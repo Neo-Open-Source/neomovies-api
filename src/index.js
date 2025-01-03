@@ -10,8 +10,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Определяем базовый URL для документации
-const BASE_URL = process.env.VERCEL_URL 
-  ? `https://${process.env.VERCEL_URL}` 
+const BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://neomovies-api.vercel.app'
   : `http://localhost:${port}`;
 
 // Swagger configuration
@@ -30,7 +30,7 @@ const swaggerOptions = {
         servers: [
             {
                 url: BASE_URL,
-                description: process.env.VERCEL_URL ? 'Production server' : 'Development server',
+                description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
             },
         ],
         tags: [
@@ -207,11 +207,14 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
 // CORS configuration
 app.use(cors({
-    origin: '*',
+    origin: true, // Разрешаем все origins в development
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['X-Requested-With', 'Content-Type', 'Authorization', 'Accept']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Middleware
 app.use(express.json());
@@ -219,10 +222,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // TMDB client middleware
 app.use((req, res, next) => {
-    if (!process.env.TMDB_ACCESS_TOKEN) {
+    const token = process.env.TMDB_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkOWRlZTY5ZjYzNzYzOGU2MjY5OGZhZGY0ZjhhYTNkYyIsInN1YiI6IjY1OTVkNmM5ODY5ZTc1NzJmOTY1MjZiZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Wd_tBYGkAoGPVHq3A5DwV1iLs_eGvH3RRz86ghJTmU8';
+    if (!token) {
         return res.status(500).json({ error: 'TMDB_ACCESS_TOKEN is not set' });
     }
-    req.tmdb = new TMDBClient(process.env.TMDB_ACCESS_TOKEN);
+    req.tmdb = new TMDBClient(token);
     next();
 });
 
@@ -268,5 +272,5 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-    console.log(`Documentation available at https://neomovies-api/api-docs`);
+    console.log(`Documentation available at https://neomovies-api.vercel.app/api-docs`);
 });
