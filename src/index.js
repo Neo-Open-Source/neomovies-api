@@ -7,12 +7,11 @@ const TMDBClient = require('./config/tmdb');
 const healthCheck = require('./utils/health');
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 // Определяем базовый URL для документации
 const BASE_URL = process.env.NODE_ENV === 'production'
   ? 'https://neomovies-api.vercel.app'
-  : `http://localhost:${port}`;
+  : 'http://localhost:3000';
 
 // Swagger configuration
 const swaggerOptions = {
@@ -30,8 +29,8 @@ const swaggerOptions = {
         servers: [
             {
                 url: BASE_URL,
-                description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
-            },
+                description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
+            }
         ],
         tags: [
             {
@@ -87,127 +86,18 @@ const swaggerOptions = {
                             description: 'Сообщение об ошибке'
                         }
                     }
-                },
-                Health: {
-                    type: 'object',
-                    properties: {
-                        status: {
-                            type: 'string',
-                            enum: ['healthy', 'unhealthy'],
-                            description: 'Общий статус API'
-                        },
-                        version: {
-                            type: 'string',
-                            description: 'Версия API'
-                        },
-                        uptime: {
-                            type: 'object',
-                            properties: {
-                                seconds: {
-                                    type: 'integer',
-                                    description: 'Время работы в секундах'
-                                },
-                                formatted: {
-                                    type: 'string',
-                                    description: 'Отформатированное время работы'
-                                }
-                            }
-                        },
-                        tmdb: {
-                            type: 'object',
-                            properties: {
-                                status: {
-                                    type: 'string',
-                                    enum: ['ok', 'error'],
-                                    description: 'Статус подключения к TMDB'
-                                },
-                                responseTime: {
-                                    type: 'integer',
-                                    description: 'Время ответа TMDB в мс'
-                                },
-                                error: {
-                                    type: 'string',
-                                    description: 'Сообщение об ошибке, если есть'
-                                }
-                            }
-                        },
-                        memory: {
-                            type: 'object',
-                            properties: {
-                                heapTotal: {
-                                    type: 'integer',
-                                    description: 'Общий размер кучи (MB)'
-                                },
-                                heapUsed: {
-                                    type: 'integer',
-                                    description: 'Использованный размер кучи (MB)'
-                                },
-                                rss: {
-                                    type: 'integer',
-                                    description: 'Resident Set Size (MB)'
-                                },
-                                memoryUsage: {
-                                    type: 'integer',
-                                    description: 'Процент использования памяти'
-                                },
-                                system: {
-                                    type: 'object',
-                                    properties: {
-                                        total: {
-                                            type: 'integer',
-                                            description: 'Общая память системы (MB)'
-                                        },
-                                        free: {
-                                            type: 'integer',
-                                            description: 'Свободная память системы (MB)'
-                                        },
-                                        usage: {
-                                            type: 'integer',
-                                            description: 'Процент использования системной памяти'
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        system: {
-                            type: 'object',
-                            properties: {
-                                platform: {
-                                    type: 'string',
-                                    description: 'Операционная система'
-                                },
-                                arch: {
-                                    type: 'string',
-                                    description: 'Архитектура процессора'
-                                },
-                                nodeVersion: {
-                                    type: 'string',
-                                    description: 'Версия Node.js'
-                                },
-                                cpuUsage: {
-                                    type: 'number',
-                                    description: 'Загрузка CPU'
-                                }
-                            }
-                        },
-                        timestamp: {
-                            type: 'string',
-                            format: 'date-time',
-                            description: 'Время проверки'
-                        }
-                    }
                 }
             }
         }
     },
-    apis: [path.join(__dirname, 'routes', '*.js'), path.join(__dirname, 'index.js')]
+    apis: [path.join(__dirname, 'routes', '*.js'), __filename]
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
 // CORS configuration
 app.use(cors({
-    origin: true, // Разрешаем все origins в development
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['X-Requested-With', 'Content-Type', 'Authorization', 'Accept']
@@ -256,21 +146,52 @@ app.use('/movies', require('./routes/movies'));
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Health'
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [ok, error]
+ *                 tmdb:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [ok, error]
  */
 app.get('/health', async (req, res) => {
-    const health = await healthCheck.getFullHealth(req.tmdb);
-    res.json(health);
+    try {
+        const health = await healthCheck.getFullHealth(req.tmdb);
+        res.json(health);
+    } catch (error) {
+        res.status(500).json({ 
+            status: 'error',
+            error: error.message
+        });
+    }
 });
 
 // Error handling
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
+    console.error('Error:', err);
+    res.status(500).json({ 
+        error: 'Internal Server Error',
+        message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
 });
 
-// Start server
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-    console.log(`Documentation available at https://neomovies-api.vercel.app/api-docs`);
+// Handle 404
+app.use((req, res) => {
+    res.status(404).json({ error: 'Not Found' });
 });
+
+// Export the Express API
+module.exports = app;
+
+// Start server only in development
+if (process.env.NODE_ENV !== 'production') {
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+        console.log(`Documentation available at http://localhost:${port}/api-docs`);
+    });
+}
