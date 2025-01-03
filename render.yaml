@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: neomovies-api
+    env: go
+    buildCommand: go build -o app
+    startCommand: ./app
+    envVars:
+      - key: GIN_MODE
+        value: release
+      - key: TMDB_ACCESS_TOKEN
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true

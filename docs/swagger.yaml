@@ -1,0 +1,512 @@
+basePath: /
+definitions:
+  api.Genre:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  api.Movie:
+    properties:
+      backdrop_path:
+        type: string
+      genres:
+        items:
+          $ref: '#/definitions/api.Genre'
+        type: array
+      id:
+        type: integer
+      overview:
+        type: string
+      poster_path:
+        type: string
+      release_date:
+        type: string
+      title:
+        type: string
+      vote_average:
+        type: number
+    type: object
+  api.MovieDetails:
+    properties:
+      backdrop_path:
+        type: string
+      budget:
+        type: integer
+      genres:
+        items:
+          $ref: '#/definitions/api.Genre'
+        type: array
+      id:
+        type: integer
+      overview:
+        type: string
+      poster_path:
+        type: string
+      release_date:
+        type: string
+      revenue:
+        type: integer
+      runtime:
+        type: integer
+      status:
+        type: string
+      tagline:
+        type: string
+      title:
+        type: string
+      vote_average:
+        type: number
+    type: object
+  api.MoviesResponse:
+    properties:
+      page:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/api.Movie'
+        type: array
+      total_pages:
+        type: integer
+      total_results:
+        type: integer
+    type: object
+  api.TMDBMoviesResponse:
+    properties:
+      page:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/api.Movie'
+        type: array
+      total_pages:
+        type: integer
+      total_results:
+        type: integer
+    type: object
+  tmdb.ExternalIDs:
+    properties:
+      facebook_id:
+        type: string
+      id:
+        type: integer
+      imdb_id:
+        type: string
+      instagram_id:
+        type: string
+      twitter_id:
+        type: string
+    type: object
+  tmdb.Genre:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  tmdb.Movie:
+    properties:
+      backdrop_path:
+        type: string
+      genres:
+        items:
+          $ref: '#/definitions/tmdb.Genre'
+        type: array
+      id:
+        type: integer
+      overview:
+        type: string
+      poster_path:
+        type: string
+      release_date:
+        type: string
+      title:
+        type: string
+      vote_average:
+        type: number
+    type: object
+  tmdb.MoviesResponse:
+    properties:
+      page:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/tmdb.Movie'
+        type: array
+      total_pages:
+        type: integer
+      total_results:
+        type: integer
+    type: object
+  tmdb.TV:
+    properties:
+      backdrop_path:
+        type: string
+      first_air_date:
+        type: string
+      genre_ids:
+        items:
+          type: integer
+        type: array
+      id:
+        type: integer
+      name:
+        type: string
+      original_language:
+        type: string
+      original_name:
+        type: string
+      overview:
+        type: string
+      popularity:
+        type: number
+      poster_path:
+        type: string
+      vote_average:
+        type: number
+      vote_count:
+        type: integer
+    type: object
+  tmdb.TVSearchResults:
+    properties:
+      page:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/tmdb.TV'
+        type: array
+      total_pages:
+        type: integer
+      total_results:
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для работы с фильмами
+  title: Neo Movies API
+  version: "1.0"
+paths:
+  /bridge/tmdb/discover/movie:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of movies based on filters
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TMDBMoviesResponse'
+      summary: Discover movies
+      tags:
+      - tmdb
+  /bridge/tmdb/discover/tv:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of TV shows based on filters
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TMDBMoviesResponse'
+      summary: Discover TV shows
+      tags:
+      - tmdb
+  /bridge/tmdb/movie/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific movie directly from TMDB
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.Movie'
+      summary: Get TMDB movie details
+      tags:
+      - tmdb
+  /bridge/tmdb/movie/{id}/external_ids:
+    get:
+      consumes:
+      - application/json
+      description: Get external IDs (IMDb, Facebook, Instagram, Twitter) for a specific
+        movie
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.ExternalIDs'
+      summary: Get TMDB movie external IDs
+      tags:
+      - tmdb
+  /bridge/tmdb/movie/popular:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of popular movies directly from TMDB
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TMDBMoviesResponse'
+      summary: Get TMDB popular movies
+      tags:
+      - tmdb
+  /bridge/tmdb/movie/top_rated:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of top rated movies directly from TMDB
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TMDBMoviesResponse'
+      summary: Get TMDB top rated movies
+      tags:
+      - tmdb
+  /bridge/tmdb/movie/upcoming:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of upcoming movies directly from TMDB
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TMDBMoviesResponse'
+      summary: Get TMDB upcoming movies
+      tags:
+      - tmdb
+  /bridge/tmdb/search/movie:
+    get:
+      consumes:
+      - application/json
+      description: Search for movies directly in TMDB
+      parameters:
+      - description: Search query
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.MoviesResponse'
+      summary: Search TMDB movies
+      tags:
+      - tmdb
+  /bridge/tmdb/search/tv:
+    get:
+      consumes:
+      - application/json
+      description: Search for TV shows directly in TMDB
+      parameters:
+      - description: Search query
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.TVSearchResults'
+      summary: Search TMDB TV shows
+      tags:
+      - tmdb
+  /bridge/tmdb/tv/{id}/external_ids:
+    get:
+      consumes:
+      - application/json
+      description: Get external IDs (IMDb, Facebook, Instagram, Twitter) for a specific
+        TV show
+      parameters:
+      - description: TV Show ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.ExternalIDs'
+      summary: Get TMDB TV show external IDs
+      tags:
+      - tmdb
+  /movies/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific movie
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MovieDetails'
+      summary: Get movie details
+      tags:
+      - movies
+  /movies/popular:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of popular movies
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MoviesResponse'
+      summary: Get popular movies
+      tags:
+      - movies
+  /movies/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for movies
+      parameters:
+      - description: Search query
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MoviesResponse'
+      summary: Search movies
+      tags:
+      - movies
+  /movies/top-rated:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of top rated movies
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MoviesResponse'
+      summary: Get top rated movies
+      tags:
+      - movies
+  /movies/upcoming:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of upcoming movies
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MoviesResponse'
+      summary: Get upcoming movies
+      tags:
+      - movies
+swagger: "2.0"
