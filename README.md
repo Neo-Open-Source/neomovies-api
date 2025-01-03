@@ -1,87 +1,85 @@
 # Neo Movies API
 
-API для поиска фильмов и сериалов с поддержкой русского языка.
+REST API для поиска и получения информации о фильмах, использующий TMDB API.
 
-## Деплой на AlwaysData
+## Особенности
 
-1. Создайте аккаунт на [AlwaysData](https://www.alwaysdata.com)
+- Поиск фильмов
+- Информация о фильмах
+- Популярные фильмы
+- Топ рейтинговые фильмы
+- Предстоящие фильмы
+- Swagger документация
+- Поддержка русского языка
 
-2. Настройте SSH ключ:
-   ```bash
-   # Создайте SSH ключ если его нет
-   ssh-keygen -t rsa -b 4096
-   
-   # Скопируйте публичный ключ
-   cat ~/.ssh/id_rsa.pub
-   ```
-   Добавьте ключ в настройках AlwaysData (SSH Keys)
+## Установка
 
-3. Подключитесь по SSH:
-   ```bash
-   # Замените username на ваш логин
-   ssh username@ssh-username.alwaysdata.net
-   ```
-
-4. Установите Go:
-   ```bash
-   # Создайте директорию для Go
-   mkdir -p $HOME/go/bin
-   
-   # Скачайте и установите Go
-   wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz
-   tar -C $HOME -xzf go1.21.5.linux-amd64.tar.gz
-   
-   # Добавьте Go в PATH
-   echo 'export PATH=$HOME/go/bin:$HOME/go/bin:$PATH' >> ~/.bashrc
-   source ~/.bashrc
-   ```
-
-5. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/ваш-username/neomovies-api.git
-   cd neomovies-api
-   ```
-
-6. Соберите приложение:
-   ```bash
-   chmod +x build.sh
-   ./build.sh
-   ```
-
-7. Настройте сервис в панели AlwaysData:
-   - Type: Site
-   - Name: neomovies-api
-   - Address: api.your-name.alwaysdata.net
-   - Command: $HOME/neomovies-api/run.sh
-   - Working directory: $HOME/neomovies-api
-   
-8. Добавьте переменные окружения:
-   - `TMDB_ACCESS_TOKEN`: Ваш токен TMDB API
-   - `PORT`: 8080 (или порт по умолчанию)
-
-После деплоя ваше API будет доступно по адресу: https://api.your-name.alwaysdata.net
-
-## Локальная разработка
-
-1. Установите зависимости:
+1. Клонируйте репозиторий:
 ```bash
-go mod download
+git clone https://github.com/yourusername/neomovies-api.git
+cd neomovies-api
 ```
 
-2. Запустите сервер:
+2. Установите зависимости:
 ```bash
-go run main.go
+npm install
 ```
 
-API будет доступно по адресу: http://localhost:8080
+3. Создайте файл `.env` на основе `.env.example`:
+```bash
+cp .env.example .env
+```
+
+4. Добавьте ваш TMDB Access Token в `.env` файл:
+```
+TMDB_ACCESS_TOKEN=your_token_here
+```
+
+## Запуск
+
+Для разработки:
+```bash
+npm run dev
+```
+
+Для продакшена:
+```bash
+npm start
+```
+
+## Развертывание на Vercel
+
+1. Установите Vercel CLI:
+```bash
+npm i -g vercel
+```
+
+2. Войдите в ваш аккаунт Vercel:
+```bash
+vercel login
+```
+
+3. Разверните приложение:
+```bash
+vercel
+```
+
+4. Добавьте переменные окружения в Vercel:
+- Перейдите в настройки проекта на Vercel
+- Добавьте `TMDB_ACCESS_TOKEN` в раздел Environment Variables
 
 ## API Endpoints
 
-- `GET /movies/search` - Поиск фильмов
-- `GET /movies/popular` - Популярные фильмы
-- `GET /movies/top-rated` - Лучшие фильмы
-- `GET /movies/upcoming` - Предстоящие фильмы
-- `GET /movies/:id` - Информация о фильме
 - `GET /health` - Проверка работоспособности API
+- `GET /movies/search?query=<search_term>&page=<page_number>` - Поиск фильмов
+- `GET /movies/:id` - Получить информацию о фильме
+- `GET /movies/popular` - Получить список популярных фильмов
+- `GET /movies/top-rated` - Получить список топ рейтинговых фильмов
+- `GET /movies/upcoming` - Получить список предстоящих фильмов
+- `GET /movies/:id/external-ids` - Получить внешние ID фильма
 
-Полная документация API доступна по адресу: `/swagger/index.html`
+## Документация API
+
+После запуска API, документация Swagger доступна по адресу:
+```
+http://localhost:3000/api-docs
