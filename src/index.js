@@ -200,13 +200,20 @@ const swaggerOptions = {
             }
         }
     },
-    apis: ['./src/routes/*.js', './src/index.js'],
+    apis: [path.join(__dirname, 'routes', '*.js'), path.join(__dirname, 'index.js')]
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
+// CORS configuration
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -219,13 +226,17 @@ app.use((req, res, next) => {
     next();
 });
 
-// Serve Swagger JSON
+// API Documentation routes
+app.get('/api-docs', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'api-docs', 'index.html'));
+});
+
 app.get('/api-docs/swagger.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerDocs);
 });
 
-// Routes
+// API routes
 app.use('/movies', require('./routes/movies'));
 
 /**
@@ -257,9 +268,5 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-    console.log(`Documentation available at http://localhost:${port}/api-docs`);
-});
-
-app.get('/api-docs', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    console.log(`Documentation available at https://neomovies-api/api-docs`);
 });
