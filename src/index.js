@@ -3,11 +3,17 @@ const express = require('express');
 const cors = require('cors');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const path = require('path');
 const TMDBClient = require('./config/tmdb');
 const healthCheck = require('./utils/health');
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Определяем базовый URL для документации
+const BASE_URL = process.env.VERCEL_URL 
+  ? `https://${process.env.VERCEL_URL}` 
+  : `http://localhost:${port}`;
 
 // Swagger configuration
 const swaggerOptions = {
@@ -24,8 +30,8 @@ const swaggerOptions = {
         },
         servers: [
             {
-                url: `http://localhost:${port}`,
-                description: 'Development server',
+                url: BASE_URL,
+                description: process.env.VERCEL_URL ? 'Production server' : 'Development server',
             },
         ],
         tags: [
@@ -204,12 +210,17 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 const swaggerCustomOptions = {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: "Neo Movies API Documentation",
-    customfavIcon: "https://www.themoviedb.org/favicon.ico"
+    customfavIcon: "https://www.themoviedb.org/favicon.ico",
+    swaggerOptions: {
+        url: `${BASE_URL}/api-docs/swagger.json`,
+        persistAuthorization: true
+    }
 };
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // TMDB client middleware
 app.use((req, res, next) => {
@@ -220,8 +231,15 @@ app.use((req, res, next) => {
     next();
 });
 
+// Serve Swagger JSON
+app.get('/api-docs/swagger.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerDocs);
+});
+
 // Routes
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, swaggerCustomOptions));
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(null, swaggerCustomOptions));
 app.use('/movies', require('./routes/movies'));
 
 /**
