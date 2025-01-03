@@ -62,30 +62,34 @@ const { formatDate } = require('../utils/date');
 router.get('/search', async (req, res) => {
     try {
         const { query, page = 1 } = req.query;
+        
         if (!query) {
-            return res.status(400).json({ error: "query parameter is required" });
+            return res.status(400).json({ error: 'Query parameter is required' });
         }
 
-        const results = await req.tmdb.searchMovies(query, page);
+        const response = await req.tmdb.searchMovies(query, page);
         
-        const response = {
-            page: results.page,
-            total_pages: results.total_pages,
-            total_results: results.total_results,
-            results: results.results.map(movie => ({
-                id: movie.id,
-                title: movie.title,
-                overview: movie.overview,
-                release_date: formatDate(movie.release_date),
-                vote_average: movie.vote_average,
-                poster_path: movie.poster_path,
-                backdrop_path: movie.backdrop_path
-            }))
-        };
+        if (!response || !response.data) {
+            throw new Error('Failed to fetch data from TMDB');
+        }
 
-        res.json(response);
+        const { results, ...rest } = response.data;
+        
+        const formattedResults = results.map(movie => ({
+            ...movie,
+            release_date: formatDate(movie.release_date)
+        }));
+
+        res.json({
+            ...rest,
+            results: formattedResults
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Search movies error:', error);
+        res.status(500).json({ 
+            error: 'Failed to search movies',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 

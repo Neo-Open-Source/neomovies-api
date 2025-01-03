@@ -7,13 +7,27 @@ class TMDBClient {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Accept': 'application/json'
-            }
+            },
+            timeout: 10000 // 10 секунд таймаут
         });
+
+        // Добавляем интерцептор для обработки ошибок
+        this.client.interceptors.response.use(
+            response => response,
+            error => {
+                console.error('TMDB API Error:', {
+                    status: error.response?.status,
+                    data: error.response?.data,
+                    message: error.message
+                });
+                throw error;
+            }
+        );
     }
 
     async makeRequest(method, endpoint, params = {}) {
         try {
-            const response = await this.client.request({
+            const response = await this.client({
                 method,
                 url: endpoint,
                 params: {
@@ -22,10 +36,12 @@ class TMDBClient {
                     region: 'RU'
                 }
             });
-            return response.data;
+            return response;
         } catch (error) {
-            console.error(`TMDB API Error: ${error.message}`);
-            throw error;
+            if (error.response) {
+                throw new Error(`TMDB API Error: ${error.response.data.status_message || error.message}`);
+            }
+            throw new Error(`Network Error: ${error.message}`);
         }
     }
 
@@ -35,71 +51,55 @@ class TMDBClient {
     }
 
     async searchMovies(query, page = 1) {
-        const data = await this.makeRequest('GET', '/search/movie', {
+        const response = await this.makeRequest('GET', '/search/movie', {
             query,
             page,
             include_adult: false
         });
+
+        const data = response.data;
 
         // Фильтруем результаты
         data.results = data.results.filter(movie => 
             movie.poster_path && 
             movie.overview && 
             movie.vote_average > 0
-        );
-
-        // Добавляем полные URL для изображений
-        data.results = data.results.map(movie => ({
+        ).map(movie => ({
             ...movie,
             poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'w1280')
+            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
         }));
 
-        return data;
+        return response;
     }
 
     async getMovie(id) {
-        const movie = await this.makeRequest('GET', `/movie/${id}`);
+        const response = await this.makeRequest('GET', `/movie/${id}`);
+        const movie = response.data;
         return {
             ...movie,
             poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'w1280')
+            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
         };
     }
 
     async getPopularMovies(page = 1) {
-        const data = await this.makeRequest('GET', '/movie/popular', { page });
+        const response = await this.makeRequest('GET', '/movie/popular', { page });
+        const data = response.data;
         data.results = data.results.map(movie => ({
             ...movie,
             poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'w1280')
+            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
         }));
-        return data;
+        return response;
     }
 
     async getTopRatedMovies(page = 1) {
-        const data = await this.makeRequest('GET', '/movie/top_rated', { page });
+        const response = await this.makeRequest('GET', '/movie/top_rated', { page });
+        const data = response.data;
         data.results = data.results.map(movie => ({
             ...movie,
             poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'w1280')
+            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
         }));
-        return data;
-    }
-
-    async getUpcomingMovies(page = 1) {
-        const data = await this.makeRequest('GET', '/movie/upcoming', { page });
-        data.results = data.results.map(movie => ({
-            ...movie,
-            poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'w1280')
-        }));
-        return data;
-    }
-
-    async getMovieExternalIDs(id) {
-        return await this.makeRequest('GET', `/movie/${id}/external_ids`);
-    }
-}
-
-module.exports = TMDBClient;
+        return response;
