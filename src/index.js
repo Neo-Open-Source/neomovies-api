@@ -25,7 +25,7 @@ const swaggerOptions = {
             description: 'API для поиска и получения информации о фильмах с поддержкой русского языка',
             contact: {
                 name: 'API Support',
-                url: 'https://github.com/yourusername/neomovies-api'
+                url: 'https://gitlab.com/foxixus/neomovies-api'
             }
         },
         servers: [
