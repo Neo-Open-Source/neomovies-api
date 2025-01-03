@@ -2,16 +2,19 @@ const axios = require('axios');
 
 class TMDBClient {
     constructor(accessToken) {
+        if (!accessToken) {
+            throw new Error('TMDB access token is required');
+        }
+
         this.client = axios.create({
             baseURL: 'https://api.themoviedb.org/3',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Accept': 'application/json'
             },
-            timeout: 10000 // 10 секунд таймаут
+            timeout: 10000
         });
 
-        // Добавляем интерцептор для обработки ошибок
         this.client.interceptors.response.use(
             response => response,
             error => {
@@ -58,17 +61,13 @@ class TMDBClient {
         });
 
         const data = response.data;
-
-        // Фильтруем результаты
-        data.results = data.results.filter(movie => 
-            movie.poster_path && 
-            movie.overview && 
-            movie.vote_average > 0
-        ).map(movie => ({
-            ...movie,
-            poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
-        }));
+        data.results = data.results
+            .filter(movie => movie.poster_path && movie.overview && movie.vote_average > 0)
+            .map(movie => ({
+                ...movie,
+                poster_path: this.getImageURL(movie.poster_path, 'w500'),
+                backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
+            }));
 
         return response;
     }
@@ -103,3 +102,23 @@ class TMDBClient {
             backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
         }));
         return response;
+    }
+
+    async getUpcomingMovies(page = 1) {
+        const response = await this.makeRequest('GET', '/movie/upcoming', { page });
+        const data = response.data;
+        data.results = data.results.map(movie => ({
+            ...movie,
+            poster_path: this.getImageURL(movie.poster_path, 'w500'),
+            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
+        }));
+        return response;
+    }
+
+    async getMovieExternalIDs(id) {
+        const response = await this.makeRequest('GET', `/movie/${id}/external_ids`);
+        return response.data;
+    }
+}
+
+module.exports = TMDBClient;
