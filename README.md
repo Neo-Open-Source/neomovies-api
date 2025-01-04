@@ -16,7 +16,7 @@ REST API для поиска и получения информации о фи�
 
 1. Клонируйте репозиторий:
 ```bash
-git clone https://github.com/yourusername/neomovies-api.git
+git clone https://gitlab.com/foxixus/neomovies-api.git
 cd neomovies-api
 ```
 
@@ -25,9 +25,9 @@ cd neomovies-api
 npm install
 ```
 
-3. Создайте файл `.env` на основе `.env.example`:
+3. Создайте файл `.env`:
 ```bash
-cp .env.example .env
+touch .env
 ```
 
 4. Добавьте ваш TMDB Access Token в `.env` файл:
