@@ -30,23 +30,34 @@ class TMDBClient {
 
     async makeRequest(method, endpoint, params = {}) {
         try {
-            console.log('TMDB Request:', { method, endpoint, params });
+            // Убедимся, что параметры запроса корректны
+            const requestParams = {
+                ...params,
+                language: 'ru-RU',
+                region: 'RU'
+            };
+
+            console.log('TMDB Request:', { 
+                method, 
+                endpoint, 
+                params: requestParams 
+            });
+
             const response = await this.client({
                 method,
                 url: endpoint,
-                params: {
-                    ...params,
-                    language: 'ru-RU',
-                    region: 'RU'
-                }
+                params: requestParams
             });
+
             console.log('TMDB Response:', {
                 endpoint,
+                requestParams,
                 status: response.status,
                 page: response.data.page,
                 totalPages: response.data.total_pages,
                 resultsCount: response.data.results?.length
             });
+
             return response;
         } catch (error) {
             console.error('TMDB Error:', {
@@ -69,6 +80,8 @@ class TMDBClient {
 
     async searchMovies(query, page = 1) {
         const pageNum = parseInt(page, 10) || 1;
+        console.log('Searching movies:', { query, page: pageNum });
+        
         const response = await this.makeRequest('GET', '/search/movie', {
             query,
             page: pageNum,
@@ -99,38 +112,58 @@ class TMDBClient {
 
     async getPopularMovies(page = 1) {
         const pageNum = parseInt(page, 10) || 1;
-        console.log('Getting popular movies for page:', pageNum);
-        const response = await this.makeRequest('GET', '/movie/popular', { page: pageNum });
+        console.log('Getting popular movies:', { page: pageNum });
+        
+        const response = await this.makeRequest('GET', '/movie/popular', { 
+            page: pageNum 
+        });
+
+        console.log('Popular movies response:', {
+            requestedPage: pageNum,
+            returnedPage: response.data.page,
+            totalPages: response.data.total_pages,
+            resultsCount: response.data.results.length
+        });
+
         const data = response.data;
         data.results = data.results.map(movie => ({
             ...movie,
             poster_path: this.getImageURL(movie.poster_path, 'w500'),
             backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
         }));
+
         return data;
     }
 
     async getTopRatedMovies(page = 1) {
         const pageNum = parseInt(page, 10) || 1;
-        const response = await this.makeRequest('GET', '/movie/top_rated', { page: pageNum });
+        const response = await this.makeRequest('GET', '/movie/top_rated', { 
+            page: pageNum 
+        });
+
         const data = response.data;
         data.results = data.results.map(movie => ({
             ...movie,
             poster_path: this.getImageURL(movie.poster_path, 'w500'),
             backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
         }));
+
         return data;
     }
 
     async getUpcomingMovies(page = 1) {
         const pageNum = parseInt(page, 10) || 1;
-        const response = await this.makeRequest('GET', '/movie/upcoming', { page: pageNum });
+        const response = await this.makeRequest('GET', '/movie/upcoming', { 
+            page: pageNum 
+        });
+
         const data = response.data;
         data.results = data.results.map(movie => ({
             ...movie,
             poster_path: this.getImageURL(movie.poster_path, 'w500'),
             backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
         }));
+
         return data;
     }
 
