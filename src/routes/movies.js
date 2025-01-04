@@ -2,6 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { formatDate } = require('../utils/date');
 
+// Middleware для логирования запросов
+router.use((req, res, next) => {
+    console.log('Movies API Request:', {
+        method: req.method,
+        path: req.path,
+        query: req.query,
+        params: req.params
+    });
+    next();
+});
+
 /**
  * @swagger
  * /movies/search:
@@ -173,10 +184,17 @@ router.get('/:id', async (req, res) => {
  */
 router.get('/popular', async (req, res) => {
     try {
+        console.log('Popular movies request:', { query: req.query });
         const { page = 1 } = req.query;
         const movies = await req.tmdb.getPopularMovies(page);
+        console.log('Popular movies response:', {
+            page: movies.page,
+            totalPages: movies.total_pages,
+            resultsCount: movies.results.length
+        });
         res.json(movies);
     } catch (error) {
+        console.error('Popular movies error:', error);
         res.status(500).json({ error: error.message });
     }
 });

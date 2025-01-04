@@ -6,9 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "build": "npm install --production",
-    "vercel-build": "echo hello",
-    "clean": "rm -rf node_modules"
+    "vercel-build": "echo hello"
   },
   "dependencies": {
     "axios": "^1.6.2",
