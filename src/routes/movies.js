@@ -72,13 +72,18 @@ router.use((req, res, next) => {
  */
 router.get('/search', async (req, res) => {
     try {
-        const { query, page = 1 } = req.query;
+        const { query, page } = req.query;
+        const pageNum = parseInt(page, 10) || 1;
         
         if (!query) {
             return res.status(400).json({ error: 'Query parameter is required' });
         }
 
-        const response = await req.tmdb.searchMovies(query, page);
+        if (pageNum < 1) {
+            return res.status(400).json({ error: 'Page must be greater than 0' });
+        }
+
+        const response = await req.tmdb.searchMovies(query, pageNum);
         
         if (!response || !response.data) {
             throw new Error('Failed to fetch data from TMDB');
@@ -99,49 +104,8 @@ router.get('/search', async (req, res) => {
         console.error('Search movies error:', error);
         res.status(500).json({ 
             error: 'Failed to search movies',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            details: error.message
         });
-    }
-});
-
-/**
- * @swagger
- * /movies/{id}:
- *   get:
- *     summary: Получить информацию о фильме
- *     description: Получает детальную информацию о фильме по ID
- *     tags: [movies]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: ID фильма
- *         schema:
- *           type: integer
- *         example: 603
- *     responses:
- *       200:
- *         description: Информация о фильме
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Movie'
- *       500:
- *         description: Ошибка сервера
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/:id', async (req, res) => {
-    try {
-        const movie = await req.tmdb.getMovie(req.params.id);
-        res.json({
-            ...movie,
-            release_date: formatDate(movie.release_date)
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
     }
 });
 
@@ -184,18 +148,47 @@ router.get('/:id', async (req, res) => {
  */
 router.get('/popular', async (req, res) => {
     try {
-        console.log('Popular movies request:', { query: req.query });
-        const { page = 1 } = req.query;
-        const movies = await req.tmdb.getPopularMovies(page);
-        console.log('Popular movies response:', {
-            page: movies.page,
-            totalPages: movies.total_pages,
-            resultsCount: movies.results.length
+        const { page } = req.query;
+        const pageNum = parseInt(page, 10) || 1;
+
+        console.log('Popular movies request:', { 
+            requestedPage: page,
+            parsedPage: pageNum,
+            rawQuery: req.query 
         });
-        res.json(movies);
+
+        if (pageNum < 1) {
+            return res.status(400).json({ error: 'Page must be greater than 0' });
+        }
+
+        const movies = await req.tmdb.getPopularMovies(pageNum);
+        
+        console.log('Popular movies response:', {
+            requestedPage: pageNum,
+            returnedPage: movies.page,
+            totalPages: movies.total_pages,
+            resultsCount: movies.results?.length
+        });
+
+        if (!movies || !movies.results) {
+            throw new Error('Invalid response from TMDB');
+        }
+
+        const formattedResults = movies.results.map(movie => ({
+            ...movie,
+            release_date: formatDate(movie.release_date)
+        }));
+
+        res.json({
+            ...movies,
+            results: formattedResults
+        });
     } catch (error) {
         console.error('Popular movies error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch popular movies',
+            details: error.message
+        });
     }
 });
 
@@ -238,11 +231,154 @@ router.get('/popular', async (req, res) => {
  */
 router.get('/top-rated', async (req, res) => {
     try {
-        const { page = 1 } = req.query;
-        const movies = await req.tmdb.getTopRatedMovies(page);
-        res.json(movies);
+        const { page } = req.query;
+        const pageNum = parseInt(page, 10) || 1;
+
+        if (pageNum < 1) {
+            return res.status(400).json({ error: 'Page must be greater than 0' });
+        }
+
+        const movies = await req.tmdb.getTopRatedMovies(pageNum);
+        
+        if (!movies || !movies.results) {
+            throw new Error('Invalid response from TMDB');
+        }
+
+        const formattedResults = movies.results.map(movie => ({
+            ...movie,
+            release_date: formatDate(movie.release_date)
+        }));
+
+        res.json({
+            ...movies,
+            results: formattedResults
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Top rated movies error:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch top rated movies',
+            details: error.message
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /movies/{id}:
+ *   get:
+ *     summary: Детали фильма
+ *     description: Получает подробную информацию о фильме по его ID
+ *     tags: [movies]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID фильма
+ *         schema:
+ *           type: integer
+ *         example: 550
+ *     responses:
+ *       200:
+ *         description: Детали фильма
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Movie'
+ *       404:
+ *         description: Фильм не найден
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const movie = await req.tmdb.getMovie(id);
+        
+        if (!movie) {
+            return res.status(404).json({ error: 'Movie not found' });
+        }
+
+        res.json({
+            ...movie,
+            release_date: formatDate(movie.release_date)
+        });
+    } catch (error) {
+        console.error('Get movie error:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch movie details',
+            details: error.message
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /movies/{id}/external-ids:
+ *   get:
+ *     summary: Внешние ID фильма
+ *     description: Получает внешние идентификаторы фильма (IMDb, и т.д.)
+ *     tags: [movies]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID фильма
+ *         schema:
+ *           type: integer
+ *         example: 550
+ *     responses:
+ *       200:
+ *         description: Внешние ID фильма
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 imdb_id:
+ *                   type: string
+ *                 facebook_id:
+ *                   type: string
+ *                 instagram_id:
+ *                   type: string
+ *                 twitter_id:
+ *                   type: string
+ *       404:
+ *         description: Фильм не найден
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:id/external-ids', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const externalIds = await req.tmdb.getMovieExternalIDs(id);
+        
+        if (!externalIds) {
+            return res.status(404).json({ error: 'External IDs not found' });
+        }
+
+        res.json(externalIds);
+    } catch (error) {
+        console.error('Get external IDs error:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch external IDs',
+            details: error.message
+        });
     }
 });
 
@@ -285,62 +421,34 @@ router.get('/top-rated', async (req, res) => {
  */
 router.get('/upcoming', async (req, res) => {
     try {
-        const { page = 1 } = req.query;
-        const movies = await req.tmdb.getUpcomingMovies(page);
-        res.json(movies);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+        const { page } = req.query;
+        const pageNum = parseInt(page, 10) || 1;
 
-/**
- * @swagger
- * /movies/{id}/external-ids:
- *   get:
- *     summary: Внешние ID фильма
- *     description: Получает внешние идентификаторы фильма (IMDb и др.)
- *     tags: [movies]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: ID фильма
- *         schema:
- *           type: integer
- *         example: 603
- *     responses:
- *       200:
- *         description: Внешние ID фильма
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 imdb_id:
- *                   type: string
- *                   description: ID на IMDb
- *                 facebook_id:
- *                   type: string
- *                   description: ID на Facebook
- *                 instagram_id:
- *                   type: string
- *                   description: ID на Instagram
- *                 twitter_id:
- *                   type: string
- *                   description: ID на Twitter
- *       500:
- *         description: Ошибка сервера
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/:id/external-ids', async (req, res) => {
-    try {
-        const externalIds = await req.tmdb.getMovieExternalIDs(req.params.id);
-        res.json(externalIds);
+        if (pageNum < 1) {
+            return res.status(400).json({ error: 'Page must be greater than 0' });
+        }
+
+        const movies = await req.tmdb.getUpcomingMovies(pageNum);
+        
+        if (!movies || !movies.results) {
+            throw new Error('Invalid response from TMDB');
+        }
+
+        const formattedResults = movies.results.map(movie => ({
+            ...movie,
+            release_date: formatDate(movie.release_date)
+        }));
+
+        res.json({
+            ...movies,
+            results: formattedResults
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Upcoming movies error:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch upcoming movies',
+            details: error.message
+        });
     }
 });
 
