@@ -112,12 +112,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // TMDB client middleware
 app.use((req, res, next) => {
-    const token = process.env.TMDB_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkOWRlZTY5ZjYzNzYzOGU2MjY5OGZhZGY0ZjhhYTNkYyIsInN1YiI6IjY1OTVkNmM5ODY5ZTc1NzJmOTY1MjZiZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Wd_tBYGkAoGPVHq3A5DwV1iLs_eGvH3RRz86ghJTmU8';
-    if (!token) {
-        return res.status(500).json({ error: 'TMDB_ACCESS_TOKEN is not set' });
+    try {
+        const token = process.env.TMDB_ACCESS_TOKEN;
+        if (!token) {
+            throw new Error('TMDB_ACCESS_TOKEN is not set');
+        }
+        req.tmdb = new TMDBClient(token);
+        next();
+    } catch (error) {
+        console.error('TMDB Client Error:', error);
+        res.status(500).json({ 
+            error: 'Failed to initialize TMDB client',
+            message: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
-    req.tmdb = new TMDBClient(token);
-    next();
 });
 
 // API Documentation routes
