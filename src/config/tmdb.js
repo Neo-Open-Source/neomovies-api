@@ -171,6 +171,70 @@ class TMDBClient {
         const response = await this.makeRequest('GET', `/movie/${id}/external_ids`);
         return response.data;
     }
+
+    async searchTVShows(query, page = 1) {
+        const pageNum = parseInt(page, 10) || 1;
+        console.log('Searching TV shows:', { query, page: pageNum });
+        
+        const response = await this.makeRequest('GET', '/search/tv', {
+            query,
+            page: pageNum,
+            include_adult: false
+        });
+
+        const data = response.data;
+        data.results = data.results
+            .filter(show => show.poster_path && show.overview && show.vote_average > 0)
+            .map(show => ({
+                ...show,
+                poster_path: this.getImageURL(show.poster_path, 'w500'),
+                backdrop_path: this.getImageURL(show.backdrop_path, 'original')
+            }));
+
+        return data;
+    }
+
+    async getTVShow(id) {
+        const response = await this.makeRequest('GET', `/tv/${id}`);
+        const show = response.data;
+        return {
+            ...show,
+            poster_path: this.getImageURL(show.poster_path, 'w500'),
+            backdrop_path: this.getImageURL(show.backdrop_path, 'original')
+        };
+    }
+
+    async getPopularTVShows(page = 1) {
+        const pageNum = parseInt(page, 10) || 1;
+        const response = await this.makeRequest('GET', '/tv/popular', { 
+            page: pageNum 
+        });
+
+        const data = response.data;
+        data.results = data.results.map(show => ({
+            ...show,
+            poster_path: this.getImageURL(show.poster_path, 'w500'),
+            backdrop_path: this.getImageURL(show.backdrop_path, 'original')
+        }));
+
+        return data;
+    }
+
+    async getTopRatedTVShows(page = 1) {
+        const pageNum = parseInt(page, 10) || 1;
+        const response = await this.makeRequest('GET', '/tv/top_rated', { 
+            page: pageNum 
+        });
+
+        const data = response.data;
+        data.results = data.results.map(show => ({
+            ...show,
+            poster_path: this.getImageURL(show.poster_path, 'w500'),
+            backdrop_path: this.getImageURL(show.backdrop_path, 'original')
+        }));
+
+        return data;
+    }
 }
 
 module.exports = TMDBClient;
