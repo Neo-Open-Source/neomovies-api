@@ -199,19 +199,17 @@ class TMDBClient {
     }
 
     async getMoviesByGenre(genreId, page = 1) {
-        const pageNum = parseInt(page, 10) || 1;
-        const response = await this.makeRequest('GET', '/discover/movie', {
-            page: pageNum,
-            with_genres: genreId,
-            sort_by: 'popularity.desc'
+        return this.makeRequest('GET', '/discover/movie', {
+            params: {
+                with_genres: genreId,
+                page,
+                sort_by: 'popularity.desc',
+                'vote_count.gte': 100,
+                include_adult: false
+            }
         });
-
-        const data = response.data;
-        data.results = this.filterAndProcessResults(data.results, 'movie');
-        return data;
     }
 
-    // TV Show methods
     async getPopularTVShows(page = 1) {
         const pageNum = parseInt(page, 10) || 1;
         console.log('Getting popular TV shows:', { page: pageNum });
