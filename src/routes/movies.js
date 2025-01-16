@@ -695,4 +695,31 @@ router.get('/genre/:id', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /movies/genres:
+ *   get:
+ *     summary: Получение списка жанров
+ *     description: Возвращает список всех доступных жанров фильмов
+ *     tags: [movies]
+ *     responses:
+ *       200:
+ *         description: Список жанров
+ */
+router.get('/genres', async (req, res) => {
+    try {
+        const response = await req.tmdb.makeRequest('get', '/genre/movie/list', {
+            language: 'ru-RU'
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        console.error('Error fetching genres:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch genres',
+            details: error.response?.data?.status_message || error.message
+        });
+    }
+});
+
 module.exports = router;
