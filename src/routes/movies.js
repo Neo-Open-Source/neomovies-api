@@ -452,4 +452,117 @@ router.get('/upcoming', async (req, res) => {
     }
 });
 
+// TV Shows Routes
+router.get('/tv/search', async (req, res) => {
+    try {
+        const { query, page } = req.query;
+        const pageNum = parseInt(page, 10) || 1;
+        
+        if (!query) {
+            return res.status(400).json({ error: 'Query parameter is required' });
+        }
+
+        if (pageNum < 1) {
+            return res.status(400).json({ error: 'Page must be greater than 0' });
+        }
+
+        const response = await req.tmdb.searchTVShows(query, pageNum);
+        
+        if (!response || !response.data) {
+            throw new Error('Failed to fetch data from TMDB');
+        }
+
+        const { results, ...rest } = response.data;
+        
+        const formattedResults = results.map(show => ({
+            ...show,
+            first_air_date: formatDate(show.first_air_date)
+        }));
+
+        res.json({
+            ...rest,
+            results: formattedResults
+        });
+    } catch (error) {
+        console.error('Error searching TV shows:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/tv/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const show = await req.tmdb.getTVShow(id);
+        show.first_air_date = formatDate(show.first_air_date);
+        res.json(show);
+    } catch (error) {
+        console.error('Error fetching TV show:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/tv/popular', async (req, res) => {
+    try {
+        const { page } = req.query;
+        const pageNum = parseInt(page, 10) || 1;
+
+        if (pageNum < 1) {
+            return res.status(400).json({ error: 'Page must be greater than 0' });
+        }
+
+        const response = await req.tmdb.getPopularTVShows(pageNum);
+        
+        if (!response || !response.data) {
+            throw new Error('Failed to fetch data from TMDB');
+        }
+
+        const { results, ...rest } = response.data;
+        
+        const formattedResults = results.map(show => ({
+            ...show,
+            first_air_date: formatDate(show.first_air_date)
+        }));
+
+        res.json({
+            ...rest,
+            results: formattedResults
+        });
+    } catch (error) {
+        console.error('Error fetching popular TV shows:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/tv/top-rated', async (req, res) => {
+    try {
+        const { page } = req.query;
+        const pageNum = parseInt(page, 10) || 1;
+
+        if (pageNum < 1) {
+            return res.status(400).json({ error: 'Page must be greater than 0' });
+        }
+
+        const response = await req.tmdb.getTopRatedTVShows(pageNum);
+        
+        if (!response || !response.data) {
+            throw new Error('Failed to fetch data from TMDB');
+        }
+
+        const { results, ...rest } = response.data;
+        
+        const formattedResults = results.map(show => ({
+            ...show,
+            first_air_date: formatDate(show.first_air_date)
+        }));
+
+        res.json({
+            ...rest,
+            results: formattedResults
+        });
+    } catch (error) {
+        console.error('Error fetching top rated TV shows:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
