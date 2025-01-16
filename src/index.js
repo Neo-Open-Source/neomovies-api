@@ -71,15 +71,22 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
 // CORS configuration
-app.use(cors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['X-Requested-With', 'Content-Type', 'Authorization', 'Accept']
-}));
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://neo-movies.vercel.app',
+    /\.vercel\.app$/
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
 // Handle preflight requests
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 
 // Middleware
 app.use(express.json());
@@ -90,15 +97,21 @@ app.use((req, res, next) => {
     try {
         const token = process.env.TMDB_ACCESS_TOKEN;
         if (!token) {
-            throw new Error('TMDB_ACCESS_TOKEN is not set');
+            console.error('TMDB_ACCESS_TOKEN is not set');
+            return res.status(500).json({ 
+                error: 'Server configuration error',
+                details: 'API token is not configured'
+            });
         }
+
+        console.log('Initializing TMDB client...');
         req.tmdb = new TMDBClient(token);
         next();
     } catch (error) {
-        console.error('TMDB Client Error:', error);
+        console.error('Failed to initialize TMDB client:', error);
         res.status(500).json({ 
-            error: 'Failed to initialize TMDB client',
-            message: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: 'Server initialization error',
+            details: error.message
         });
     }
 });
