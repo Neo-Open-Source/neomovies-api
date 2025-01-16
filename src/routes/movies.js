@@ -664,33 +664,43 @@ router.get('/:id/videos', async (req, res) => {
 router.get('/genre/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { page } = req.query;
-        const pageNum = parseInt(page, 10) || 1;
+        const { page = 1 } = req.query;
 
-        if (pageNum < 1) {
-            return res.status(400).json({ error: 'Page must be greater than 0' });
-        }
+        console.log('Fetching movies by genre:', { id, page });
 
-        const movies = await req.tmdb.getMoviesByGenre(id, pageNum);
-        
-        if (!movies || !movies.results) {
-            return res.status(404).json({ error: 'Movies not found for this genre' });
-        }
+        const response = await req.tmdb.makeRequest('get', '/discover/movie', {
+            params: {
+                with_genres: id,
+                page,
+                language: 'ru-RU',
+                'vote_count.gte': 100,
+                'vote_average.gte': 1,
+                sort_by: 'popularity.desc',
+                include_adult: false
+            }
+        });
 
-        const formattedResults = movies.results.map(movie => ({
+        console.log('Movies by genre response:', {
+            page: response.data.page,
+            total_results: response.data.total_results,
+            results_count: response.data.results?.length
+        });
+
+        // Форматируем даты в результатах
+        const formattedResults = response.data.results.map(movie => ({
             ...movie,
-            release_date: formatDate(movie.release_date)
+            release_date: movie.release_date ? formatDate(movie.release_date) : undefined
         }));
 
         res.json({
-            ...movies,
+            ...response.data,
             results: formattedResults
         });
     } catch (error) {
-        console.error('Get movies by genre error:', error);
+        console.error('Error fetching movies by genre:', error.response?.data || error.message);
         res.status(500).json({ 
             error: 'Failed to fetch movies by genre',
-            details: error.message
+            details: error.response?.data?.status_message || error.message
         });
     }
 });
@@ -708,13 +718,15 @@ router.get('/genre/:id', async (req, res) => {
  */
 router.get('/genres', async (req, res) => {
     try {
+        console.log('Fetching genres...');
         const response = await req.tmdb.makeRequest('get', '/genre/movie/list', {
             language: 'ru-RU'
         });
 
+        console.log('Genres response:', response.data);
         res.json(response.data);
     } catch (error) {
-        console.error('Error fetching genres:', error);
+        console.error('Error fetching genres:', error.response?.data || error.message);
         res.status(500).json({ 
             error: 'Failed to fetch genres',
             details: error.response?.data?.status_message || error.message
