@@ -30,7 +30,6 @@ class TMDBClient {
 
     async makeRequest(method, endpoint, params = {}) {
         try {
-            // Убедимся, что параметры запроса корректны
             const requestParams = {
                 ...params,
                 language: 'ru-RU',
@@ -49,15 +48,6 @@ class TMDBClient {
                 params: requestParams
             });
 
-            console.log('TMDB Response:', {
-                endpoint,
-                requestParams,
-                status: response.status,
-                page: response.data.page,
-                totalPages: response.data.total_pages,
-                resultsCount: response.data.results?.length
-            });
-
             return response;
         } catch (error) {
             console.error('TMDB Error:', {
@@ -66,16 +56,76 @@ class TMDBClient {
                 error: error.message,
                 response: error.response?.data
             });
-            if (error.response) {
-                throw new Error(`TMDB API Error: ${error.response.data.status_message || error.message}`);
-            }
-            throw new Error(`Network Error: ${error.message}`);
+            throw error;
         }
     }
 
     getImageURL(path, size = 'original') {
         if (!path) return null;
         return `https://image.tmdb.org/t/p/${size}${path}`;
+    }
+
+    isReleased(releaseDate) {
+        if (!releaseDate) return false;
+
+        // Если дата в будущем формате (с "г."), пропускаем фильм
+        if (releaseDate.includes(' г.')) {
+            const currentYear = new Date().getFullYear();
+            const yearStr = releaseDate.split(' ')[2];
+            const year = parseInt(yearStr, 10);
+            return year <= currentYear;
+        }
+
+        // Для ISO дат
+        const date = new Date(releaseDate);
+        if (isNaN(date.getTime())) return true; // Если не смогли распарсить, пропускаем
+
+        const currentDate = new Date();
+        return date <= currentDate;
+    }
+
+    filterAndProcessResults(results, type = 'movie') {
+        if (!Array.isArray(results)) {
+            console.error('Expected results to be an array, got:', typeof results);
+            return [];
+        }
+
+        console.log(`Filtering ${type}s, total before:`, results.length);
+        
+        const filteredResults = results.filter(item => {
+            if (!item || typeof item !== 'object') {
+                console.log('Skipping invalid item object');
+                return false;
+            }
+
+            // Проверяем название (для фильмов - title, для сериалов - name)
+            const title = type === 'movie' ? item.title : item.name;
+            const isNumericTitle = /^\d+$/.test(title || '');
+            const hasCyrillic = /[а-яА-ЯёЁ]/.test(title || '');
+            const hasValidTitle = isNumericTitle || hasCyrillic;
+
+            if (!hasValidTitle) {
+                console.log(`Skipping ${type} - invalid title:`, title);
+                return false;
+            }
+
+            // Проверяем рейтинг
+            const hasValidRating = item.vote_average > 0;
+            if (!hasValidRating) {
+                console.log(`Skipping ${type} - no rating:`, title);
+                return false;
+            }
+
+            return true;
+        });
+
+        console.log(`${type}s after filtering:`, filteredResults.length);
+
+        return filteredResults.map(item => ({
+            ...item,
+            poster_path: this.getImageURL(item.poster_path, 'w500'),
+            backdrop_path: this.getImageURL(item.backdrop_path, 'original')
+        }));
     }
 
     async searchMovies(query, page = 1) {
@@ -89,14 +139,42 @@ class TMDBClient {
         });
 
         const data = response.data;
-        data.results = data.results
-            .filter(movie => movie.poster_path && movie.overview && movie.vote_average > 0)
-            .map(movie => ({
-                ...movie,
-                poster_path: this.getImageURL(movie.poster_path, 'w500'),
-                backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
-            }));
+        data.results = this.filterAndProcessResults(data.results, 'movie');
+        return data;
+    }
 
+    async getPopularMovies(page = 1) {
+        const pageNum = parseInt(page, 10) || 1;
+        console.log('Getting popular movies:', { page: pageNum });
+        
+        const response = await this.makeRequest('GET', '/movie/popular', { 
+            page: pageNum 
+        });
+
+        const data = response.data;
+        data.results = this.filterAndProcessResults(data.results, 'movie');
+        return data;
+    }
+
+    async getTopRatedMovies(page = 1) {
+        const pageNum = parseInt(page, 10) || 1;
+        const response = await this.makeRequest('GET', '/movie/top_rated', { 
+            page: pageNum 
+        });
+
+        const data = response.data;
+        data.results = this.filterAndProcessResults(data.results, 'movie');
+        return data;
+    }
+
+    async getUpcomingMovies(page = 1) {
+        const pageNum = parseInt(page, 10) || 1;
+        const response = await this.makeRequest('GET', '/movie/upcoming', { 
+            page: pageNum 
+        });
+
+        const data = response.data;
+        data.results = this.filterAndProcessResults(data.results, 'movie');
         return data;
     }
 
@@ -110,66 +188,42 @@ class TMDBClient {
         };
     }
 
-    async getPopularMovies(page = 1) {
-        const pageNum = parseInt(page, 10) || 1;
-        console.log('Getting popular movies:', { page: pageNum });
-        
-        const response = await this.makeRequest('GET', '/movie/popular', { 
-            page: pageNum 
-        });
-
-        console.log('Popular movies response:', {
-            requestedPage: pageNum,
-            returnedPage: response.data.page,
-            totalPages: response.data.total_pages,
-            resultsCount: response.data.results.length
-        });
-
-        const data = response.data;
-        data.results = data.results.map(movie => ({
-            ...movie,
-            poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
-        }));
-
-        return data;
-    }
-
-    async getTopRatedMovies(page = 1) {
-        const pageNum = parseInt(page, 10) || 1;
-        const response = await this.makeRequest('GET', '/movie/top_rated', { 
-            page: pageNum 
-        });
-
-        const data = response.data;
-        data.results = data.results.map(movie => ({
-            ...movie,
-            poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
-        }));
-
-        return data;
-    }
-
-    async getUpcomingMovies(page = 1) {
-        const pageNum = parseInt(page, 10) || 1;
-        const response = await this.makeRequest('GET', '/movie/upcoming', { 
-            page: pageNum 
-        });
-
-        const data = response.data;
-        data.results = data.results.map(movie => ({
-            ...movie,
-            poster_path: this.getImageURL(movie.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(movie.backdrop_path, 'original')
-        }));
-
-        return data;
-    }
-
     async getMovieExternalIDs(id) {
         const response = await this.makeRequest('GET', `/movie/${id}/external_ids`);
         return response.data;
+    }
+
+    async getMovieVideos(id) {
+        const response = await this.makeRequest('GET', `/movie/${id}/videos`);
+        return response.data;
+    }
+
+    async getMoviesByGenre(genreId, page = 1) {
+        const pageNum = parseInt(page, 10) || 1;
+        const response = await this.makeRequest('GET', '/discover/movie', {
+            page: pageNum,
+            with_genres: genreId,
+            sort_by: 'popularity.desc'
+        });
+
+        const data = response.data;
+        data.results = this.filterAndProcessResults(data.results, 'movie');
+        return data;
+    }
+
+    // TV Show methods
+    async getPopularTVShows(page = 1) {
+        const pageNum = parseInt(page, 10) || 1;
+        console.log('Getting popular TV shows:', { page: pageNum });
+        
+        const response = await this.makeRequest('GET', '/tv/popular', { 
+            page: pageNum 
+        });
+
+        return {
+            ...response.data,
+            results: this.filterAndProcessResults(response.data.results, 'tv')
+        };
     }
 
     async searchTVShows(query, page = 1) {
@@ -182,58 +236,35 @@ class TMDBClient {
             include_adult: false
         });
 
-        const data = response.data;
-        data.results = data.results
-            .filter(show => show.poster_path && show.overview && show.vote_average > 0)
-            .map(show => ({
-                ...show,
-                poster_path: this.getImageURL(show.poster_path, 'w500'),
-                backdrop_path: this.getImageURL(show.backdrop_path, 'original')
-            }));
-
-        return data;
+        return {
+            ...response.data,
+            results: this.filterAndProcessResults(response.data.results, 'tv')
+        };
     }
 
     async getTVShow(id) {
-        const response = await this.makeRequest('GET', `/tv/${id}`);
+        const response = await this.makeRequest('GET', `/tv/${id}`, {
+            append_to_response: 'credits,videos,similar,external_ids'
+        });
+
         const show = response.data;
         return {
             ...show,
             poster_path: this.getImageURL(show.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(show.backdrop_path, 'original')
+            backdrop_path: this.getImageURL(show.backdrop_path, 'original'),
+            credits: show.credits || { cast: [], crew: [] },
+            videos: show.videos || { results: [] }
         };
     }
 
-    async getPopularTVShows(page = 1) {
-        const pageNum = parseInt(page, 10) || 1;
-        const response = await this.makeRequest('GET', '/tv/popular', { 
-            page: pageNum 
-        });
-
-        const data = response.data;
-        data.results = data.results.map(show => ({
-            ...show,
-            poster_path: this.getImageURL(show.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(show.backdrop_path, 'original')
-        }));
-
-        return data;
+    async getTVShowExternalIDs(id) {
+        const response = await this.makeRequest('GET', `/tv/${id}/external_ids`);
+        return response.data;
     }
 
-    async getTopRatedTVShows(page = 1) {
-        const pageNum = parseInt(page, 10) || 1;
-        const response = await this.makeRequest('GET', '/tv/top_rated', { 
-            page: pageNum 
-        });
-
-        const data = response.data;
-        data.results = data.results.map(show => ({
-            ...show,
-            poster_path: this.getImageURL(show.poster_path, 'w500'),
-            backdrop_path: this.getImageURL(show.backdrop_path, 'original')
-        }));
-
-        return data;
+    async getTVShowVideos(id) {
+        const response = await this.makeRequest('GET', `/tv/${id}/videos`);
+        return response.data;
     }
 }
 

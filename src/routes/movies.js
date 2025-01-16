@@ -72,40 +72,129 @@ router.use((req, res, next) => {
  */
 router.get('/search', async (req, res) => {
     try {
-        const { query, page } = req.query;
-        const pageNum = parseInt(page, 10) || 1;
+        const { query, page = 1 } = req.query;
         
         if (!query) {
             return res.status(400).json({ error: 'Query parameter is required' });
         }
 
-        if (pageNum < 1) {
-            return res.status(400).json({ error: 'Page must be greater than 0' });
-        }
+        console.log('Search request:', { query, page });
 
-        const response = await req.tmdb.searchMovies(query, pageNum);
-        
-        if (!response || !response.data) {
-            throw new Error('Failed to fetch data from TMDB');
-        }
+        const data = await req.tmdb.searchMovies(query, page);
 
-        const { results, ...rest } = response.data;
-        
-        const formattedResults = results.map(movie => ({
+        console.log('Search response:', {
+            page: data.page,
+            total_results: data.total_results,
+            total_pages: data.total_pages,
+            results_count: data.results?.length
+        });
+
+        // Форматируем даты в результатах
+        const formattedResults = data.results.map(movie => ({
             ...movie,
             release_date: formatDate(movie.release_date)
         }));
 
         res.json({
-            ...rest,
+            ...data,
             results: formattedResults
         });
     } catch (error) {
-        console.error('Search movies error:', error);
-        res.status(500).json({ 
-            error: 'Failed to search movies',
-            details: error.message
+        console.error('Error searching movies:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * @swagger
+ * /search/multi:
+ *   get:
+ *     summary: Мультипоиск
+ *     description: Поиск фильмов и сериалов по запросу
+ *     tags: [search]
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         required: true
+ *         description: Поисковый запрос
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         description: Номер страницы
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *     responses:
+ *       200:
+ *         description: Успешный поиск
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       media_type:
+ *                         type: string
+ *                         enum: [movie, tv]
+ */
+router.get('/search/multi', async (req, res) => {
+    try {
+        const { query, page = 1 } = req.query;
+        
+        if (!query) {
+            return res.status(400).json({ error: 'Query parameter is required' });
+        }
+
+        console.log('Multi search request:', { query, page });
+
+        // Параллельный поиск фильмов и сериалов
+        const [moviesData, tvData] = await Promise.all([
+            req.tmdb.searchMovies(query, page),
+            req.tmdb.searchTVShows(query, page)
+        ]);
+
+        // Объединяем и сортируем результаты по популярности
+        const combinedResults = [
+            ...moviesData.results.map(movie => ({
+                ...movie,
+                media_type: 'movie',
+                release_date: formatDate(movie.release_date)
+            })),
+            ...tvData.results.map(show => ({
+                ...show,
+                media_type: 'tv',
+                first_air_date: formatDate(show.first_air_date)
+            }))
+        ].sort((a, b) => b.popularity - a.popularity);
+
+        // Пагинация результатов
+        const itemsPerPage = 20;
+        const startIndex = (parseInt(page) - 1) * itemsPerPage;
+        const paginatedResults = combinedResults.slice(startIndex, startIndex + itemsPerPage);
+
+        res.json({
+            page: parseInt(page),
+            results: paginatedResults,
+            total_pages: Math.ceil(combinedResults.length / itemsPerPage),
+            total_results: combinedResults.length
         });
+    } catch (error) {
+        console.error('Error in multi search:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -452,57 +541,129 @@ router.get('/upcoming', async (req, res) => {
     }
 });
 
-// TV Shows Routes
-router.get('/tv/search', async (req, res) => {
-    try {
-        const { query, page } = req.query;
-        const pageNum = parseInt(page, 10) || 1;
-        
-        if (!query) {
-            return res.status(400).json({ error: 'Query parameter is required' });
-        }
-
-        if (pageNum < 1) {
-            return res.status(400).json({ error: 'Page must be greater than 0' });
-        }
-
-        const response = await req.tmdb.searchTVShows(query, pageNum);
-        
-        if (!response || !response.data) {
-            throw new Error('Failed to fetch data from TMDB');
-        }
-
-        const { results, ...rest } = response.data;
-        
-        const formattedResults = results.map(show => ({
-            ...show,
-            first_air_date: formatDate(show.first_air_date)
-        }));
-
-        res.json({
-            ...rest,
-            results: formattedResults
-        });
-    } catch (error) {
-        console.error('Error searching TV shows:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-router.get('/tv/:id', async (req, res) => {
+/**
+ * @swagger
+ * /movies/{id}/videos:
+ *   get:
+ *     summary: Видео фильма
+ *     description: Получает список видео для фильма (трейлеры, тизеры и т.д.)
+ *     tags: [movies]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID фильма
+ *         schema:
+ *           type: integer
+ *         example: 550
+ *     responses:
+ *       200:
+ *         description: Список видео
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       key:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       site:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *       404:
+ *         description: Видео не найдены
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:id/videos', async (req, res) => {
     try {
         const { id } = req.params;
-        const show = await req.tmdb.getTVShow(id);
-        show.first_air_date = formatDate(show.first_air_date);
-        res.json(show);
+        const videos = await req.tmdb.getMovieVideos(id);
+        
+        if (!videos || !videos.results) {
+            return res.status(404).json({ error: 'Videos not found' });
+        }
+
+        res.json(videos);
     } catch (error) {
-        console.error('Error fetching TV show:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Get videos error:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch videos',
+            details: error.message
+        });
     }
 });
 
-router.get('/tv/popular', async (req, res) => {
+/**
+ * @swagger
+ * /movies/genre/{id}:
+ *   get:
+ *     summary: Фильмы по жанру
+ *     description: Получает список фильмов определенного жанра
+ *     tags: [movies]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID жанра
+ *         schema:
+ *           type: integer
+ *         example: 28
+ *       - in: query
+ *         name: page
+ *         description: Номер страницы
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Список фильмов
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Movie'
+ *       404:
+ *         description: Жанр не найден
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/genre/:id', async (req, res) => {
     try {
+        const { id } = req.params;
         const { page } = req.query;
         const pageNum = parseInt(page, 10) || 1;
 
@@ -510,58 +671,27 @@ router.get('/tv/popular', async (req, res) => {
             return res.status(400).json({ error: 'Page must be greater than 0' });
         }
 
-        const response = await req.tmdb.getPopularTVShows(pageNum);
+        const movies = await req.tmdb.getMoviesByGenre(id, pageNum);
         
-        if (!response || !response.data) {
-            throw new Error('Failed to fetch data from TMDB');
+        if (!movies || !movies.results) {
+            return res.status(404).json({ error: 'Movies not found for this genre' });
         }
 
-        const { results, ...rest } = response.data;
-        
-        const formattedResults = results.map(show => ({
-            ...show,
-            first_air_date: formatDate(show.first_air_date)
+        const formattedResults = movies.results.map(movie => ({
+            ...movie,
+            release_date: formatDate(movie.release_date)
         }));
 
         res.json({
-            ...rest,
+            ...movies,
             results: formattedResults
         });
     } catch (error) {
-        console.error('Error fetching popular TV shows:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-router.get('/tv/top-rated', async (req, res) => {
-    try {
-        const { page } = req.query;
-        const pageNum = parseInt(page, 10) || 1;
-
-        if (pageNum < 1) {
-            return res.status(400).json({ error: 'Page must be greater than 0' });
-        }
-
-        const response = await req.tmdb.getTopRatedTVShows(pageNum);
-        
-        if (!response || !response.data) {
-            throw new Error('Failed to fetch data from TMDB');
-        }
-
-        const { results, ...rest } = response.data;
-        
-        const formattedResults = results.map(show => ({
-            ...show,
-            first_air_date: formatDate(show.first_air_date)
-        }));
-
-        res.json({
-            ...rest,
-            results: formattedResults
+        console.error('Get movies by genre error:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch movies by genre',
+            details: error.message
         });
-    } catch (error) {
-        console.error('Error fetching top rated TV shows:', error);
-        res.status(500).json({ error: error.message });
     }
 });
 

@@ -5,6 +5,7 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const path = require('path');
 const TMDBClient = require('./config/tmdb');
 const healthCheck = require('./utils/health');
+const { formatDate } = require('./utils/date');
 
 const app = express();
 
@@ -38,6 +39,10 @@ const swaggerOptions = {
                 description: 'Операции с фильмами'
             },
             {
+                name: 'tv',
+                description: 'Операции с сериалами'
+            },
+            {
                 name: 'health',
                 description: 'Проверка работоспособности API'
             }
@@ -54,36 +59,6 @@ const swaggerOptions = {
                         title: {
                             type: 'string',
                             description: 'Название фильма'
-                        },
-                        overview: {
-                            type: 'string',
-                            description: 'Описание фильма'
-                        },
-                        release_date: {
-                            type: 'string',
-                            format: 'date',
-                            description: 'Дата выхода'
-                        },
-                        vote_average: {
-                            type: 'number',
-                            description: 'Средняя оценка'
-                        },
-                        poster_path: {
-                            type: 'string',
-                            description: 'URL постера'
-                        },
-                        backdrop_path: {
-                            type: 'string',
-                            description: 'URL фонового изображения'
-                        }
-                    }
-                },
-                Error: {
-                    type: 'object',
-                    properties: {
-                        error: {
-                            type: 'string',
-                            description: 'Сообщение об ошибке'
                         }
                     }
                 }
@@ -138,8 +113,109 @@ app.get('/api-docs/swagger.json', (req, res) => {
     res.send(swaggerDocs);
 });
 
+/**
+ * @swagger
+ * /search/multi:
+ *   get:
+ *     summary: Мультипоиск
+ *     description: Поиск фильмов и сериалов по запросу
+ *     tags: [search]
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         required: true
+ *         description: Поисковый запрос
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         description: Номер страницы
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *     responses:
+ *       200:
+ *         description: Успешный поиск
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       media_type:
+ *                         type: string
+ *                         enum: [movie, tv]
+ */
+app.get('/search/multi', async (req, res) => {
+    try {
+        const { query, page = 1 } = req.query;
+        
+        if (!query) {
+            return res.status(400).json({ error: 'Query parameter is required' });
+        }
+
+        console.log('Multi-search request:', { query, page });
+
+        const response = await req.tmdb.makeRequest('get', '/search/multi', {
+            query,
+            page,
+            include_adult: false,
+            language: 'ru-RU'
+        });
+
+        if (!response.data || !response.data.results) {
+            console.error('Invalid response from TMDB:', response);
+            return res.status(500).json({ error: 'Invalid response from TMDB API' });
+        }
+
+        console.log('Multi-search response:', {
+            page: response.data.page,
+            total_results: response.data.total_results,
+            total_pages: response.data.total_pages,
+            results_count: response.data.results?.length
+        });
+
+        // Форматируем даты в результатах
+        const formattedResults = response.data.results.map(item => ({
+            ...item,
+            release_date: item.release_date ? formatDate(item.release_date) : undefined,
+            first_air_date: item.first_air_date ? formatDate(item.first_air_date) : undefined
+        }));
+
+        res.json({
+            ...response.data,
+            results: formattedResults
+        });
+    } catch (error) {
+        console.error('Error in multi-search:', error.response?.data || error.message);
+        res.status(500).json({ 
+            error: 'Failed to search',
+            details: error.response?.data?.status_message || error.message
+        });
+    }
+});
+
 // API routes
-app.use('/movies', require('./routes/movies'));
+const moviesRouter = require('./routes/movies');
+const tvRouter = require('./routes/tv');
+const imagesRouter = require('./routes/images');
+
+app.use('/movies', moviesRouter);
+app.use('/tv', tvRouter);
+app.use('/images', imagesRouter);
 
 /**
  * @swagger
@@ -171,7 +247,8 @@ app.get('/health', async (req, res) => {
         const health = await healthCheck.getFullHealth(req.tmdb);
         res.json(health);
     } catch (error) {
-        res.status(500).json({ 
+        console.error('Health check error:', error);
+        res.status(500).json({
             status: 'error',
             error: error.message
         });
