@@ -613,19 +613,62 @@ router.get('/:id/videos', async (req, res) => {
 
 /**
  * @swagger
- * /movies/genre/{id}:
+ * /movies/genres:
  *   get:
- *     summary: Фильмы по жанру
- *     description: Получает список фильмов определенного жанра
+ *     summary: Получение списка жанров
+ *     description: Возвращает список всех доступных жанров фильмов
+ *     tags: [movies]
+ *     responses:
+ *       200:
+ *         description: Список жанров
+ */
+router.get('/genres', async (req, res) => {
+    try {
+        console.log('Fetching genres...');
+        const response = await req.tmdb.getGenres();
+        
+        if (!response?.data?.genres) {
+            console.error('Invalid genres response:', response);
+            return res.status(500).json({ 
+                error: 'Invalid response from TMDB',
+                details: 'Genres data is missing'
+            });
+        }
+
+        console.log('Genres response:', {
+            count: response.data.genres.length,
+            genres: response.data.genres
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        console.error('Error fetching genres:', {
+            message: error.message,
+            response: error.response?.data,
+            stack: error.stack
+        });
+        
+        res.status(500).json({ 
+            error: 'Failed to fetch genres',
+            details: error.response?.data?.status_message || error.message
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /movies/discover:
+ *   get:
+ *     summary: Получение фильмов по жанру
+ *     description: Возвращает список фильмов определенного жанра
  *     tags: [movies]
  *     parameters:
- *       - in: path
- *         name: id
+ *       - in: query
+ *         name: with_genres
  *         required: true
  *         description: ID жанра
  *         schema:
  *           type: integer
- *         example: 28
  *       - in: query
  *         name: page
  *         description: Номер страницы
@@ -633,44 +676,23 @@ router.get('/:id/videos', async (req, res) => {
  *           type: integer
  *           minimum: 1
  *           default: 1
- *         example: 1
- *     responses:
- *       200:
- *         description: Список фильмов
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 page:
- *                   type: integer
- *                 results:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Movie'
- *       404:
- *         description: Жанр не найден
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Ошибка сервера
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
-router.get('/genre/:id', async (req, res) => {
+router.get('/discover', async (req, res) => {
     try {
-        const { id } = req.params;
-        const { page = 1 } = req.query;
+        const { with_genres, page = 1 } = req.query;
 
-        console.log('Fetching movies by genre:', { id, page });
+        if (!with_genres) {
+            return res.status(400).json({ 
+                error: 'Missing required parameter',
+                details: 'Genre ID is required'
+            });
+        }
+
+        console.log('Fetching movies by genre:', { with_genres, page });
 
         const response = await req.tmdb.makeRequest('get', '/discover/movie', {
             params: {
-                with_genres: id,
+                with_genres,
                 page,
                 language: 'ru-RU',
                 'vote_count.gte': 100,
@@ -700,35 +722,6 @@ router.get('/genre/:id', async (req, res) => {
         console.error('Error fetching movies by genre:', error.response?.data || error.message);
         res.status(500).json({ 
             error: 'Failed to fetch movies by genre',
-            details: error.response?.data?.status_message || error.message
-        });
-    }
-});
-
-/**
- * @swagger
- * /movies/genres:
- *   get:
- *     summary: Получение списка жанров
- *     description: Возвращает список всех доступных жанров фильмов
- *     tags: [movies]
- *     responses:
- *       200:
- *         description: Список жанров
- */
-router.get('/genres', async (req, res) => {
-    try {
-        console.log('Fetching genres...');
-        const response = await req.tmdb.makeRequest('get', '/genre/movie/list', {
-            language: 'ru-RU'
-        });
-
-        console.log('Genres response:', response.data);
-        res.json(response.data);
-    } catch (error) {
-        console.error('Error fetching genres:', error.response?.data || error.message);
-        res.status(500).json({ 
-            error: 'Failed to fetch genres',
             details: error.response?.data?.status_message || error.message
         });
     }
