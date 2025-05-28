@@ -28,25 +28,37 @@ class TMDBClient {
         );
     }
 
-    async makeRequest(method, endpoint, params = {}) {
+    async makeRequest(method, endpoint, options = {}) {
         try {
-            const requestParams = {
-                ...params,
-                language: 'ru-RU',
-                region: 'RU'
+            // Здесь была ошибка - если передать {params: {...}} в options,
+            // то мы создаем вложенный объект params.params
+            const clientOptions = {
+                method,
+                url: endpoint,
+                ...options
             };
+            
+            // Если не передали params, добавляем базовые
+            if (!clientOptions.params) {
+                clientOptions.params = {};
+            }
+            
+            // Добавляем базовые параметры, если их еще нет
+            if (!clientOptions.params.language) {
+                clientOptions.params.language = 'ru-RU';
+            }
+            
+            if (!clientOptions.params.region) {
+                clientOptions.params.region = 'RU';
+            }
 
             console.log('TMDB Request:', { 
                 method, 
                 endpoint, 
-                params: requestParams 
+                options: clientOptions 
             });
 
-            const response = await this.client({
-                method,
-                url: endpoint,
-                params: requestParams
-            });
+            const response = await this.client(clientOptions);
 
             return response;
         } catch (error) {
@@ -196,6 +208,60 @@ class TMDBClient {
     async getMovieVideos(id) {
         const response = await this.makeRequest('GET', `/movie/${id}/videos`);
         return response.data;
+    }
+
+    // Получение жанров фильмов
+    async getMovieGenres() {
+        console.log('Getting movie genres');
+        try {
+            const response = await this.makeRequest('GET', '/genre/movie/list', {
+                language: 'ru'
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error getting movie genres:', error.message);
+            throw error;
+        }
+    }
+
+    // Получение жанров сериалов
+    async getTVGenres() {
+        console.log('Getting TV genres');
+        try {
+            const response = await this.makeRequest('GET', '/genre/tv/list', {
+                language: 'ru'
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error getting TV genres:', error.message);
+            throw error;
+        }
+    }
+    
+    // Получение всех жанров (фильмы и сериалы)
+    async getAllGenres() {
+        console.log('Getting all genres (movies and TV)');
+        try {
+            const [movieGenres, tvGenres] = await Promise.all([
+                this.getMovieGenres(),
+                this.getTVGenres()
+            ]);
+            
+            // Объединяем жанры, удаляя дубликаты по ID
+            const allGenres = [...movieGenres.genres];
+            
+            // Добавляем жанры сериалов, которых нет в фильмах
+            tvGenres.genres.forEach(tvGenre => {
+                if (!allGenres.some(genre => genre.id === tvGenre.id)) {
+                    allGenres.push(tvGenre);
+                }
+            });
+            
+            return { genres: allGenres };
+        } catch (error) {
+            console.error('Error getting all genres:', error.message);
+            throw error;
+        }
     }
 
     async getMoviesByGenre(genreId, page = 1) {
