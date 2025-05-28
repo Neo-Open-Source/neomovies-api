@@ -151,7 +151,7 @@ router.get('/search', async (req, res) => {
  *                         type: string
  *                         enum: [movie, tv]
  */
-router.get('/search/multi', async (req, res) => {
+router.get('/search/multi', async (req, res) => { // Путь должен быть /search/multi, а не /movies/search/multi, т.к. мы уже находимся в movies.js
     try {
         const { query, page = 1 } = req.query;
         
