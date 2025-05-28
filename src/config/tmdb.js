@@ -96,7 +96,8 @@ class TMDBClient {
         return date <= currentDate;
     }
 
-    filterAndProcessResults(results, type = 'movie') {
+    filterAndProcessResults(results, type) {
+        // Проверяем, что результаты - это массив
         if (!Array.isArray(results)) {
             console.error('Expected results to be an array, got:', typeof results);
             return [];
@@ -112,19 +113,18 @@ class TMDBClient {
 
             // Проверяем название (для фильмов - title, для сериалов - name)
             const title = type === 'movie' ? item.title : item.name;
-            const isNumericTitle = /^\d+$/.test(title || '');
-            const hasCyrillic = /[а-яА-ЯёЁ]/.test(title || '');
-            const hasValidTitle = isNumericTitle || hasCyrillic;
-
-            if (!hasValidTitle) {
-                console.log(`Skipping ${type} - invalid title:`, title);
+            
+            // Убираем проверку на кириллицу, разрешаем любые названия
+            if (!title) {
+                console.log(`Skipping ${type} - no title`);
                 return false;
             }
 
-            // Проверяем рейтинг
-            const hasValidRating = item.vote_average > 0;
-            if (!hasValidRating) {
-                console.log(`Skipping ${type} - no rating:`, title);
+            // Проверяем рейтинг, но снижаем требования
+            // Разрешаем любой рейтинг, даже если он равен 0
+            // Это позволит находить новые фильмы и сериалы без рейтинга
+            if (item.vote_average === undefined) {
+                console.log(`Skipping ${type} - no rating info:`, title);
                 return false;
             }
 
@@ -144,15 +144,53 @@ class TMDBClient {
         const pageNum = parseInt(page, 10) || 1;
         console.log('Searching movies:', { query, page: pageNum });
         
-        const response = await this.makeRequest('GET', '/search/movie', {
-            query,
-            page: pageNum,
-            include_adult: false
-        });
-
-        const data = response.data;
-        data.results = this.filterAndProcessResults(data.results, 'movie');
-        return data;
+        try {
+            // Сначала пробуем поиск по стандартному запросу
+            const response = await this.makeRequest('GET', '/search/movie', {
+                params: {
+                    query,
+                    page: pageNum,
+                    include_adult: false
+                }
+            });
+    
+            const data = response.data;
+            data.results = this.filterAndProcessResults(data.results, 'movie');
+            
+            // Если нет результатов, попробуем поиск по альтернативным параметрам
+            if (data.results.length === 0 && query) {
+                console.log('No results from primary search, trying alternative search...');
+                
+                // Выполним поиск по популярным фильмам и отфильтруем результаты локально
+                const popularResponse = await this.makeRequest('GET', '/movie/popular', { 
+                    params: {
+                        page: 1,
+                        region: '',  // Снимаем ограничение региона
+                        language: 'ru-RU'
+                    }
+                });
+                
+                const queryLower = query.toLowerCase();
+                const filteredResults = popularResponse.data.results.filter(movie => {
+                    // Проверяем совпадение в названии и оригинальном названии
+                    const titleMatch = (movie.title || '').toLowerCase().includes(queryLower);
+                    const originalTitleMatch = (movie.original_title || '').toLowerCase().includes(queryLower);
+                    return titleMatch || originalTitleMatch;
+                });
+                
+                console.log(`Found ${filteredResults.length} results in alternative search`);
+                
+                if (filteredResults.length > 0) {
+                    data.results = this.filterAndProcessResults(filteredResults, 'movie');
+                }
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error in searchMovies:', error);
+            // Возвращаем пустой результат в случае ошибки
+            return { results: [], total_results: 0, total_pages: 0, page: pageNum };
+        }
     }
 
     async getPopularMovies(page = 1) {
@@ -160,7 +198,9 @@ class TMDBClient {
         console.log('Getting popular movies:', { page: pageNum });
         
         const response = await this.makeRequest('GET', '/movie/popular', { 
-            page: pageNum 
+            params: {
+                page: pageNum
+            }
         });
 
         const data = response.data;
@@ -171,7 +211,9 @@ class TMDBClient {
     async getTopRatedMovies(page = 1) {
         const pageNum = parseInt(page, 10) || 1;
         const response = await this.makeRequest('GET', '/movie/top_rated', { 
-            page: pageNum 
+            params: {
+                page: pageNum
+            }
         });
 
         const data = response.data;
@@ -182,7 +224,9 @@ class TMDBClient {
     async getUpcomingMovies(page = 1) {
         const pageNum = parseInt(page, 10) || 1;
         const response = await this.makeRequest('GET', '/movie/upcoming', { 
-            page: pageNum 
+            params: {
+                page: pageNum
+            }
         });
 
         const data = response.data;
@@ -209,13 +253,15 @@ class TMDBClient {
         const response = await this.makeRequest('GET', `/movie/${id}/videos`);
         return response.data;
     }
-
+    
     // Получение жанров фильмов
     async getMovieGenres() {
         console.log('Getting movie genres');
         try {
             const response = await this.makeRequest('GET', '/genre/movie/list', {
-                language: 'ru'
+                params: {
+                    language: 'ru'
+                }
             });
             return response.data;
         } catch (error) {
@@ -229,7 +275,9 @@ class TMDBClient {
         console.log('Getting TV genres');
         try {
             const response = await this.makeRequest('GET', '/genre/tv/list', {
-                language: 'ru'
+                params: {
+                    language: 'ru'
+                }
             });
             return response.data;
         } catch (error) {
@@ -281,7 +329,9 @@ class TMDBClient {
         console.log('Getting popular TV shows:', { page: pageNum });
         
         const response = await this.makeRequest('GET', '/tv/popular', { 
-            page: pageNum 
+            params: {
+                page: pageNum
+            }
         });
 
         return {
@@ -294,16 +344,53 @@ class TMDBClient {
         const pageNum = parseInt(page, 10) || 1;
         console.log('Searching TV shows:', { query, page: pageNum });
         
-        const response = await this.makeRequest('GET', '/search/tv', {
-            query,
-            page: pageNum,
-            include_adult: false
-        });
-
-        return {
-            ...response.data,
-            results: this.filterAndProcessResults(response.data.results, 'tv')
-        };
+        try {
+            // Сначала пробуем стандартный поиск
+            const response = await this.makeRequest('GET', '/search/tv', {
+                params: {
+                    query,
+                    page: pageNum,
+                    include_adult: false
+                }
+            });
+            
+            const data = response.data;
+            data.results = this.filterAndProcessResults(data.results, 'tv');
+            
+            // Если нет результатов, попробуем поиск по альтернативным параметрам
+            if (data.results.length === 0 && query) {
+                console.log('No results from primary TV search, trying alternative search...');
+                
+                // Выполним поиск по популярным сериалам и отфильтруем результаты локально
+                const popularResponse = await this.makeRequest('GET', '/tv/popular', { 
+                    params: {
+                        page: 1,
+                        region: '',  // Снимаем ограничение региона
+                        language: 'ru-RU'
+                    }
+                });
+                
+                const queryLower = query.toLowerCase();
+                const filteredResults = popularResponse.data.results.filter(show => {
+                    // Проверяем совпадение в названии и оригинальном названии
+                    const nameMatch = (show.name || '').toLowerCase().includes(queryLower);
+                    const originalNameMatch = (show.original_name || '').toLowerCase().includes(queryLower);
+                    return nameMatch || originalNameMatch;
+                });
+                
+                console.log(`Found ${filteredResults.length} results in alternative TV search`);
+                
+                if (filteredResults.length > 0) {
+                    data.results = this.filterAndProcessResults(filteredResults, 'tv');
+                }
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error in searchTVShows:', error);
+            // Возвращаем пустой результат в случае ошибки
+            return { results: [], total_results: 0, total_pages: 0, page: pageNum };
+        }
     }
 
     async getTVShow(id) {
