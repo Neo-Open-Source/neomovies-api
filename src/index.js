@@ -225,10 +225,12 @@ app.get('/search/multi', async (req, res) => {
 const moviesRouter = require('./routes/movies');
 const tvRouter = require('./routes/tv');
 const imagesRouter = require('./routes/images');
+const categoriesRouter = require('./routes/categories');
 
 app.use('/movies', moviesRouter);
 app.use('/tv', tvRouter);
 app.use('/images', imagesRouter);
+app.use('/categories', categoriesRouter);
 
 /**
  * @swagger
@@ -287,7 +289,11 @@ module.exports = app;
 
 // Start server only in development
 if (process.env.NODE_ENV !== 'production') {
-    const port = process.env.PORT || 3000;
+    // Проверяем аргументы командной строки
+    const args = process.argv.slice(2);
+    // Используем порт из аргументов командной строки, переменной окружения или по умолчанию 3000
+    const port = args[0] || process.env.PORT || 3000;
+    
     app.listen(port, () => {
         console.log(`Server is running on port ${port}`);
         console.log(`Documentation available at http://localhost:${port}/api-docs`);
