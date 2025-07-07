@@ -15,13 +15,13 @@ const clientOptions = {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
   connectTimeoutMS: 30000,
-  keepAlive: true,
-  keepAliveInitialDelay: 300000,
   retryWrites: true,
   w: 'majority',
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  tlsAllowInvalidCertificates: true
+  tlsAllowInvalidCertificates: true,
+  heartbeatFrequencyMS: 10000,
+  minHeartbeatFrequencyMS: 500,
+  maxIdleTimeMS: 30000,
+  waitQueueTimeoutMS: 30000
 };
 
 if (process.env.NODE_ENV === 'development') {
