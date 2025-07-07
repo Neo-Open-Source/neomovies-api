@@ -9,14 +9,29 @@ if (!uri) {
 let client;
 let clientPromise;
 
+const clientOptions = {
+  maxPoolSize: 10,
+  minPoolSize: 0,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 30000,
+  keepAlive: true,
+  keepAliveInitialDelay: 300000,
+  retryWrites: true,
+  w: 'majority',
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  tlsAllowInvalidCertificates: true
+};
+
 if (process.env.NODE_ENV === 'development') {
   if (!global._mongoClientPromise) {
-    client = new MongoClient(uri);
+    client = new MongoClient(uri, clientOptions);
     global._mongoClientPromise = client.connect();
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  client = new MongoClient(uri);
+  client = new MongoClient(uri, clientOptions);
   clientPromise = client.connect();
 }
 
@@ -25,4 +40,32 @@ async function getDb() {
   return _client.db();
 }
 
-module.exports = { getDb };
+async function closeConnection() {
+  if (client) {
+    await client.close();
+  }
+}
+
+module.exports = { getDb, closeConnection };
+
+process.on('SIGINT', async () => {
+  await closeConnection();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await closeConnection();
+  process.exit(0);
+});
+
+process.on('uncaughtException', async (err) => {
+  console.error('Uncaught Exception:', err);
+  await closeConnection();
+  process.exit(1);
+});
+
+process.on('unhandledRejection', async (reason) => {
+  console.error('Unhandled Rejection:', reason);
+  await closeConnection();
+  process.exit(1);
+});
