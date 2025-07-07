@@ -33,6 +33,7 @@ const swaggerOptions = {
                 description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
             }
         ],
+        security: [{ bearerAuth: [] }],
         tags: [
             {
                 name: 'movies',
@@ -45,9 +46,28 @@ const swaggerOptions = {
             {
                 name: 'health',
                 description: 'Проверка работоспособности API'
+            },
+            {
+                name: 'auth',
+                description: 'Операции авторизации'
+            },
+            {
+                name: 'favorites',
+                description: 'Операции с избранным'
+            },
+            {
+                name: 'players',
+                description: 'Плееры Alloha и Lumex'
             }
         ],
         components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                }
+            },
             schemas: {
                 Movie: {
                     type: 'object',
@@ -226,11 +246,18 @@ const moviesRouter = require('./routes/movies');
 const tvRouter = require('./routes/tv');
 const imagesRouter = require('./routes/images');
 const categoriesRouter = require('./routes/categories');
+const favoritesRouter = require('./routes/favorites');
+const playersRouter = require('./routes/players');
+require('./utils/cleanup');
+const authRouter = require('./routes/auth');
 
 app.use('/movies', moviesRouter);
 app.use('/tv', tvRouter);
 app.use('/images', imagesRouter);
 app.use('/categories', categoriesRouter);
+app.use('/favorites', favoritesRouter);
+app.use('/players', playersRouter);
+app.use('/auth', authRouter);
 
 /**
  * @swagger
