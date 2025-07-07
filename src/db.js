@@ -12,51 +12,90 @@ let clientPromise;
 const clientOptions = {
   maxPoolSize: 10,
   minPoolSize: 0,
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 30000,
   socketTimeoutMS: 45000,
   connectTimeoutMS: 30000,
   retryWrites: true,
   w: 'majority',
-  tlsAllowInvalidCertificates: true,
-  heartbeatFrequencyMS: 10000,
-  minHeartbeatFrequencyMS: 500,
-  maxIdleTimeMS: 30000,
-  waitQueueTimeoutMS: 30000
+  
+  serverApi: {
+    version: '1',
+    strict: true,
+    deprecationErrors: true
+  }
 };
+
+// Connection management
+async function initializeClient() {
+  try {
+    client = new MongoClient(uri, clientOptions);
+    
+    // Minimal essential monitoring
+    client.on('serverHeartbeatFailed', (error) => {
+      console.error('MongoDB server heartbeat failed:', error);
+    });
+
+    client.on('connectionPoolCleared', () => {
+      console.warn('MongoDB connection pool cleared');
+    });
+
+    await client.connect();
+    console.log('MongoDB connection established');
+    return client;
+  } catch (error) {
+    console.error('Failed to initialize MongoDB client:', error);
+    throw error;
+  }
+}
 
 if (process.env.NODE_ENV === 'development') {
   if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, clientOptions);
-    global._mongoClientPromise = client.connect();
+    global._mongoClientPromise = initializeClient();
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  client = new MongoClient(uri, clientOptions);
-  clientPromise = client.connect();
+  clientPromise = initializeClient();
 }
 
 async function getDb() {
-  const _client = await clientPromise;
-  return _client.db();
+  try {
+    const _client = await clientPromise;
+    const db = _client.db();
+    
+    // Basic connection validation
+    if (!_client.topology || !_client.topology.isConnected()) {
+      console.warn('MongoDB connection lost, reconnecting...');
+      await _client.connect();
+    }
+    
+    return db;
+  } catch (error) {
+    console.error('Error getting MongoDB database:', error);
+    throw error;
+  }
 }
 
 async function closeConnection() {
   if (client) {
-    await client.close();
+    try {
+      await client.close(true);
+      client = null;
+      global._mongoClientPromise = null;
+      console.log('MongoDB connection closed');
+    } catch (error) {
+      console.error('Error closing MongoDB connection:', error);
+    }
   }
 }
 
-module.exports = { getDb, closeConnection };
-
-process.on('SIGINT', async () => {
+// Clean up handlers
+const cleanup = async () => {
   await closeConnection();
   process.exit(0);
-});
+};
 
-process.on('SIGTERM', async () => {
-  await closeConnection();
-  process.exit(0);
-});
+process.on('SIGTERM', cleanup);
+process.on('SIGINT', cleanup);
 
 process.on('uncaughtException', async (err) => {
   console.error('Uncaught Exception:', err);
@@ -69,3 +108,5 @@ process.on('unhandledRejection', async (reason) => {
   await closeConnection();
   process.exit(1);
 });
+
+module.exports = { getDb, closeConnection };
