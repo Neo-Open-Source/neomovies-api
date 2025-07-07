@@ -32,7 +32,15 @@ touch .env
 
 4. Добавьте ваш TMDB Access Token в `.env` файл:
 ```
-TMDB_ACCESS_TOKEN=your_token_here
+
+TMDB_ACCESS_TOKEN=your_tmdb_access_token
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+GMAIL_USER=your_gmail@gmail.com
+GMAIL_APP_PASSWORD=your_app_specific_password
+LUMEX_URL=your_lumex_player_url
+ALLOHA_TOKEN=your_token
+
 ```
 
 ## Запуск
@@ -66,7 +74,7 @@ vercel
 
 4. Добавьте переменные окружения в Vercel:
 - Перейдите в настройки проекта на Vercel
-- Добавьте `TMDB_ACCESS_TOKEN` в раздел Environment Variables
+- Добавьте `TMDB_ACCESS_TOKEN`, `MONGODB_URI`, `JWT_SECRET`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `LUMEX_URL`, `ALLOHA_TOKEN` в раздел Environment Variables
 
 ## API Endpoints
 
