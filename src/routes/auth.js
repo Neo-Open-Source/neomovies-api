@@ -3,7 +3,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../db');
+const { ObjectId } = require('mongodb');
 const { sendVerificationEmail } = require('../utils/mailer');
+const authRequired = require('../middleware/auth');
+const fetch = require('node-fetch');
 
 /**
  * @swagger
@@ -202,6 +205,50 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Login failed' });
   }
+});
+
+// Delete account
+/**
+ * @swagger
+ * /auth/profile:
+ *   delete:
+ *     tags: [auth]
+ *     summary: Удаление аккаунта пользователя
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Аккаунт успешно удален
+ *       500:
+ *         description: Ошибка сервера
+ */
+router.delete('/profile', authRequired, async (req, res) => {
+    try {
+        const db = await getDb();
+        const userId = req.user.id;
+
+        // 1. Найти все реакции пользователя, чтобы уменьшить счетчики в cub.rip
+        const userReactions = await db.collection('reactions').find({ userId }).toArray();
+        if (userReactions.length > 0) {
+            const CUB_API_URL = process.env.CUB_API_URL || 'https://cub.rip/api';
+            const removalPromises = userReactions.map(reaction => 
+                fetch(`${CUB_API_URL}/reactions/remove/${reaction.mediaId}/${reaction.type}`, {
+                    method: 'POST' // или 'DELETE', в зависимости от API
+                })
+            );
+            await Promise.all(removalPromises);
+        }
+
+        // 2. Удалить все данные пользователя
+        await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
+        await db.collection('favorites').deleteMany({ userId });
+        await db.collection('reactions').deleteMany({ userId });
+
+        res.status(200).json({ success: true, message: 'Account deleted successfully.' });
+    } catch (err) {
+        console.error('Delete account error:', err);
+        res.status(500).json({ error: 'Failed to delete account.' });
+    }
 });
 
 module.exports = router;

@@ -1,6 +1,33 @@
 const express = require('express');
 const router = express.Router();
+
 const { formatDate } = require('../utils/date');
+
+// Helper to check if a title contains valid characters (Cyrillic, Latin, numbers, common punctuation)
+const isValidTitle = (title = '') => {
+    if (!title) return true; // Allow items with no title (e.g., some TV episodes)
+    // Regular expression to match titles containing Cyrillic, Latin, numbers, and common punctuation.
+    const validTitleRegex = /^[\p{Script=Cyrillic}\p{Script=Latin}\d\s:!?'.,()-]+$/u;
+    return validTitleRegex.test(title.trim());
+};
+
+// Function to filter and format results
+const filterAndFormat = (results = []) => {
+    if (!Array.isArray(results)) return [];
+    return results
+        .filter(item => {
+            if (!item) return false;
+            // Filter out items with a vote average of 0, unless they are upcoming (as they might not have votes yet)
+            if (item.vote_average === 0 && !item.release_date) return false;
+            // Filter based on title validity
+            return isValidTitle(item.title || item.name || '');
+        })
+        .map(item => ({
+            ...item,
+            release_date: item.release_date ? formatDate(item.release_date) : null,
+            first_air_date: item.first_air_date ? formatDate(item.first_air_date) : null,
+        }));
+};
 
 // Middleware для логирования запросов
 router.use((req, res, next) => {
@@ -89,16 +116,8 @@ router.get('/search', async (req, res) => {
             results_count: data.results?.length
         });
 
-        // Форматируем даты в результатах
-        const formattedResults = data.results.map(movie => ({
-            ...movie,
-            release_date: formatDate(movie.release_date)
-        }));
-
-        res.json({
-            ...data,
-            results: formattedResults
-        });
+        const formattedResults = filterAndFormat(data.results);
+        res.json({ ...data, results: formattedResults });
     } catch (error) {
         console.error('Error searching movies:', error);
         res.status(500).json({ error: error.message });
@@ -168,18 +187,10 @@ router.get('/search/multi', async (req, res) => { // Путь должен бы�
         ]);
 
         // Объединяем и сортируем результаты по популярности
-        const combinedResults = [
-            ...moviesData.results.map(movie => ({
-                ...movie,
-                media_type: 'movie',
-                release_date: formatDate(movie.release_date)
-            })),
-            ...tvData.results.map(show => ({
-                ...show,
-                media_type: 'tv',
-                first_air_date: formatDate(show.first_air_date)
-            }))
-        ].sort((a, b) => b.popularity - a.popularity);
+        const combinedResults = filterAndFormat([
+            ...moviesData.results.map(item => ({ ...item, media_type: 'movie' })),
+            ...tvData.results.map(item => ({ ...item, media_type: 'tv' }))
+        ]).sort((a, b) => b.popularity - a.popularity);
 
         // Пагинация результатов
         const itemsPerPage = 20;
@@ -263,10 +274,7 @@ router.get('/popular', async (req, res) => {
             throw new Error('Invalid response from TMDB');
         }
 
-        const formattedResults = movies.results.map(movie => ({
-            ...movie,
-            release_date: formatDate(movie.release_date)
-        }));
+        const formattedResults = filterAndFormat(movies.results);
 
         res.json({
             ...movies,
@@ -333,10 +341,7 @@ router.get('/top-rated', async (req, res) => {
             throw new Error('Invalid response from TMDB');
         }
 
-        const formattedResults = movies.results.map(movie => ({
-            ...movie,
-            release_date: formatDate(movie.release_date)
-        }));
+        const formattedResults = filterAndFormat(movies.results);
 
         res.json({
             ...movies,
@@ -523,10 +528,7 @@ router.get('/upcoming', async (req, res) => {
             throw new Error('Invalid response from TMDB');
         }
 
-        const formattedResults = movies.results.map(movie => ({
-            ...movie,
-            release_date: formatDate(movie.release_date)
-        }));
+        const formattedResults = filterAndFormat(movies.results);
 
         res.json({
             ...movies,
