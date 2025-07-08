@@ -26,49 +26,28 @@ const clientOptions = {
 };
 
 // Connection management
-async function initializeClient() {
-  try {
-    client = new MongoClient(uri, clientOptions);
-    
-    // Minimal essential monitoring
-    client.on('serverHeartbeatFailed', (error) => {
-      console.error('MongoDB server heartbeat failed:', error);
-    });
-
-    client.on('connectionPoolCleared', () => {
-      console.warn('MongoDB connection pool cleared');
-    });
-
-    await client.connect();
-    console.log('MongoDB connection established');
-    return client;
-  } catch (error) {
-    console.error('Failed to initialize MongoDB client:', error);
-    throw error;
-  }
-}
-
 if (process.env.NODE_ENV === 'development') {
+  // In development mode, use a global variable so that the value
+  // is preserved across module reloads caused by HMR (Hot Module Replacement).
   if (!global._mongoClientPromise) {
-    global._mongoClientPromise = initializeClient();
+    client = new MongoClient(uri, clientOptions);
+    global._mongoClientPromise = client.connect();
+    console.log('MongoDB connection initialized in development');
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  clientPromise = initializeClient();
+  // In production mode, it's best to not use a global variable.
+  client = new MongoClient(uri, clientOptions);
+  clientPromise = client.connect();
+  console.log('MongoDB connection initialized in production');
 }
+
+
 
 async function getDb() {
   try {
-    const _client = await clientPromise;
-    const db = _client.db();
-    
-    // Basic connection validation
-    if (!_client.topology || !_client.topology.isConnected()) {
-      console.warn('MongoDB connection lost, reconnecting...');
-      await _client.connect();
-    }
-    
-    return db;
+    const mongoClient = await clientPromise;
+    return mongoClient.db();
   } catch (error) {
     console.error('Error getting MongoDB database:', error);
     throw error;
