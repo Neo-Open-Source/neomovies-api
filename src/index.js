@@ -249,9 +249,9 @@ const categoriesRouter = require('./routes/categories');
 const favoritesRouter = require('./routes/favorites');
 const playersRouter = require('./routes/players');
 const reactionsRouter = require('./routes/reactions');
+const routerToUse = reactionsRouter.default || reactionsRouter;
 require('./utils/cleanup');
 const authRouter = require('./routes/auth');
-const sessionRouter = require('./routes/session.routes');
 
 app.use('/api/movies', moviesRouter);
 app.use('/api/tv', tvRouter);
@@ -259,9 +259,8 @@ app.use('/api/images', imagesRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/players', playersRouter);
-app.use('/api/reactions', reactionsRouter);
+app.use('/api/reactions', routerToUse);
 app.use('/auth', authRouter);
-app.use('/api/sessions', sessionRouter);
 
 /**
  * @swagger

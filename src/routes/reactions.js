@@ -1,7 +1,8 @@
 const { Router } = require('express');
 const { getDb } = require('../db');
 const authRequired = require('../middleware/auth');
-const fetch = require('node-fetch');
+console.log('typeof authRequired:', typeof authRequired, authRequired);
+const fetch = global.fetch || require('node-fetch');
 
 const router = Router();
 
