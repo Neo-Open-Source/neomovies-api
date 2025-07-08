@@ -92,6 +92,17 @@ router.get('/check/:mediaId', async (req, res) => {
  *         schema:
  *           type: string
  *           enum: [movie, tv]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               posterPath:
+ *                 type: string
  *     responses:
  *       200:
  *         description: OK
@@ -100,6 +111,7 @@ router.post('/:mediaId', async (req, res) => {
   try {
     const { mediaId } = req.params;
     const { mediaType } = req.query;
+    const { title, posterPath } = req.body;
     if (!mediaType) return res.status(400).json({ error: 'mediaType required' });
 
     const db = await getDb();
@@ -107,6 +119,8 @@ router.post('/:mediaId', async (req, res) => {
       userId: req.user.email || req.user.id,
       mediaId,
       mediaType,
+      title: title || '',
+      posterPath: posterPath || '',
       createdAt: new Date()
     });
     res.json({ success: true });
