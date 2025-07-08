@@ -81,6 +81,19 @@ const swaggerOptions = {
                             description: 'Название фильма'
                         }
                     }
+                },
+                Error: {
+                    type: 'object',
+                    properties: {
+                        error: {
+                            type: 'string',
+                            description: 'Сообщение об ошибке'
+                        },
+                        details: {
+                            type: 'string',
+                            description: 'Детали ошибки'
+                        }
+                    }
                 }
             }
         }
