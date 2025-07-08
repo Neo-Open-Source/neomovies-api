@@ -9,6 +9,29 @@ const router = Router();
 const CUB_API_URL = 'https://cub.rip/api';
 const VALID_REACTIONS = ['fire', 'nice', 'think', 'bore', 'shit'];
 
+// Получить все счетчики реакций для медиа
+router.get('/:mediaId/counts', async (req, res) => {
+    try {
+        const { mediaId } = req.params;
+        const response = await fetch(`${CUB_API_URL}/reactions/get/${mediaId}`);
+        if (!response.ok) {
+            throw new Error(`CUB API request failed with status ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Преобразуем ответ от CUB API в удобный формат { type: count }
+        const counts = data.result.reduce((acc, reaction) => {
+            acc[reaction.type] = reaction.counter;
+            return acc;
+        }, {});
+
+        res.json(counts);
+    } catch (err) {
+        console.error('Get reaction counts error:', err);
+        res.status(500).json({ error: 'Failed to get reaction counts' });
+    }
+});
+
 // --- PUBLIC ROUTE ---
 // Получить общее количество реакций для медиа
 router.get('/counts/:mediaType/:mediaId', async (req, res) => {
