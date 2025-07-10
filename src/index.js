@@ -108,6 +108,7 @@ const corsOptions = {
   origin: [
     'http://localhost:3000',
     'https://neo-movies.vercel.app',
+    'https://neomovies.sofron.ru',
     /\.vercel\.app$/
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
