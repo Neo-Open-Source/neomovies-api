@@ -12,11 +12,17 @@ let clientPromise;
 const clientOptions = {
   maxPoolSize: 10,
   minPoolSize: 0,
-  serverSelectionTimeoutMS: 30000,
-  socketTimeoutMS: 45000,
-  connectTimeoutMS: 30000,
+  // Увеличиваем таймауты для медленных соединений
+  serverSelectionTimeoutMS: 60000, // 60 секунд
+  socketTimeoutMS: 0, // Убираем таймаут сокета
+  connectTimeoutMS: 60000, // 60 секунд
   retryWrites: true,
   w: 'majority',
+  
+  // Добавляем настройки для лучшей стабильности
+  maxIdleTimeMS: 30000,
+  waitQueueTimeoutMS: 5000,
+  heartbeatFrequencyMS: 10000,
   
   serverApi: {
     version: '1',
@@ -25,50 +31,110 @@ const clientOptions = {
   }
 };
 
+// Функция для создания подключения с retry логикой
+async function createConnection() {
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  while (attempts < maxAttempts) {
+    try {
+      console.log(`Attempting to connect to MongoDB (attempt ${attempts + 1}/${maxAttempts})...`);
+      const client = new MongoClient(uri, clientOptions);
+      await client.connect();
+      
+      // Проверяем подключение
+      await client.db().admin().ping();
+      console.log('MongoDB connection successful');
+      return client;
+      
+    } catch (error) {
+      attempts++;
+      console.error(`Connection attempt ${attempts} failed:`, error.message);
+      
+      if (attempts >= maxAttempts) {
+        throw new Error(`Failed to connect to MongoDB after ${maxAttempts} attempts: ${error.message}`);
+      }
+      
+      // Ждем перед следующей попыткой
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+}
+
 // Connection management
 if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
+  // В режиме разработки используем глобальную переменную
   if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, clientOptions);
-    global._mongoClientPromise = client.connect();
+    global._mongoClientPromise = createConnection();
     console.log('MongoDB connection initialized in development');
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, clientOptions);
-  clientPromise = client.connect();
+  // В продакшене создаем новое подключение
+  clientPromise = createConnection();
   console.log('MongoDB connection initialized in production');
 }
-
-
 
 async function getDb() {
   try {
     const mongoClient = await clientPromise;
+    
+    // Проверяем, что подключение все еще активно
+    if (!mongoClient || mongoClient.topology.isDestroyed()) {
+      throw new Error('MongoDB connection is not available');
+    }
+    
     return mongoClient.db();
   } catch (error) {
     console.error('Error getting MongoDB database:', error);
-    throw error;
+    
+    // Пытаемся переподключиться
+    console.log('Attempting to reconnect...');
+    if (process.env.NODE_ENV === 'development') {
+      global._mongoClientPromise = createConnection();
+      clientPromise = global._mongoClientPromise;
+    } else {
+      clientPromise = createConnection();
+    }
+    
+    const mongoClient = await clientPromise;
+    return mongoClient.db();
   }
 }
 
 async function closeConnection() {
-  if (client) {
-    try {
-      await client.close(true);
-      client = null;
-      global._mongoClientPromise = null;
+  try {
+    const mongoClient = await clientPromise;
+    if (mongoClient) {
+      await mongoClient.close(true);
       console.log('MongoDB connection closed');
-    } catch (error) {
-      console.error('Error closing MongoDB connection:', error);
     }
+  } catch (error) {
+    console.error('Error closing MongoDB connection:', error);
+  } finally {
+    client = null;
+    if (process.env.NODE_ENV === 'development') {
+      global._mongoClientPromise = null;
+    }
+  }
+}
+
+// Функция для проверки подключения
+async function checkConnection() {
+  try {
+    const db = await getDb();
+    await db.admin().ping();
+    console.log('MongoDB connection is healthy');
+    return true;
+  } catch (error) {
+    console.error('MongoDB connection check failed:', error.message);
+    return false;
   }
 }
 
 // Clean up handlers
 const cleanup = async () => {
+  console.log('Cleaning up MongoDB connection...');
   await closeConnection();
   process.exit(0);
 };
@@ -88,4 +154,4 @@ process.on('unhandledRejection', async (reason) => {
   process.exit(1);
 });
 
-module.exports = { getDb, closeConnection };
+module.exports = { getDb, closeConnection, checkConnection };
