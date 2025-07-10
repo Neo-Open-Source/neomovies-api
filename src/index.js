@@ -104,13 +104,24 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://neo-movies.vercel.app',
+  'https://neomovies.sofron.ru'
+];
+
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://neo-movies.vercel.app',
-    'https://neomovies.sofron.ru',
-    /\.vercel\.app$/
-  ],
+  origin: function (origin, callback) {
+    // Разрешаем запросы без origin (например, от мобильных приложений или curl)
+    if (!origin) return callback(null, true);
+
+    // Разрешаем, если домен есть в списке или это превью-сборка Vercel
+    if (allowedOrigins.indexOf(origin) !== -1 || /\.vercel\.app$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
