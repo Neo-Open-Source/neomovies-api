@@ -105,12 +105,7 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
 // CORS configuration
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://neo-movies.vercel.app',
-    'https://neomovies.sofron.ru',
-    /\.vercel\.app$/
-  ],
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
