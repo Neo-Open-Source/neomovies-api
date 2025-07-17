@@ -150,16 +150,24 @@ class RedApiClient {
      * @param {string} title - название на русском  
      * @param {string} originalTitle - оригинальное название  
      * @param {number} year - год выпуска  
+     * @param {number} season - номер сезона (опционально)  
      * @returns {Promise<Array>}  
      */  
-    async searchSeries(title, originalTitle, year) {  
-        const results = await this.searchTorrents({  
+    async searchSeries(title, originalTitle, year, season = null) {  
+        const searchParams = {
             title,  
             title_original: originalTitle,  
             year,  
             is_serial: 2,  
-            category: '5000'  
-        });  
+            category: '5000'
+        };
+        
+        // Добавляем параметр season если он указан
+        if (season) {
+            searchParams.season = season;
+        }
+        
+        const results = await this.searchTorrents(searchParams);  
   
         return this.filterByContentType(results, 'serial');  
     }  
@@ -645,6 +653,7 @@ class RedApiClient {
 
     /**
      * Фильтрация результатов по сезону на клиенте
+     * Показываем только те торренты, где в названии найден номер сезона
      * @param {Array} results - результаты поиска
      * @param {number} season - номер сезона
      * @returns {Array}
@@ -653,21 +662,21 @@ class RedApiClient {
         if (!season) return results;
 
         return results.filter(torrent => {
-            // Проверяем поле seasons
-            if (torrent.seasons && Array.isArray(torrent.seasons)) {
-                return torrent.seasons.includes(season);
+            // Используем точную регулярку для поиска сезона в названии
+            const title = torrent.title;
+            const seasonRegex = /(?:s|сезон)[\s:]*(\d+)|(\d+)\s*сезон/gi;
+            
+            // Проверяем, есть ли в названии нужный сезон
+            let foundSeason = false;
+            for (const match of title.matchAll(seasonRegex)) {
+                const seasonNumber = parseInt(match[1] || match[2]);
+                if (!isNaN(seasonNumber) && seasonNumber === season) {
+                    foundSeason = true;
+                    break;
+                }
             }
-
-            // Проверяем название торрента
-            const title = torrent.title.toLowerCase();
-            const seasonPatterns = [
-                new RegExp(`сезон[\\s:]*${season}`, 'i'),
-                new RegExp(`season[\\s:]*${season}`, 'i'),
-                new RegExp(`s${season}(?![0-9])`, 'i'),
-                new RegExp(`${season}[\\s]*сезон`, 'i')
-            ];
-
-            return seasonPatterns.some(pattern => pattern.test(title));
+            
+            return foundSeason;
         });
     }
 
