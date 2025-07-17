@@ -236,6 +236,13 @@ router.get('/search/:imdbId', async (req, res) => {
             filteredResults = redApiClient.filterByQuality(results, qualityFilter);
             console.log(`Filtered to ${filteredResults.length} torrents by quality`);
         }
+        
+        // Дополнительная фильтрация по сезону для сериалов
+        if (type === 'tv' && season) {
+            const redApiClient = torrentService.redApiClient;
+            filteredResults = redApiClient.filterBySeason(filteredResults, parseInt(season));
+            console.log(`Filtered to ${filteredResults.length} torrents for season ${season}`);
+        }
 
         // Группировка или обычная сортировка
         let responseData;
