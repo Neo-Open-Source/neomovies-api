@@ -58,6 +58,10 @@ const swaggerOptions = {
             {
                 name: 'players',
                 description: 'Плееры Alloha и Lumex'
+            },
+            {
+                name: 'torrents',
+                description: 'Поиск торрентов'
             }
         ],
         components: {
@@ -261,6 +265,7 @@ const reactionsRouter = require('./routes/reactions');
 const routerToUse = reactionsRouter.default || reactionsRouter;
 require('./utils/cleanup');
 const authRouter = require('./routes/auth');
+const torrentsRouter = require('./routes/torrents');
 
 app.use('/movies', moviesRouter);
 app.use('/tv', tvRouter);
@@ -270,6 +275,7 @@ app.use('/favorites', favoritesRouter);
 app.use('/players', playersRouter);
 app.use('/reactions', routerToUse);
 app.use('/auth', authRouter);
+app.use('/torrents', torrentsRouter);
 
 /**
  * @swagger
