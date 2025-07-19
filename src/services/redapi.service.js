@@ -72,6 +72,7 @@ class RedApiClient {
             title: torrent.Title,  
             tracker: torrent.Tracker,  
             size: torrent.Size,  
+            size_gb: torrent.Size ? (torrent.Size / (1024 * 1024 * 1024)).toFixed(2) : null,  
             seeders: torrent.Seeders,  
             peers: torrent.Peers,  
             magnet: torrent.MagnetUri,  
@@ -81,7 +82,7 @@ class RedApiClient {
             voice: torrent.Info?.voices,  
             details: torrent.Details,  
             types: torrent.Info?.types,  
-            seasons: torrent.Info?.seasons, // Добавляем информацию о сезонах  
+            seasons: torrent.Info?.seasons,  
             source: 'RedAPI'  
         }));  
     }  
@@ -253,7 +254,7 @@ class RedApiClient {
     async getMovieInfoByKinopoisk(kpId) {  
         try {  
             const response = await axios.get(  
-                `https://api.alloha.tv/?token=04941a9a3ca3ac16e2b4327347bbc1&kp=${kpId}`,  
+                `https://api.alloha.tv/?token=04941a9a3ca3ac16e2b4327347bbc1&kp=${kpId}`,  //Данный токен для alloha является открытым(взят из Lampac)
                 { timeout: 10000 }  
             );  
   
