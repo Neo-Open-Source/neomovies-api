@@ -72,7 +72,6 @@ class RedApiClient {
             title: torrent.Title,  
             tracker: torrent.Tracker,  
             size: torrent.Size,  
-            size_gb: torrent.Size ? (torrent.Size / (1024 * 1024 * 1024)).toFixed(2) : null,  
             seeders: torrent.Seeders,  
             peers: torrent.Peers,  
             magnet: torrent.MagnetUri,  
