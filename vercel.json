@@ -2,17 +2,20 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.js",
-      "use": "@vercel/node"
+      "src": "api/index.go",
+      "use": "@vercel/go",
+      "config": {
+        "maxDuration": 10
+      }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/api/index.js"
+      "dest": "/api/index.go"
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "GO_VERSION": "1.21"
   }
 }
