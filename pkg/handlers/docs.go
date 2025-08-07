@@ -259,16 +259,30 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 			},
 			"/api/v1/torrents/search/{imdbId}": map[string]interface{}{
 				"get": map[string]interface{}{
-					"summary": "Поиск торрентов",
+					"summary":     "Поиск торрентов",
 					"description": "Поиск торрентов по IMDB ID",
-					"tags": []string{"Torrents"},
+					"tags":        []string{"Torrents"},
 					"parameters": []map[string]interface{}{
 						{
-							"name": "imdbId",
-							"in": "path",
-							"required": true,
-							"schema": map[string]string{"type": "string"},
-							"description": "IMDB ID фильма",
+							"name":        "imdbId",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "string"},
+							"description": "IMDB ID фильма или сериала",
+						},
+						{
+							"name":        "type",
+							"in":          "query",
+							"required":    true,
+							"schema":      map[string]interface{}{"type": "string", "enum": []string{"movie", "tv", "serial"}},
+							"description": "Тип контента: movie (фильм) или tv/serial (сериал)",
+						},
+						{
+							"name":        "season",
+							"in":          "query",
+							"required":    false,
+							"schema":      map[string]interface{}{"type": "integer"},
+							"description": "Номер сезона (для сериалов)",
 						},
 					},
 					"responses": map[string]interface{}{
@@ -545,6 +559,38 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 						},
 					},
 				},
+                // --- Добавленный блок для DELETE-запроса ---
+                "delete": map[string]interface{}{
+					"summary": "Удалить аккаунт пользователя",
+					"description": "Полное и безвозвратное удаление аккаунта пользователя и всех связанных с ним данных (избранное, реакции)",
+					"tags": []string{"Authentication"},
+					"security": []map[string][]string{
+						{"bearerAuth": []string{}},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "Аккаунт успешно удален",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"schema": map[string]interface{}{
+										"type": "object",
+										"properties": map[string]interface{}{
+											"success": map[string]interface{}{"type": "boolean"},
+											"message": map[string]interface{}{"type": "string"},
+										},
+									},
+								},
+							},
+						},
+						"401": map[string]interface{}{
+							"description": "Неавторизованный запрос",
+						},
+						"500": map[string]interface{}{
+							"description": "Внутренняя ошибка сервера",
+						},
+					},
+				},
+                // ------------------------------------------
 			},
 			"/api/v1/movies/search": map[string]interface{}{
 				"get": map[string]interface{}{
@@ -861,11 +907,13 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 							"name": "page",
 							"in": "query",
 							"schema": map[string]string{"type": "integer", "default": "1"},
+							"description": "Номер страницы",
 						},
 						{
 							"name": "language",
 							"in": "query",
 							"schema": map[string]string{"type": "string", "default": "ru-RU"},
+							"description": "Язык ответа",
 						},
 					},
 					"responses": map[string]interface{}{

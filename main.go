@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -13,13 +13,14 @@ import (
 	"neomovies-api/pkg/database"
 	appHandlers "neomovies-api/pkg/handlers"
 	"neomovies-api/pkg/middleware"
+    "neomovies-api/pkg/monitor"
 	"neomovies-api/pkg/services"
 )
 
 func main() {
 	// Загружаем переменные окружения
 	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found")
+		// Не выводим предупреждение в продакшене
 	}
 
 	// Инициализируем конфигурацию
@@ -28,14 +29,15 @@ func main() {
 	// Подключаемся к базе данных
 	db, err := database.Connect(cfg.MongoURI)
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		fmt.Printf("❌ Failed to connect to database: %v\n", err)
+		os.Exit(1)
 	}
 	defer database.Disconnect()
 
 	// Инициализируем сервисы
 	tmdbService := services.NewTMDBService(cfg.TMDBAccessToken)
 	emailService := services.NewEmailService(cfg)
-	authService := services.NewAuthService(db, cfg.JWTSecret, emailService)
+	authService := services.NewAuthService(db, cfg.JWTSecret, emailService, cfg.BaseURL)
 	movieService := services.NewMovieService(db, tmdbService)
 	tvService := services.NewTVService(db, tmdbService)
 	torrentService := services.NewTorrentService()
@@ -75,11 +77,11 @@ func main() {
 
 	// Категории
 	api.HandleFunc("/categories", categoriesHandler.GetCategories).Methods("GET")
-	api.HandleFunc("/categories/{id}/movies", categoriesHandler.GetMoviesByCategory).Methods("GET")// Плееры - ИСПРАВЛЕНО: добавлены параметры {imdb_id}
+	api.HandleFunc("/categories/{id}/movies", categoriesHandler.GetMoviesByCategory).Methods("GET")
 
-    // Плееры
-    api.HandleFunc("/players/alloha/{imdb_id}", playersHandler.GetAllohaPlayer).Methods("GET")
-    api.HandleFunc("/players/lumex/{imdb_id}", playersHandler.GetLumexPlayer).Methods("GET")
+	// Плееры - ИСПРАВЛЕНО: добавлены параметры {imdb_id}
+	api.HandleFunc("/players/alloha/{imdb_id}", playersHandler.GetAllohaPlayer).Methods("GET")
+	api.HandleFunc("/players/lumex/{imdb_id}", playersHandler.GetLumexPlayer).Methods("GET")
 
 	// Торренты
 	api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
@@ -95,7 +97,7 @@ func main() {
 	// Изображения (прокси для TMDB)
 	api.HandleFunc("/images/{size}/{path:.*}", imagesHandler.GetImage).Methods("GET")
 
-	// Маршруты для фильмов (некоторые публичные, некоторые приватные)
+	// Маршруты для фильмов
 	api.HandleFunc("/movies/search", movieHandler.Search).Methods("GET")
 	api.HandleFunc("/movies/popular", movieHandler.Popular).Methods("GET")
 	api.HandleFunc("/movies/top-rated", movieHandler.TopRated).Methods("GET")
@@ -104,6 +106,7 @@ func main() {
 	api.HandleFunc("/movies/{id}", movieHandler.GetByID).Methods("GET")
 	api.HandleFunc("/movies/{id}/recommendations", movieHandler.GetRecommendations).Methods("GET")
 	api.HandleFunc("/movies/{id}/similar", movieHandler.GetSimilar).Methods("GET")
+	api.HandleFunc("/movies/{id}/external-ids", movieHandler.GetExternalIDs).Methods("GET")
 
 	// Маршруты для сериалов
 	api.HandleFunc("/tv/search", tvHandler.Search).Methods("GET")
@@ -114,6 +117,7 @@ func main() {
 	api.HandleFunc("/tv/{id}", tvHandler.GetByID).Methods("GET")
 	api.HandleFunc("/tv/{id}/recommendations", tvHandler.GetRecommendations).Methods("GET")
 	api.HandleFunc("/tv/{id}/similar", tvHandler.GetSimilar).Methods("GET")
+	api.HandleFunc("/tv/{id}/external-ids", tvHandler.GetExternalIDs).Methods("GET")
 
 	// Приватные маршруты (требуют авторизации)
 	protected := api.PathPrefix("").Subrouter()
@@ -134,22 +138,43 @@ func main() {
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.RemoveReaction).Methods("DELETE")
 	protected.HandleFunc("/reactions/my", reactionsHandler.GetMyReactions).Methods("GET")
 
-	// CORS и другие middleware
+	// CORS middleware
 	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"}), 
-                handlers.AllowCredentials(),
+		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"}),
+		handlers.AllowCredentials(),
 	)
 
+	// Применяем мониторинг запросов только в development
+	var finalHandler http.Handler
+	if cfg.NodeEnv == "development" {
+		// Добавляем middleware для мониторинга запросов
+		r.Use(monitor.RequestMonitor())
+		finalHandler = corsHandler(r)
+		
+		// Выводим заголовок мониторинга
+		fmt.Println("\n🚀 NeoMovies API Server")
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Printf("📡 Server: http://localhost:%s\n", cfg.Port)
+		fmt.Printf("📚 Docs:   http://localhost:%s/\n", cfg.Port)
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Printf("%-6s %-3s │ %-60s │ %8s\n", "METHOD", "CODE", "ENDPOINT", "TIME")
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	} else {
+		finalHandler = corsHandler(r)
+		fmt.Printf("✅ Server starting on port %s\n", cfg.Port)
+	}
+
 	// Определяем порт
-	port := os.Getenv("PORT")
+	port := cfg.Port
 	if port == "" {
 		port = "3000"
 	}
 
-	log.Printf("Server starting on port %s", port)
-	log.Printf("API documentation available at: http://localhost:%s/", port)
-	
-	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
+	// Запускаем сервер
+	if err := http.ListenAndServe(":"+port, finalHandler); err != nil {
+		fmt.Printf("❌ Server failed to start: %v\n", err)
+		os.Exit(1)
+	}
 }
