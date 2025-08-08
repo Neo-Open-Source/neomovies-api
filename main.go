@@ -104,7 +104,8 @@ func main() {
 	api.HandleFunc("/movies/upcoming", movieHandler.Upcoming).Methods("GET")
 	api.HandleFunc("/movies/now-playing", movieHandler.NowPlaying).Methods("GET")
 	api.HandleFunc("/movies/{id}", movieHandler.GetByID).Methods("GET")
-	api.HandleFunc("/movies/{id}/recommendations", movieHandler.GetRecommendations).Methods("GET")
+	
+api.HandleFunc("/movies/{id}/recommendations", movieHandler.GetRecommendations).Methods("GET")
 	api.HandleFunc("/movies/{id}/similar", movieHandler.GetSimilar).Methods("GET")
 	api.HandleFunc("/movies/{id}/external-ids", movieHandler.GetExternalIDs).Methods("GET")
 
@@ -131,6 +132,8 @@ func main() {
 	// Пользовательские данные
 	protected.HandleFunc("/auth/profile", authHandler.GetProfile).Methods("GET")
 	protected.HandleFunc("/auth/profile", authHandler.UpdateProfile).Methods("PUT")
+	// Новый маршрут удаления аккаунта
+	protected.HandleFunc("/auth/profile", authHandler.DeleteAccount).Methods("DELETE")
 
 	// Реакции (приватные)
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}/my-reaction", reactionsHandler.GetMyReaction).Methods("GET")
@@ -140,7 +143,8 @@ func main() {
 
 	// CORS middleware
 	corsHandler := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
+
+handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"}),
 		handlers.AllowCredentials(),

@@ -122,7 +122,26 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Верификация email
+// Удаление аккаунта
+func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.authService.DeleteAccount(r.Context(), userID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Message: "Account deleted successfully",
+	})
+}
+// Подтверждение email
 func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	var req models.VerifyEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

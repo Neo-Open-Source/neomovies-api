@@ -112,7 +112,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
     api.HandleFunc("/torrents/anime", torrentsHandler.SearchAnime).Methods("GET")
     api.HandleFunc("/torrents/seasons", torrentsHandler.GetAvailableSeasons).Methods("GET")
     api.HandleFunc("/torrents/search", torrentsHandler.SearchByQuery).Methods("GET")
-
+    
     // Реакции (публичные)
     api.HandleFunc("/reactions/{mediaType}/{mediaId}/counts", reactionsHandler.GetReactionCounts).Methods("GET")
 
@@ -153,7 +153,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
     // Пользовательские данные
     protected.HandleFunc("/auth/profile", authHandler.GetProfile).Methods("GET")
     protected.HandleFunc("/auth/profile", authHandler.UpdateProfile).Methods("PUT")
-
+    // Новый маршрут удаления аккаунта
+    protected.HandleFunc("/auth/profile", authHandler.DeleteAccount).Methods("DELETE")
+    
     // Реакции (приватные)
     protected.HandleFunc("/reactions/{mediaType}/{mediaId}/my-reaction", reactionsHandler.GetMyReaction).Methods("GET")
     protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.SetReaction).Methods("POST")
