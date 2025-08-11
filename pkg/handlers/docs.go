@@ -251,6 +251,32 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 				},
 			},
+			"/api/v1/players/vibix/{imdb_id}": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "Vibix плеер по IMDb ID",
+					"description": "Возвращает HTML-страницу с iframe Vibix для указанного IMDb ID",
+					"tags":        []string{"Players"},
+					"parameters": []map[string]interface{}{
+						{
+							"name":        "imdb_id",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "string"},
+							"description": "IMDb ID, например tt0133093",
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "HTML со встроенным Vibix плеером",
+							"content": map[string]interface{}{
+								"text/html": map[string]interface{}{},
+							},
+						},
+						"404": map[string]interface{}{"description": "Фильм не найден"},
+						"503": map[string]interface{}{"description": "VIBIX_TOKEN не настроен"},
+					},
+				},
+			},
 			"/api/v1/torrents/search/{imdbId}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Поиск торрентов",
@@ -553,8 +579,7 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 						},
 					},
 				},
-                // --- Добавленный блок для DELETE-запроса ---
-                "delete": map[string]interface{}{
+				"delete": map[string]interface{}{
 					"summary": "Удалить аккаунт пользователя",
 					"description": "Полное и безвозвратное удаление аккаунта пользователя и всех связанных с ним данных (избранное, реакции)",
 					"tags": []string{"Authentication"},
@@ -584,7 +609,6 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 						},
 					},
 				},
-                // ------------------------------------------
 			},
 			"/api/v1/movies/search": map[string]interface{}{
 				"get": map[string]interface{}{

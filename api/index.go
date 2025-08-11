@@ -91,6 +91,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
     api.HandleFunc("/players/alloha/{imdb_id}", playersHandler.GetAllohaPlayer).Methods("GET")
     api.HandleFunc("/players/lumex/{imdb_id}", playersHandler.GetLumexPlayer).Methods("GET")
+    api.HandleFunc("/players/vibix/{imdb_id}", playersHandler.GetVibixPlayer).Methods("GET")
 
     api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
     api.HandleFunc("/torrents/movies", torrentsHandler.SearchMovies).Methods("GET")

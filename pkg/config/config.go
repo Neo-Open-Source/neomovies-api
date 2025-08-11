@@ -23,6 +23,8 @@ type Config struct {
 	GoogleClientSecret string
 	GoogleRedirectURL  string
 	FrontendURL        string
+    VibixHost        string
+    VibixToken       string
 }
 
 func New() *Config {
@@ -46,6 +48,8 @@ func New() *Config {
 		GoogleClientSecret: getEnv(EnvGoogleClientSecret, ""),
 		GoogleRedirectURL:  getEnv(EnvGoogleRedirectURL, ""),
 		FrontendURL:        getEnv(EnvFrontendURL, ""),
+        VibixHost:        getEnv(EnvVibixHost, DefaultVibixHost),
+        VibixToken:       getEnv(EnvVibixToken, ""),
 	}
 }
 

@@ -18,7 +18,9 @@ const (
 	EnvGoogleClientSecret= "GOOGLE_CLIENT_SECRET"
 	EnvGoogleRedirectURL = "GOOGLE_REDIRECT_URL"
 	EnvFrontendURL       = "FRONTEND_URL"
-
+    EnvVibixHost  = "VIBIX_HOST"
+    EnvVibixToken = "VIBIX_TOKEN"
+    
 	// Default values
 	DefaultJWTSecret   = "your-secret-key"
 	DefaultPort        = "3000"
@@ -26,6 +28,7 @@ const (
 	DefaultNodeEnv     = "development"
 	DefaultRedAPIBase  = "http://redapi.cfhttp.top"
 	DefaultMongoDBName = "database"
+    DefaultVibixHost = "https://vibix.org"  
 
 	// Static constants
 	TMDBImageBaseURL = "https://image.tmdb.org/t/p"
