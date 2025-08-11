@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"neomovies-api/pkg/models"
@@ -58,32 +57,24 @@ func (s *MovieService) GetSimilar(id, page int, language string) (*models.TMDBRe
 func (s *MovieService) AddToFavorites(userID string, movieID string) error {
 	collection := s.db.Collection("users")
 	
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		return err
-	}
-	filter := bson.M{"_id": objID}
+	filter := bson.M{"_id": userID}
 	update := bson.M{
 		"$addToSet": bson.M{"favorites": movieID},
 	}
 	
-	_, err = collection.UpdateOne(context.Background(), filter, update)
+	_, err := collection.UpdateOne(context.Background(), filter, update)
 	return err
 }
 
 func (s *MovieService) RemoveFromFavorites(userID string, movieID string) error {
 	collection := s.db.Collection("users")
 	
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		return err
-	}
-	filter := bson.M{"_id": objID}
+	filter := bson.M{"_id": userID}
 	update := bson.M{
 		"$pull": bson.M{"favorites": movieID},
 	}
 	
-	_, err = collection.UpdateOne(context.Background(), filter, update)
+	_, err := collection.UpdateOne(context.Background(), filter, update)
 	return err
 }
 
@@ -91,11 +82,7 @@ func (s *MovieService) GetFavorites(userID string, language string) ([]models.Mo
 	collection := s.db.Collection("users")
 	
 	var user models.User
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		return nil, err
-	}
-	err = collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&user)
+	err := collection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}

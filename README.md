@@ -67,6 +67,7 @@ GMAIL_APP_PASSWORD=
 # Плееры
 LUMEX_URL=
 ALLOHA_TOKEN=
+VIBIX_TOKEN=
 
 # Торренты (RedAPI)
 REDAPI_BASE_URL=http://redapi.cfhttp.top
@@ -122,6 +123,7 @@ GET  /api/v1/tv/{id}/similar                 # Похожие
 # Плееры
 GET  /api/v1/players/alloha/{imdb_id}          # Alloha плеер по IMDb ID
 GET  /api/v1/players/lumex/{imdb_id}           # Lumex плеер по IMDb ID
+GET  /api/v1/players/vibix/{imdb_id}           # Vibix плеер по IMDb ID
 
 # Торренты
 GET  /api/v1/torrents/search/{imdbId}        # Поиск торрентов
