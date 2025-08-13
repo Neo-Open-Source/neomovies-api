@@ -112,7 +112,7 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 			Version:     "2.0.0",
 			Contact: Contact{
 				Name: "API Support",
-				URL:  "https://gitlab.com/foxixus/neomovies-api",
+				URL:  "https://github.com/your-username/neomovies-api-go",
 			},
 		},
 		Servers: []Server{
