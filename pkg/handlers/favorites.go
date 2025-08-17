@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -9,16 +11,35 @@ import (
 	"neomovies-api/pkg/middleware"
 	"neomovies-api/pkg/models"
 	"neomovies-api/pkg/services"
+	"neomovies-api/pkg/config"
 )
 
 type FavoritesHandler struct {
 	favoritesService *services.FavoritesService
+	config           *config.Config
 }
 
-func NewFavoritesHandler(favoritesService *services.FavoritesService) *FavoritesHandler {
+func NewFavoritesHandler(favoritesService *services.FavoritesService, cfg *config.Config) *FavoritesHandler {
 	return &FavoritesHandler{
 		favoritesService: favoritesService,
+		config:          cfg,
 	}
+}
+
+type MediaInfo struct {
+	ID           string  `json:"id"`
+	Title        string  `json:"title"`
+	OriginalTitle string `json:"original_title,omitempty"`
+	Overview     string  `json:"overview"`
+	PosterPath   string  `json:"poster_path"`
+	BackdropPath string  `json:"backdrop_path"`
+	ReleaseDate  string  `json:"release_date,omitempty"`
+	FirstAirDate string  `json:"first_air_date,omitempty"`
+	VoteAverage  float64 `json:"vote_average"`
+	VoteCount    int     `json:"vote_count"`
+	MediaType    string  `json:"media_type"`
+	Popularity   float64 `json:"popularity"`
+	GenreIDs     []int   `json:"genre_ids"`
 }
 
 func (h *FavoritesHandler) GetFavorites(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +88,14 @@ func (h *FavoritesHandler) AddToFavorites(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err := h.favoritesService.AddToFavorites(userID, mediaID, mediaType)
+	// Получаем информацию о медиа на русском языке
+	mediaInfo, err := h.fetchMediaInfoRussian(mediaID, mediaType)
+	if err != nil {
+		http.Error(w, "Failed to fetch media information: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = h.favoritesService.AddToFavoritesWithInfo(userID, mediaID, mediaType, mediaInfo)
 	if err != nil {
 		http.Error(w, "Failed to add to favorites: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -154,4 +182,95 @@ func (h *FavoritesHandler) CheckIsFavorite(w http.ResponseWriter, r *http.Reques
 		Success: true,
 		Data:    map[string]bool{"isFavorite": isFavorite},
 	})
+}
+
+// fetchMediaInfoRussian получает информацию о медиа на русском языке из TMDB
+func (h *FavoritesHandler) fetchMediaInfoRussian(mediaID, mediaType string) (*MediaInfo, error) {
+	var url string
+	if mediaType == "movie" {
+		url = fmt.Sprintf("https://api.themoviedb.org/3/movie/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAPIKey)
+	} else {
+		url = fmt.Sprintf("https://api.themoviedb.org/3/tv/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAPIKey)
+	}
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch from TMDB: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var tmdbResponse map[string]interface{}
+	if err := json.Unmarshal(body, &tmdbResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse TMDB response: %w", err)
+	}
+
+	mediaInfo := &MediaInfo{
+		ID:        mediaID,
+		MediaType: mediaType,
+	}
+
+	// Заполняем информацию в зависимости от типа медиа
+	if mediaType == "movie" {
+		if title, ok := tmdbResponse["title"].(string); ok {
+			mediaInfo.Title = title
+		}
+		if originalTitle, ok := tmdbResponse["original_title"].(string); ok {
+			mediaInfo.OriginalTitle = originalTitle
+		}
+		if releaseDate, ok := tmdbResponse["release_date"].(string); ok {
+			mediaInfo.ReleaseDate = releaseDate
+		}
+	} else {
+		if name, ok := tmdbResponse["name"].(string); ok {
+			mediaInfo.Title = name
+		}
+		if originalName, ok := tmdbResponse["original_name"].(string); ok {
+			mediaInfo.OriginalTitle = originalName
+		}
+		if firstAirDate, ok := tmdbResponse["first_air_date"].(string); ok {
+			mediaInfo.FirstAirDate = firstAirDate
+		}
+	}
+
+	// Общие поля
+	if overview, ok := tmdbResponse["overview"].(string); ok {
+		mediaInfo.Overview = overview
+	}
+	if posterPath, ok := tmdbResponse["poster_path"].(string); ok {
+		mediaInfo.PosterPath = posterPath
+	}
+	if backdropPath, ok := tmdbResponse["backdrop_path"].(string); ok {
+		mediaInfo.BackdropPath = backdropPath
+	}
+	if voteAverage, ok := tmdbResponse["vote_average"].(float64); ok {
+		mediaInfo.VoteAverage = voteAverage
+	}
+	if voteCount, ok := tmdbResponse["vote_count"].(float64); ok {
+		mediaInfo.VoteCount = int(voteCount)
+	}
+	if popularity, ok := tmdbResponse["popularity"].(float64); ok {
+		mediaInfo.Popularity = popularity
+	}
+
+	// Жанры
+	if genres, ok := tmdbResponse["genres"].([]interface{}); ok {
+		for _, genre := range genres {
+			if genreMap, ok := genre.(map[string]interface{}); ok {
+				if genreID, ok := genreMap["id"].(float64); ok {
+					mediaInfo.GenreIDs = append(mediaInfo.GenreIDs, int(genreID))
+				}
+			}
+		}
+	}
+
+	return mediaInfo, nil
 }
