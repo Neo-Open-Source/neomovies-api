@@ -18,7 +18,7 @@ REST API для поиска и получения информации о фи�
 
 1. **Клонирование репозитория**
 ```bash
-git clone <your-repo>
+git clone https://gitlab.com/foxixus/neomovies-api.git
 cd neomovies-api
 ```
 
