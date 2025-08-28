@@ -6,46 +6,50 @@ import (
 )
 
 type Config struct {
-	MongoURI        string
-	MongoDBName     string
-	TMDBAccessToken string
-	JWTSecret       string
-	Port            string
-	BaseURL         string
-	NodeEnv         string
-	GmailUser       string
-	GmailPassword   string
-	LumexURL        string
-	AllohaToken     string
-	RedAPIBaseURL   string
-	RedAPIKey       string
-	GoogleClientID  string
+	MongoURI           string
+	MongoDBName        string
+	TMDBAccessToken    string
+	JWTSecret          string
+	Port               string
+	BaseURL            string
+	NodeEnv            string
+	GmailUser          string
+	GmailPassword      string
+	LumexURL           string
+	AllohaToken        string
+	RedAPIBaseURL      string
+	RedAPIKey          string
+	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURL  string
 	FrontendURL        string
+	VibixHost          string
+	VibixToken         string
 }
 
 func New() *Config {
 	mongoURI := getMongoURI()
 
 	return &Config{
-		MongoURI:        mongoURI,
-		MongoDBName:     getEnv(EnvMongoDBName, DefaultMongoDBName),
-		TMDBAccessToken: getEnv(EnvTMDBAccessToken, ""),
-		JWTSecret:       getEnv(EnvJWTSecret, DefaultJWTSecret),
-		Port:            getEnv(EnvPort, DefaultPort),
-		BaseURL:         getEnv(EnvBaseURL, DefaultBaseURL),
-		NodeEnv:         getEnv(EnvNodeEnv, DefaultNodeEnv),
-		GmailUser:       getEnv(EnvGmailUser, ""),
-		GmailPassword:   getEnv(EnvGmailPassword, ""),
-		LumexURL:        getEnv(EnvLumexURL, ""),
-		AllohaToken:     getEnv(EnvAllohaToken, ""),
-		RedAPIBaseURL:   getEnv(EnvRedAPIBaseURL, DefaultRedAPIBase),
-		RedAPIKey:       getEnv(EnvRedAPIKey, ""),
-		GoogleClientID:  getEnv(EnvGoogleClientID, ""),
+		MongoURI:           mongoURI,
+		MongoDBName:        getEnv(EnvMongoDBName, DefaultMongoDBName),
+		TMDBAccessToken:    getEnv(EnvTMDBAccessToken, ""),
+		JWTSecret:          getEnv(EnvJWTSecret, DefaultJWTSecret),
+		Port:               getEnv(EnvPort, DefaultPort),
+		BaseURL:            getEnv(EnvBaseURL, DefaultBaseURL),
+		NodeEnv:            getEnv(EnvNodeEnv, DefaultNodeEnv),
+		GmailUser:          getEnv(EnvGmailUser, ""),
+		GmailPassword:      getEnv(EnvGmailPassword, ""),
+		LumexURL:           getEnv(EnvLumexURL, ""),
+		AllohaToken:        getEnv(EnvAllohaToken, ""),
+		RedAPIBaseURL:      getEnv(EnvRedAPIBaseURL, DefaultRedAPIBase),
+		RedAPIKey:          getEnv(EnvRedAPIKey, ""),
+		GoogleClientID:     getEnv(EnvGoogleClientID, ""),
 		GoogleClientSecret: getEnv(EnvGoogleClientSecret, ""),
 		GoogleRedirectURL:  getEnv(EnvGoogleRedirectURL, ""),
 		FrontendURL:        getEnv(EnvFrontendURL, ""),
+		VibixHost:          getEnv(EnvVibixHost, DefaultVibixHost),
+		VibixToken:         getEnv(EnvVibixToken, ""),
 	}
 }
 

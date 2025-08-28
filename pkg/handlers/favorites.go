@@ -8,10 +8,10 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"neomovies-api/pkg/config"
 	"neomovies-api/pkg/middleware"
 	"neomovies-api/pkg/models"
 	"neomovies-api/pkg/services"
-	"neomovies-api/pkg/config"
 )
 
 type FavoritesHandler struct {
@@ -22,24 +22,8 @@ type FavoritesHandler struct {
 func NewFavoritesHandler(favoritesService *services.FavoritesService, cfg *config.Config) *FavoritesHandler {
 	return &FavoritesHandler{
 		favoritesService: favoritesService,
-		config:          cfg,
+		config:           cfg,
 	}
-}
-
-type MediaInfo struct {
-	ID           string  `json:"id"`
-	Title        string  `json:"title"`
-	OriginalTitle string `json:"original_title,omitempty"`
-	Overview     string  `json:"overview"`
-	PosterPath   string  `json:"poster_path"`
-	BackdropPath string  `json:"backdrop_path"`
-	ReleaseDate  string  `json:"release_date,omitempty"`
-	FirstAirDate string  `json:"first_air_date,omitempty"`
-	VoteAverage  float64 `json:"vote_average"`
-	VoteCount    int     `json:"vote_count"`
-	MediaType    string  `json:"media_type"`
-	Popularity   float64 `json:"popularity"`
-	GenreIDs     []int   `json:"genre_ids"`
 }
 
 func (h *FavoritesHandler) GetFavorites(w http.ResponseWriter, r *http.Request) {
@@ -73,16 +57,16 @@ func (h *FavoritesHandler) AddToFavorites(w http.ResponseWriter, r *http.Request
 	vars := mux.Vars(r)
 	mediaID := vars["id"]
 	mediaType := r.URL.Query().Get("type")
-	
+
 	if mediaID == "" {
 		http.Error(w, "Media ID is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	if mediaType == "" {
 		mediaType = "movie" // По умолчанию фильм для обратной совместимости
 	}
-	
+
 	if mediaType != "movie" && mediaType != "tv" {
 		http.Error(w, "Media type must be 'movie' or 'tv'", http.StatusBadRequest)
 		return
@@ -118,16 +102,16 @@ func (h *FavoritesHandler) RemoveFromFavorites(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	mediaID := vars["id"]
 	mediaType := r.URL.Query().Get("type")
-	
+
 	if mediaID == "" {
 		http.Error(w, "Media ID is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	if mediaType == "" {
 		mediaType = "movie" // По умолчанию фильм для обратной совместимости
 	}
-	
+
 	if mediaType != "movie" && mediaType != "tv" {
 		http.Error(w, "Media type must be 'movie' or 'tv'", http.StatusBadRequest)
 		return
@@ -156,16 +140,16 @@ func (h *FavoritesHandler) CheckIsFavorite(w http.ResponseWriter, r *http.Reques
 	vars := mux.Vars(r)
 	mediaID := vars["id"]
 	mediaType := r.URL.Query().Get("type")
-	
+
 	if mediaID == "" {
 		http.Error(w, "Media ID is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	if mediaType == "" {
 		mediaType = "movie" // По умолчанию фильм для обратной совместимости
 	}
-	
+
 	if mediaType != "movie" && mediaType != "tv" {
 		http.Error(w, "Media type must be 'movie' or 'tv'", http.StatusBadRequest)
 		return
@@ -185,12 +169,12 @@ func (h *FavoritesHandler) CheckIsFavorite(w http.ResponseWriter, r *http.Reques
 }
 
 // fetchMediaInfoRussian получает информацию о медиа на русском языке из TMDB
-func (h *FavoritesHandler) fetchMediaInfoRussian(mediaID, mediaType string) (*MediaInfo, error) {
+func (h *FavoritesHandler) fetchMediaInfoRussian(mediaID, mediaType string) (*models.MediaInfo, error) {
 	var url string
 	if mediaType == "movie" {
-		url = fmt.Sprintf("https://api.themoviedb.org/3/movie/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAPIKey)
+		url = fmt.Sprintf("https://api.themoviedb.org/3/movie/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAccessToken)
 	} else {
-		url = fmt.Sprintf("https://api.themoviedb.org/3/tv/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAPIKey)
+		url = fmt.Sprintf("https://api.themoviedb.org/3/tv/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAccessToken)
 	}
 
 	resp, err := http.Get(url)
@@ -213,7 +197,7 @@ func (h *FavoritesHandler) fetchMediaInfoRussian(mediaID, mediaType string) (*Me
 		return nil, fmt.Errorf("failed to parse TMDB response: %w", err)
 	}
 
-	mediaInfo := &MediaInfo{
+	mediaInfo := &models.MediaInfo{
 		ID:        mediaID,
 		MediaType: mediaType,
 	}

@@ -1,28 +1,45 @@
 package models
 
+// MediaInfo represents media information structure used by handlers and services
+type MediaInfo struct {
+	ID            string  `json:"id"`
+	Title         string  `json:"title"`
+	OriginalTitle string  `json:"original_title,omitempty"`
+	Overview      string  `json:"overview"`
+	PosterPath    string  `json:"poster_path"`
+	BackdropPath  string  `json:"backdrop_path"`
+	ReleaseDate   string  `json:"release_date,omitempty"`
+	FirstAirDate  string  `json:"first_air_date,omitempty"`
+	VoteAverage   float64 `json:"vote_average"`
+	VoteCount     int     `json:"vote_count"`
+	MediaType     string  `json:"media_type"`
+	Popularity    float64 `json:"popularity"`
+	GenreIDs      []int   `json:"genre_ids"`
+}
+
 type Movie struct {
-	ID               int                    `json:"id"`
-	Title            string                 `json:"title"`
-	OriginalTitle    string                 `json:"original_title"`
-	Overview         string                 `json:"overview"`
-	PosterPath       string                 `json:"poster_path"`
-	BackdropPath     string                 `json:"backdrop_path"`
-	ReleaseDate      string                 `json:"release_date"`
-	GenreIDs         []int                  `json:"genre_ids"`
-	Genres           []Genre                `json:"genres"`
-	VoteAverage      float64                `json:"vote_average"`
-	VoteCount        int                    `json:"vote_count"`
-	Popularity       float64                `json:"popularity"`
-	Adult            bool                   `json:"adult"`
-	Video            bool                   `json:"video"`
-	OriginalLanguage string                 `json:"original_language"`
-	Runtime          int                    `json:"runtime,omitempty"`
-	Budget           int64                  `json:"budget,omitempty"`
-	Revenue          int64                  `json:"revenue,omitempty"`
-	Status           string                 `json:"status,omitempty"`
-	Tagline          string                 `json:"tagline,omitempty"`
-	Homepage         string                 `json:"homepage,omitempty"`
-	IMDbID           string                 `json:"imdb_id,omitempty"`
+	ID                  int                 `json:"id"`
+	Title               string              `json:"title"`
+	OriginalTitle       string              `json:"original_title"`
+	Overview            string              `json:"overview"`
+	PosterPath          string              `json:"poster_path"`
+	BackdropPath        string              `json:"backdrop_path"`
+	ReleaseDate         string              `json:"release_date"`
+	GenreIDs            []int               `json:"genre_ids"`
+	Genres              []Genre             `json:"genres"`
+	VoteAverage         float64             `json:"vote_average"`
+	VoteCount           int                 `json:"vote_count"`
+	Popularity          float64             `json:"popularity"`
+	Adult               bool                `json:"adult"`
+	Video               bool                `json:"video"`
+	OriginalLanguage    string              `json:"original_language"`
+	Runtime             int                 `json:"runtime,omitempty"`
+	Budget              int64               `json:"budget,omitempty"`
+	Revenue             int64               `json:"revenue,omitempty"`
+	Status              string              `json:"status,omitempty"`
+	Tagline             string              `json:"tagline,omitempty"`
+	Homepage            string              `json:"homepage,omitempty"`
+	IMDbID              string              `json:"imdb_id,omitempty"`
 	BelongsToCollection *Collection         `json:"belongs_to_collection,omitempty"`
 	ProductionCompanies []ProductionCompany `json:"production_companies,omitempty"`
 	ProductionCountries []ProductionCountry `json:"production_countries,omitempty"`
@@ -30,29 +47,29 @@ type Movie struct {
 }
 
 type TVShow struct {
-	ID               int                    `json:"id"`
-	Name             string                 `json:"name"`
-	OriginalName     string                 `json:"original_name"`
-	Overview         string                 `json:"overview"`
-	PosterPath       string                 `json:"poster_path"`
-	BackdropPath     string                 `json:"backdrop_path"`
-	FirstAirDate     string                 `json:"first_air_date"`
-	LastAirDate      string                 `json:"last_air_date"`
-	GenreIDs         []int                  `json:"genre_ids"`
-	Genres           []Genre                `json:"genres"`
-	VoteAverage      float64                `json:"vote_average"`
-	VoteCount        int                    `json:"vote_count"`
-	Popularity       float64                `json:"popularity"`
-	OriginalLanguage string                 `json:"original_language"`
-	OriginCountry    []string               `json:"origin_country"`
-	NumberOfEpisodes int                    `json:"number_of_episodes,omitempty"`
-	NumberOfSeasons  int                    `json:"number_of_seasons,omitempty"`
-	Status           string                 `json:"status,omitempty"`
-	Type             string                 `json:"type,omitempty"`
-	Homepage         string                 `json:"homepage,omitempty"`
-	InProduction     bool                   `json:"in_production,omitempty"`
-	Languages        []string               `json:"languages,omitempty"`
-	Networks         []Network              `json:"networks,omitempty"`
+	ID                  int                 `json:"id"`
+	Name                string              `json:"name"`
+	OriginalName        string              `json:"original_name"`
+	Overview            string              `json:"overview"`
+	PosterPath          string              `json:"poster_path"`
+	BackdropPath        string              `json:"backdrop_path"`
+	FirstAirDate        string              `json:"first_air_date"`
+	LastAirDate         string              `json:"last_air_date"`
+	GenreIDs            []int               `json:"genre_ids"`
+	Genres              []Genre             `json:"genres"`
+	VoteAverage         float64             `json:"vote_average"`
+	VoteCount           int                 `json:"vote_count"`
+	Popularity          float64             `json:"popularity"`
+	OriginalLanguage    string              `json:"original_language"`
+	OriginCountry       []string            `json:"origin_country"`
+	NumberOfEpisodes    int                 `json:"number_of_episodes,omitempty"`
+	NumberOfSeasons     int                 `json:"number_of_seasons,omitempty"`
+	Status              string              `json:"status,omitempty"`
+	Type                string              `json:"type,omitempty"`
+	Homepage            string              `json:"homepage,omitempty"`
+	InProduction        bool                `json:"in_production,omitempty"`
+	Languages           []string            `json:"languages,omitempty"`
+	Networks            []Network           `json:"networks,omitempty"`
 	ProductionCompanies []ProductionCompany `json:"production_companies,omitempty"`
 	ProductionCountries []ProductionCountry `json:"production_countries,omitempty"`
 	SpokenLanguages     []SpokenLanguage    `json:"spoken_languages,omitempty"`
@@ -63,23 +80,23 @@ type TVShow struct {
 
 // MultiSearchResult для мультипоиска
 type MultiSearchResult struct {
-	ID               int     `json:"id"`
-	MediaType        string  `json:"media_type"` // "movie" или "tv"
-	Title            string  `json:"title,omitempty"`       // для фильмов
-	Name             string  `json:"name,omitempty"`        // для сериалов
-	OriginalTitle    string  `json:"original_title,omitempty"`
-	OriginalName     string  `json:"original_name,omitempty"`
-	Overview         string  `json:"overview"`
-	PosterPath       string  `json:"poster_path"`
-	BackdropPath     string  `json:"backdrop_path"`
-	ReleaseDate      string  `json:"release_date,omitempty"`     // для фильмов
-	FirstAirDate     string  `json:"first_air_date,omitempty"`   // для сериалов
-	GenreIDs         []int   `json:"genre_ids"`
-	VoteAverage      float64 `json:"vote_average"`
-	VoteCount        int     `json:"vote_count"`
-	Popularity       float64 `json:"popularity"`
-	Adult            bool    `json:"adult"`
-	OriginalLanguage string  `json:"original_language"`
+	ID               int      `json:"id"`
+	MediaType        string   `json:"media_type"`      // "movie" или "tv"
+	Title            string   `json:"title,omitempty"` // для фильмов
+	Name             string   `json:"name,omitempty"`  // для сериалов
+	OriginalTitle    string   `json:"original_title,omitempty"`
+	OriginalName     string   `json:"original_name,omitempty"`
+	Overview         string   `json:"overview"`
+	PosterPath       string   `json:"poster_path"`
+	BackdropPath     string   `json:"backdrop_path"`
+	ReleaseDate      string   `json:"release_date,omitempty"`   // для фильмов
+	FirstAirDate     string   `json:"first_air_date,omitempty"` // для сериалов
+	GenreIDs         []int    `json:"genre_ids"`
+	VoteAverage      float64  `json:"vote_average"`
+	VoteCount        int      `json:"vote_count"`
+	Popularity       float64  `json:"popularity"`
+	Adult            bool     `json:"adult"`
+	OriginalLanguage string   `json:"original_language"`
 	OriginCountry    []string `json:"origin_country,omitempty"`
 }
 
@@ -170,18 +187,18 @@ type SeasonDetails struct {
 }
 
 type Episode struct {
-	AirDate       string  `json:"air_date"`
-	EpisodeNumber int     `json:"episode_number"`
-	ID            int     `json:"id"`
-	Name          string  `json:"name"`
-	Overview      string  `json:"overview"`
-	ProductionCode string `json:"production_code"`
-	Runtime       int     `json:"runtime"`
-	SeasonNumber  int     `json:"season_number"`
-	ShowID        int     `json:"show_id"`
-	StillPath     string  `json:"still_path"`
-	VoteAverage   float64 `json:"vote_average"`
-	VoteCount     int     `json:"vote_count"`
+	AirDate        string  `json:"air_date"`
+	EpisodeNumber  int     `json:"episode_number"`
+	ID             int     `json:"id"`
+	Name           string  `json:"name"`
+	Overview       string  `json:"overview"`
+	ProductionCode string  `json:"production_code"`
+	Runtime        int     `json:"runtime"`
+	SeasonNumber   int     `json:"season_number"`
+	ShowID         int     `json:"show_id"`
+	StillPath      string  `json:"still_path"`
+	VoteAverage    float64 `json:"vote_average"`
+	VoteCount      int     `json:"vote_count"`
 }
 
 type TMDBResponse struct {
@@ -199,12 +216,12 @@ type TMDBTVResponse struct {
 }
 
 type SearchParams struct {
-	Query        string `json:"query"`
-	Page         int    `json:"page"`
-	Language     string `json:"language"`
-	Region       string `json:"region"`
-	Year         int    `json:"year"`
-	PrimaryReleaseYear int `json:"primary_release_year"`
+	Query              string `json:"query"`
+	Page               int    `json:"page"`
+	Language           string `json:"language"`
+	Region             string `json:"region"`
+	Year               int    `json:"year"`
+	PrimaryReleaseYear int    `json:"primary_release_year"`
 }
 
 type APIResponse struct {
@@ -216,23 +233,23 @@ type APIResponse struct {
 
 // Модели для торрентов
 type TorrentResult struct {
-	Title       string    `json:"title"`
-	Tracker     string    `json:"tracker"`
-	Size        string    `json:"size"`
-	Seeders     int       `json:"seeders"`
-	Peers       int       `json:"peers"`
-	Leechers    int       `json:"leechers"`
-	Quality     string    `json:"quality"`
-	Voice       []string  `json:"voice,omitempty"`
-	Types       []string  `json:"types,omitempty"`
-	Seasons     []int     `json:"seasons,omitempty"`
-	Category    string    `json:"category"`
-	MagnetLink  string    `json:"magnet"`
-	TorrentLink string    `json:"torrent_link,omitempty"`
-	Details     string    `json:"details,omitempty"`
-	PublishDate string    `json:"publish_date"`
-	AddedDate   string    `json:"added_date,omitempty"`
-	Source      string    `json:"source"`
+	Title       string   `json:"title"`
+	Tracker     string   `json:"tracker"`
+	Size        string   `json:"size"`
+	Seeders     int      `json:"seeders"`
+	Peers       int      `json:"peers"`
+	Leechers    int      `json:"leechers"`
+	Quality     string   `json:"quality"`
+	Voice       []string `json:"voice,omitempty"`
+	Types       []string `json:"types,omitempty"`
+	Seasons     []int    `json:"seasons,omitempty"`
+	Category    string   `json:"category"`
+	MagnetLink  string   `json:"magnet"`
+	TorrentLink string   `json:"torrent_link,omitempty"`
+	Details     string   `json:"details,omitempty"`
+	PublishDate string   `json:"publish_date"`
+	AddedDate   string   `json:"added_date,omitempty"`
+	Source      string   `json:"source"`
 }
 
 type TorrentSearchResponse struct {
@@ -247,16 +264,16 @@ type RedAPIResponse struct {
 }
 
 type RedAPITorrent struct {
-	Title       string            `json:"Title"`
-	Tracker     string            `json:"Tracker"`
-	Size        interface{}       `json:"Size"` // Может быть string или number
-	Seeders     int               `json:"Seeders"`
-	Peers       int               `json:"Peers"`
-	MagnetUri   string            `json:"MagnetUri"`
-	PublishDate string            `json:"PublishDate"`
-	CategoryDesc string           `json:"CategoryDesc"`
-	Details     string            `json:"Details"`
-	Info        *RedAPITorrentInfo `json:"Info,omitempty"`
+	Title        string             `json:"Title"`
+	Tracker      string             `json:"Tracker"`
+	Size         interface{}        `json:"Size"` // Может быть string или number
+	Seeders      int                `json:"Seeders"`
+	Peers        int                `json:"Peers"`
+	MagnetUri    string             `json:"MagnetUri"`
+	PublishDate  string             `json:"PublishDate"`
+	CategoryDesc string             `json:"CategoryDesc"`
+	Details      string             `json:"Details"`
+	Info         *RedAPITorrentInfo `json:"Info,omitempty"`
 }
 
 type RedAPITorrentInfo struct {
@@ -301,11 +318,11 @@ type PlayerResponse struct {
 
 // Модели для реакций
 type Reaction struct {
-	ID       string `json:"id" bson:"_id,omitempty"`
-	UserID   string `json:"userId" bson:"userId"`
-	MediaID  string `json:"mediaId" bson:"mediaId"`
-	Type     string `json:"type" bson:"type"`
-	Created  string `json:"created" bson:"created"`
+	ID      string `json:"id" bson:"_id,omitempty"`
+	UserID  string `json:"userId" bson:"userId"`
+	MediaID string `json:"mediaId" bson:"mediaId"`
+	Type    string `json:"type" bson:"type"`
+	Created string `json:"created" bson:"created"`
 }
 
 type ReactionCounts struct {
