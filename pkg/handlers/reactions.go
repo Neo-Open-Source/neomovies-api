@@ -85,7 +85,9 @@ func (h *ReactionsHandler) SetReaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var request struct{ Type string `json:"type"` }
+	var request struct {
+		Type string `json:"type"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return

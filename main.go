@@ -67,6 +67,7 @@ func main() {
 	api.HandleFunc("/auth/resend-code", authHandler.ResendVerificationCode).Methods("POST")
 	api.HandleFunc("/auth/google/login", authHandler.GoogleLogin).Methods("GET")
 	api.HandleFunc("/auth/google/callback", authHandler.GoogleCallback).Methods("GET")
+	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
 
 	api.HandleFunc("/search/multi", searchHandler.MultiSearch).Methods("GET")
 
@@ -120,6 +121,8 @@ func main() {
 	protected.HandleFunc("/auth/profile", authHandler.GetProfile).Methods("GET")
 	protected.HandleFunc("/auth/profile", authHandler.UpdateProfile).Methods("PUT")
 	protected.HandleFunc("/auth/profile", authHandler.DeleteAccount).Methods("DELETE")
+	protected.HandleFunc("/auth/revoke-token", authHandler.RevokeRefreshToken).Methods("POST")
+	protected.HandleFunc("/auth/revoke-all-tokens", authHandler.RevokeAllRefreshTokens).Methods("POST")
 
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}/my-reaction", reactionsHandler.GetMyReaction).Methods("GET")
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.SetReaction).Methods("POST")

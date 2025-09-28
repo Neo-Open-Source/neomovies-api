@@ -12,16 +12,16 @@ func RequestMonitor() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			
+
 			// Создаем wrapper для ResponseWriter чтобы получить статус код
 			ww := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-			
+
 			// Выполняем запрос
 			next.ServeHTTP(ww, r)
-			
+
 			// Вычисляем время выполнения
 			duration := time.Since(start)
-			
+
 			// Форматируем URL (обрезаем если слишком длинный)
 			url := r.URL.Path
 			if r.URL.RawQuery != "" {
@@ -30,11 +30,11 @@ func RequestMonitor() func(http.Handler) http.Handler {
 			if len(url) > 60 {
 				url = url[:57] + "..."
 			}
-			
+
 			// Определяем цвет статуса
 			statusColor := getStatusColor(ww.statusCode)
 			methodColor := getMethodColor(r.Method)
-			
+
 			// Выводим информацию о запросе
 			fmt.Printf("\033[2K\r%s%-6s\033[0m %s%-3d\033[0m │ %-60s │ %6.2fms\n",
 				methodColor, r.Method,
