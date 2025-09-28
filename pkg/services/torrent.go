@@ -207,7 +207,6 @@ func (s *TorrentService) SearchTorrentsByIMDbID(tmdbService *TMDBService, imdbID
 	return response, nil
 }
 
-
 // SearchMovies - поиск фильмов с дополнительной фильтрацией
 func (s *TorrentService) SearchMovies(title, originalTitle, year string) (*models.TorrentSearchResponse, error) {
 	params := map[string]string{
@@ -850,7 +849,7 @@ func (s *TorrentService) SearchByImdb(imdbID, contentType string, season *int) (
 			"is_serial": "2",
 			"category":  "5000",
 		}
-		
+
 		fallbackResp, err := s.SearchTorrents(paramsNoSeason)
 		if err == nil {
 			filtered := s.filterBySeason(fallbackResp.Results, *season)

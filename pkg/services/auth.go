@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"encoding/json"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
@@ -19,17 +20,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"encoding/json"
 
 	"neomovies-api/pkg/models"
 )
 
 // AuthService contains the database connection, JWT secret, and email service.
 type AuthService struct {
-	db           *mongo.Database
-	jwtSecret    string
-	emailService *EmailService
-	baseURL      string
+	db                 *mongo.Database
+	jwtSecret          string
+	emailService       *EmailService
+	baseURL            string
 	googleClientID     string
 	googleClientSecret string
 	googleRedirectURL  string
@@ -38,18 +38,18 @@ type AuthService struct {
 
 // Reaction represents a reaction entry in the database.
 type Reaction struct {
-    MediaID string `bson:"mediaId"`
-    Type    string `bson:"type"`
-    UserID  primitive.ObjectID `bson:"userId"`
+	MediaID string             `bson:"mediaId"`
+	Type    string             `bson:"type"`
+	UserID  primitive.ObjectID `bson:"userId"`
 }
 
 // NewAuthService creates and initializes a new AuthService.
 func NewAuthService(db *mongo.Database, jwtSecret string, emailService *EmailService, baseURL string, googleClientID string, googleClientSecret string, googleRedirectURL string, frontendURL string) *AuthService {
 	service := &AuthService{
-		db:           db,
-		jwtSecret:    jwtSecret,
-		emailService: emailService,
-		baseURL:      baseURL,
+		db:                 db,
+		jwtSecret:          jwtSecret,
+		emailService:       emailService,
+		baseURL:            baseURL,
 		googleClientID:     googleClientID,
 		googleClientSecret: googleClientSecret,
 		googleRedirectURL:  googleRedirectURL,
@@ -81,11 +81,11 @@ func (s *AuthService) GetGoogleLoginURL(state string) (string, error) {
 }
 
 type googleUserInfo struct {
-	Sub     string `json:"sub"`
-	Email   string `json:"email"`
-	Name    string `json:"name"`
-	Picture string `json:"picture"`
-	EmailVerified bool `json:"email_verified"`
+	Sub           string `json:"sub"`
+	Email         string `json:"email"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+	EmailVerified bool   `json:"email_verified"`
 }
 
 // BuildFrontendRedirect builds frontend URL for redirect after OAuth; returns false if not configured
@@ -149,19 +149,19 @@ func (s *AuthService) HandleGoogleCallback(ctx context.Context, code string) (*m
 	if err == mongo.ErrNoDocuments {
 		// Create new user
 		user = models.User{
-			ID:        primitive.NewObjectID(),
-			Email:     gUser.Email,
-			Password:  "",
-			Name:      gUser.Name,
-			Avatar:    gUser.Picture,
-			Favorites: []string{},
-			Verified:  true,
-			IsAdmin:   false,
+			ID:            primitive.NewObjectID(),
+			Email:         gUser.Email,
+			Password:      "",
+			Name:          gUser.Name,
+			Avatar:        gUser.Picture,
+			Favorites:     []string{},
+			Verified:      true,
+			IsAdmin:       false,
 			AdminVerified: false,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			Provider:  "google",
-			GoogleID:  gUser.Sub,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+			Provider:      "google",
+			GoogleID:      gUser.Sub,
 		}
 		if _, err := collection.InsertOne(ctx, user); err != nil {
 			return nil, err
@@ -171,13 +171,17 @@ func (s *AuthService) HandleGoogleCallback(ctx context.Context, code string) (*m
 	} else {
 		// Existing user: ensure fields
 		update := bson.M{
-			"verified": true,
-			"provider": "google",
-			"googleId": gUser.Sub,
+			"verified":  true,
+			"provider":  "google",
+			"googleId":  gUser.Sub,
 			"updatedAt": time.Now(),
 		}
-		if user.Name == "" && gUser.Name != "" { update["name"] = gUser.Name }
-		if user.Avatar == "" && gUser.Picture != "" { update["avatar"] = gUser.Picture }
+		if user.Name == "" && gUser.Name != "" {
+			update["name"] = gUser.Name
+		}
+		if user.Avatar == "" && gUser.Picture != "" {
+			update["avatar"] = gUser.Picture
+		}
 		_, _ = collection.UpdateOne(ctx, bson.M{"_id": user.ID}, bson.M{"$set": update})
 	}
 
@@ -186,10 +190,16 @@ func (s *AuthService) HandleGoogleCallback(ctx context.Context, code string) (*m
 		// If we created user above, we already have user.ID set; else fetch updated
 		_ = collection.FindOne(ctx, bson.M{"email": gUser.Email}).Decode(&user)
 	}
-	token, err := s.generateJWT(user.ID.Hex())
-	if err != nil { return nil, err }
+	tokenPair, err := s.generateTokenPair(user.ID.Hex(), "", "")
+	if err != nil {
+		return nil, err
+	}
 
-	return &models.AuthResponse{ Token: token, User: user }, nil
+	return &models.AuthResponse{
+		Token:        tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		User:         user,
+	}, nil
 }
 
 // generateVerificationCode creates a 6-digit verification code.
@@ -216,18 +226,18 @@ func (s *AuthService) Register(req models.RegisterRequest) (map[string]interface
 	codeExpires := time.Now().Add(10 * time.Minute)
 
 	user := models.User{
-		ID:                 primitive.NewObjectID(),
-		Email:              req.Email,
-		Password:           string(hashedPassword),
-		Name:               req.Name,
-		Favorites:          []string{},
-		Verified:           false,
-		VerificationCode:   code,
+		ID:                  primitive.NewObjectID(),
+		Email:               req.Email,
+		Password:            string(hashedPassword),
+		Name:                req.Name,
+		Favorites:           []string{},
+		Verified:            false,
+		VerificationCode:    code,
 		VerificationExpires: codeExpires,
-		IsAdmin:            false,
-		AdminVerified:      false,
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
+		IsAdmin:             false,
+		AdminVerified:       false,
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
 	}
 
 	_, err = collection.InsertOne(context.Background(), user)
@@ -246,9 +256,9 @@ func (s *AuthService) Register(req models.RegisterRequest) (map[string]interface
 }
 
 // Login authenticates a user.
-func (s *AuthService) Login(req models.LoginRequest) (*models.AuthResponse, error) {
+func (s *AuthService) LoginWithTokens(req models.LoginRequest, userAgent, ipAddress string) (*models.AuthResponse, error) {
 	collection := s.db.Collection("users")
-    
+
 	var user models.User
 	err := collection.FindOne(context.Background(), bson.M{"email": req.Email}).Decode(&user)
 	if err != nil {
@@ -264,15 +274,21 @@ func (s *AuthService) Login(req models.LoginRequest) (*models.AuthResponse, erro
 		return nil, errors.New("Invalid password")
 	}
 
-	token, err := s.generateJWT(user.ID.Hex())
+	tokenPair, err := s.generateTokenPair(user.ID.Hex(), userAgent, ipAddress)
 	if err != nil {
 		return nil, err
 	}
 
 	return &models.AuthResponse{
-		Token: token,
-		User:  user,
+		Token:        tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		User:         user,
 	}, nil
+}
+
+// Login authenticates a user (legacy method for backward compatibility).
+func (s *AuthService) Login(req models.LoginRequest) (*models.AuthResponse, error) {
+	return s.LoginWithTokens(req, "", "")
 }
 
 // GetUserByID retrieves a user by their ID.
@@ -320,13 +336,165 @@ func (s *AuthService) UpdateUser(userID string, updates bson.M) (*models.User, e
 func (s *AuthService) generateJWT(userID string) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(),
+		"exp":     time.Now().Add(time.Hour * 1).Unix(), // Сократил время жизни до 1 часа
 		"iat":     time.Now().Unix(),
 		"jti":     uuid.New().String(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.jwtSecret))
+}
+
+// generateRefreshToken generates a new refresh token
+func (s *AuthService) generateRefreshToken() string {
+	return uuid.New().String()
+}
+
+// generateTokenPair generates both access and refresh tokens
+func (s *AuthService) generateTokenPair(userID, userAgent, ipAddress string) (*models.TokenPair, error) {
+	accessToken, err := s.generateJWT(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken := s.generateRefreshToken()
+
+	// Сохраняем refresh token в базе данных
+	collection := s.db.Collection("users")
+	objectID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshTokenDoc := models.RefreshToken{
+		Token:     refreshToken,
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 30), // 30 дней
+		CreatedAt: time.Now(),
+		UserAgent: userAgent,
+		IPAddress: ipAddress,
+	}
+
+	// Удаляем старые истекшие токены и добавляем новый
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objectID},
+		bson.M{
+			"$pull": bson.M{
+				"refreshTokens": bson.M{
+					"expiresAt": bson.M{"$lt": time.Now()},
+				},
+			},
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objectID},
+		bson.M{
+			"$push": bson.M{
+				"refreshTokens": refreshTokenDoc,
+			},
+			"$set": bson.M{
+				"updatedAt": time.Now(),
+			},
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+// RefreshAccessToken refreshes an access token using a refresh token
+func (s *AuthService) RefreshAccessToken(refreshToken, userAgent, ipAddress string) (*models.TokenPair, error) {
+	collection := s.db.Collection("users")
+
+	// Найти пользователя с данным refresh токеном
+	var user models.User
+	err := collection.FindOne(
+		context.Background(),
+		bson.M{
+			"refreshTokens": bson.M{
+				"$elemMatch": bson.M{
+					"token":     refreshToken,
+					"expiresAt": bson.M{"$gt": time.Now()},
+				},
+			},
+		},
+	).Decode(&user)
+
+	if err != nil {
+		return nil, errors.New("invalid or expired refresh token")
+	}
+
+	// Удалить использованный refresh token
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": user.ID},
+		bson.M{
+			"$pull": bson.M{
+				"refreshTokens": bson.M{
+					"token": refreshToken,
+				},
+			},
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Создать новую пару токенов
+	return s.generateTokenPair(user.ID.Hex(), userAgent, ipAddress)
+}
+
+// RevokeRefreshToken revokes a specific refresh token
+func (s *AuthService) RevokeRefreshToken(userID, refreshToken string) error {
+	collection := s.db.Collection("users")
+	objectID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objectID},
+		bson.M{
+			"$pull": bson.M{
+				"refreshTokens": bson.M{
+					"token": refreshToken,
+				},
+			},
+		},
+	)
+	return err
+}
+
+// RevokeAllRefreshTokens revokes all refresh tokens for a user
+func (s *AuthService) RevokeAllRefreshTokens(userID string) error {
+	collection := s.db.Collection("users")
+	objectID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objectID},
+		bson.M{
+			"$set": bson.M{
+				"refreshTokens": []models.RefreshToken{},
+				"updatedAt":     time.Now(),
+			},
+		},
+	)
+	return err
 }
 
 // VerifyEmail verifies a user's email with a code.
@@ -439,20 +607,20 @@ func (s *AuthService) DeleteAccount(ctx context.Context, userID string) error {
 			go func(r Reaction) {
 				defer wg.Done()
 				url := fmt.Sprintf("%s/reactions/remove/%s/%s", s.baseURL, r.MediaID, r.Type) // Changed from cubAPIURL to baseURL
-				req, err := http.NewRequestWithContext(ctx, "POST", url, nil) // or "DELETE"
+				req, err := http.NewRequestWithContext(ctx, "POST", url, nil)                 // or "DELETE"
 				if err != nil {
 					// Log the error but don't stop the process
 					fmt.Printf("failed to create request for cub.rip: %v\n", err)
 					return
 				}
-				
+
 				resp, err := client.Do(req)
 				if err != nil {
 					fmt.Printf("failed to send request to cub.rip: %v\n", err)
 					return
 				}
 				defer resp.Body.Close()
-				
+
 				if resp.StatusCode != http.StatusOK {
 					body, _ := io.ReadAll(resp.Body)
 					fmt.Printf("cub.rip API responded with status %d: %s\n", resp.StatusCode, body)
