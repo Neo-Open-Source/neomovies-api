@@ -33,7 +33,7 @@ var validReactions = []string{"fire", "nice", "think", "bore", "shit"}
 // Получить счетчики реакций для медиа из внешнего API (cub.rip)
 func (s *ReactionsService) GetReactionCounts(mediaType, mediaID string) (*models.ReactionCounts, error) {
 	cubID := fmt.Sprintf("%s_%s", mediaType, mediaID)
-	
+
 	resp, err := s.client.Get(fmt.Sprintf("%s/reactions/get/%s", config.CubAPIBaseURL, cubID))
 	if err != nil {
 		return &models.ReactionCounts{}, nil
@@ -83,7 +83,9 @@ func (s *ReactionsService) GetMyReaction(userID, mediaType, mediaID string) (str
 	collection := s.db.Collection("reactions")
 	ctx := context.Background()
 
-	var result struct{ Type string `bson:"type"` }
+	var result struct {
+		Type string `bson:"type"`
+	}
 	err := collection.FindOne(ctx, bson.M{
 		"userId":    userID,
 		"mediaType": mediaType,
@@ -165,7 +167,7 @@ func (s *ReactionsService) isValidReactionType(reactionType string) bool {
 // Отправка реакции в cub.rip API (асинхронно)
 func (s *ReactionsService) sendReactionToCub(mediaID, reactionType string) {
 	url := fmt.Sprintf("%s/reactions/set", config.CubAPIBaseURL)
-	
+
 	data := map[string]string{
 		"mediaId": mediaID,
 		"type":    reactionType,
