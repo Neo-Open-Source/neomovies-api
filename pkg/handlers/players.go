@@ -7,11 +7,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"neomovies-api/pkg/config"
+	"neomovies-api/pkg/players"
 )
 
 type PlayersHandler struct {
@@ -234,4 +236,202 @@ func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) 
 	w.Write([]byte(htmlDoc))
 
 	log.Printf("Successfully served Vibix player for imdb_id: %s", imdbID)
+}
+
+// GetRgShowsPlayer handles RgShows streaming requests
+func (h *PlayersHandler) GetRgShowsPlayer(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetRgShowsPlayer called: %s %s", r.Method, r.URL.Path)
+
+	vars := mux.Vars(r)
+	tmdbID := vars["tmdb_id"]
+	if tmdbID == "" {
+		log.Printf("Error: tmdb_id is empty")
+		http.Error(w, "tmdb_id path param is required", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Processing tmdb_id: %s", tmdbID)
+
+	pm := players.NewPlayersManager()
+	result, err := pm.GetMovieStreamByProvider("rgshows", tmdbID)
+	if err != nil {
+		log.Printf("Error getting RgShows stream: %v", err)
+		http.Error(w, "Failed to get stream", http.StatusInternalServerError)
+		return
+	}
+
+	if !result.Success {
+		log.Printf("RgShows stream not found: %s", result.Error)
+		http.Error(w, "Stream not found", http.StatusNotFound)
+		return
+	}
+
+	// Create iframe with the stream URL
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, result.StreamURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>RgShows Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(htmlDoc))
+
+	log.Printf("Successfully served RgShows player for tmdb_id: %s", tmdbID)
+}
+
+// GetRgShowsTVPlayer handles RgShows TV show streaming requests
+func (h *PlayersHandler) GetRgShowsTVPlayer(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetRgShowsTVPlayer called: %s %s", r.Method, r.URL.Path)
+
+	vars := mux.Vars(r)
+	tmdbID := vars["tmdb_id"]
+	seasonStr := vars["season"]
+	episodeStr := vars["episode"]
+
+	if tmdbID == "" || seasonStr == "" || episodeStr == "" {
+		log.Printf("Error: missing required parameters")
+		http.Error(w, "tmdb_id, season, and episode path params are required", http.StatusBadRequest)
+		return
+	}
+
+	season, err := strconv.Atoi(seasonStr)
+	if err != nil {
+		log.Printf("Error parsing season: %v", err)
+		http.Error(w, "Invalid season number", http.StatusBadRequest)
+		return
+	}
+
+	episode, err := strconv.Atoi(episodeStr)
+	if err != nil {
+		log.Printf("Error parsing episode: %v", err)
+		http.Error(w, "Invalid episode number", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Processing tmdb_id: %s, season: %d, episode: %d", tmdbID, season, episode)
+
+	pm := players.NewPlayersManager()
+	result, err := pm.GetTVStreamByProvider("rgshows", tmdbID, season, episode)
+	if err != nil {
+		log.Printf("Error getting RgShows TV stream: %v", err)
+		http.Error(w, "Failed to get stream", http.StatusInternalServerError)
+		return
+	}
+
+	if !result.Success {
+		log.Printf("RgShows TV stream not found: %s", result.Error)
+		http.Error(w, "Stream not found", http.StatusNotFound)
+		return
+	}
+
+	// Create iframe with the stream URL
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, result.StreamURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>RgShows TV Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(htmlDoc))
+
+	log.Printf("Successfully served RgShows TV player for tmdb_id: %s, S%dE%d", tmdbID, season, episode)
+}
+
+// GetIframeVideoPlayer handles IframeVideo streaming requests
+func (h *PlayersHandler) GetIframeVideoPlayer(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetIframeVideoPlayer called: %s %s", r.Method, r.URL.Path)
+
+	vars := mux.Vars(r)
+	kinopoiskID := vars["kinopoisk_id"]
+	imdbID := vars["imdb_id"]
+
+	if kinopoiskID == "" && imdbID == "" {
+		log.Printf("Error: both kinopoisk_id and imdb_id are empty")
+		http.Error(w, "Either kinopoisk_id or imdb_id path param is required", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Processing kinopoisk_id: %s, imdb_id: %s", kinopoiskID, imdbID)
+
+	pm := players.NewPlayersManager()
+	result, err := pm.GetStreamWithKinopoisk(kinopoiskID, imdbID)
+	if err != nil {
+		log.Printf("Error getting IframeVideo stream: %v", err)
+		http.Error(w, "Failed to get stream", http.StatusInternalServerError)
+		return
+	}
+
+	if !result.Success {
+		log.Printf("IframeVideo stream not found: %s", result.Error)
+		http.Error(w, "Stream not found", http.StatusNotFound)
+		return
+	}
+
+	// Create iframe with the stream URL
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, result.StreamURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>IframeVideo Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(htmlDoc))
+
+	log.Printf("Successfully served IframeVideo player for kinopoisk_id: %s, imdb_id: %s", kinopoiskID, imdbID)
+}
+
+// GetStreamAPI returns stream information as JSON API
+func (h *PlayersHandler) GetStreamAPI(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetStreamAPI called: %s %s", r.Method, r.URL.Path)
+
+	vars := mux.Vars(r)
+	provider := vars["provider"]
+	tmdbID := vars["tmdb_id"]
+
+	if provider == "" || tmdbID == "" {
+		log.Printf("Error: missing required parameters")
+		http.Error(w, "provider and tmdb_id path params are required", http.StatusBadRequest)
+		return
+	}
+
+	// Check for TV show parameters
+	seasonStr := r.URL.Query().Get("season")
+	episodeStr := r.URL.Query().Get("episode")
+	kinopoiskID := r.URL.Query().Get("kinopoisk_id")
+	imdbID := r.URL.Query().Get("imdb_id")
+
+	log.Printf("Processing provider: %s, tmdb_id: %s", provider, tmdbID)
+
+	pm := players.NewPlayersManager()
+	var result *players.StreamResult
+	var err error
+
+	switch provider {
+	case "iframevideo":
+		if kinopoiskID == "" && imdbID == "" {
+			http.Error(w, "kinopoisk_id or imdb_id query param is required for IframeVideo", http.StatusBadRequest)
+			return
+		}
+		result, err = pm.GetStreamWithKinopoisk(kinopoiskID, imdbID)
+	case "rgshows":
+		if seasonStr != "" && episodeStr != "" {
+			season, err1 := strconv.Atoi(seasonStr)
+			episode, err2 := strconv.Atoi(episodeStr)
+			if err1 != nil || err2 != nil {
+				http.Error(w, "Invalid season or episode number", http.StatusBadRequest)
+				return
+			}
+			result, err = pm.GetTVStreamByProvider("rgshows", tmdbID, season, episode)
+		} else {
+			result, err = pm.GetMovieStreamByProvider("rgshows", tmdbID)
+		}
+	default:
+		http.Error(w, "Unsupported provider", http.StatusBadRequest)
+		return
+	}
+
+	if err != nil {
+		log.Printf("Error getting stream from %s: %v", provider, err)
+		result = &players.StreamResult{
+			Success:  false,
+			Provider: provider,
+			Error:    err.Error(),
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+
+	log.Printf("Successfully served stream API for provider: %s, tmdb_id: %s", provider, tmdbID)
 }
