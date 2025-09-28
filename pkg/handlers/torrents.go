@@ -123,12 +123,12 @@ func (h *TorrentsHandler) SearchTorrents(w http.ResponseWriter, r *http.Request)
 		// Группируем сначала по сезонам, затем по качеству внутри каждого сезона
 		seasonGroups := h.torrentService.GroupBySeason(results.Results)
 		finalGroups := make(map[string]map[string][]models.TorrentResult)
-		
+
 		for season, torrents := range seasonGroups {
 			qualityGroups := h.torrentService.GroupByQuality(torrents)
 			finalGroups[season] = qualityGroups
 		}
-		
+
 		response["grouped"] = true
 		response["groups"] = finalGroups
 	} else if options.GroupByQuality {

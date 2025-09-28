@@ -3,8 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -46,7 +46,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.authService.Login(req)
+	// Получаем информацию о клиенте для refresh токена
+	userAgent := r.Header.Get("User-Agent")
+	ipAddress := r.RemoteAddr
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		ipAddress = forwarded
+	}
+
+	response, err := h.authService.LoginWithTokens(req, userAgent, ipAddress)
 	if err != nil {
 		statusCode := http.StatusBadRequest
 		if err.Error() == "Account not activated. Please verify your email." {
@@ -74,7 +81,7 @@ func (h *AuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	state := q.Get("state")
-	code := q.Get("code") 
+	code := q.Get("code")
 	preferJSON := q.Get("response") == "json" || strings.Contains(r.Header.Get("Accept"), "application/json")
 	cookie, _ := r.Cookie("oauth_state")
 	if cookie == nil || cookie.Value != state || code == "" {
@@ -219,6 +226,83 @@ func (h *AuthHandler) ResendVerificationCode(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// RefreshToken refreshes an access token using a refresh token
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req models.RefreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем информацию о клиенте
+	userAgent := r.Header.Get("User-Agent")
+	ipAddress := r.RemoteAddr
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		ipAddress = forwarded
+	}
+
+	tokenPair, err := h.authService.RefreshAccessToken(req.RefreshToken, userAgent, ipAddress)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data:    tokenPair,
+		Message: "Token refreshed successfully",
+	})
+}
+
+// RevokeRefreshToken revokes a specific refresh token
+func (h *AuthHandler) RevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	var req models.RefreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := h.authService.RevokeRefreshToken(userID, req.RefreshToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Message: "Refresh token revoked successfully",
+	})
+}
+
+// RevokeAllRefreshTokens revokes all refresh tokens for the current user
+func (h *AuthHandler) RevokeAllRefreshTokens(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	err := h.authService.RevokeAllRefreshTokens(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Message: "All refresh tokens revoked successfully",
+	})
 }
 
 // helpers

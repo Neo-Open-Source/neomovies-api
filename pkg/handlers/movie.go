@@ -189,8 +189,6 @@ func (h *MovieHandler) GetSimilar(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
-
 func (h *MovieHandler) GetExternalIDs(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -217,11 +215,11 @@ func getIntQuery(r *http.Request, key string, defaultValue int) int {
 	if str == "" {
 		return defaultValue
 	}
-	
+
 	value, err := strconv.Atoi(str)
 	if err != nil {
 		return defaultValue
 	}
-	
+
 	return value
 }

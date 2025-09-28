@@ -48,8 +48,6 @@ func (s *MovieService) GetSimilar(id, page int, language string) (*models.TMDBRe
 	return s.tmdb.GetSimilarMovies(id, page, language)
 }
 
-
-
 func (s *MovieService) GetExternalIDs(id int) (*models.ExternalIDs, error) {
 	return s.tmdb.GetMovieExternalIDs(id)
 }
