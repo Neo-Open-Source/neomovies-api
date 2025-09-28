@@ -98,7 +98,7 @@ func (s *EmailService) SendVerificationEmail(userEmail, code string) error {
 
 func (s *EmailService) SendPasswordResetEmail(userEmail, resetToken string) error {
 	resetURL := fmt.Sprintf("%s/reset-password?token=%s", s.config.BaseURL, resetToken)
-	
+
 	options := &EmailOptions{
 		To:      []string{userEmail},
 		Subject: "Сброс пароля Neo Movies",
