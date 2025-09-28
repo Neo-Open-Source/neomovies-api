@@ -18,10 +18,10 @@ import (
 )
 
 var (
-	globalDB   *mongo.Database
-	globalCfg  *config.Config
-	initOnce   sync.Once
-	initError  error
+	globalDB  *mongo.Database
+	globalCfg *config.Config
+	initOnce  sync.Once
+	initError error
 )
 
 func initializeApp() {
@@ -104,6 +104,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	// Плееры
 	api.HandleFunc("/players/alloha/{imdb_id}", playersHandler.GetAllohaPlayer).Methods("GET")
 	api.HandleFunc("/players/lumex/{imdb_id}", playersHandler.GetLumexPlayer).Methods("GET")
+	api.HandleFunc("/players/rgshows/{tmdb_id}", playersHandler.GetRgShowsPlayer).Methods("GET")
+	api.HandleFunc("/players/rgshows/{tmdb_id}/{season}/{episode}", playersHandler.GetRgShowsTVPlayer).Methods("GET")
+	api.HandleFunc("/players/iframevideo/{kinopoisk_id}/{imdb_id}", playersHandler.GetIframeVideoPlayer).Methods("GET")
+	api.HandleFunc("/stream/{provider}/{tmdb_id}", playersHandler.GetStreamAPI).Methods("GET")
 
 	// Торренты
 	api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
@@ -159,8 +163,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"}), 
-                handlers.AllowCredentials(),
+		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"}),
+		handlers.AllowCredentials(),
 	)
 
 	// Обрабатываем запрос
