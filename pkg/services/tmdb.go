@@ -52,23 +52,23 @@ func (s *TMDBService) SearchMovies(query string, page int, language, region stri
 	params.Set("query", query)
 	params.Set("page", strconv.Itoa(page))
 	params.Set("include_adult", "false")
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
 		params.Set("language", "ru-RU")
 	}
-	
+
 	if region != "" {
 		params.Set("region", region)
 	}
-	
+
 	if year > 0 {
 		params.Set("year", strconv.Itoa(year))
 	}
 
 	endpoint := fmt.Sprintf("%s/search/movie?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -119,24 +119,29 @@ func (s *TMDBService) SearchMulti(query string, page int, language string) (*mod
 	return &response, nil
 }
 
+// Алиас для совместимости с новым WebTorrent handler
+func (s *TMDBService) SearchTV(query string, page int, language string, firstAirDateYear int) (*models.TMDBTVResponse, error) {
+	return s.SearchTVShows(query, page, language, firstAirDateYear)
+}
+
 func (s *TMDBService) SearchTVShows(query string, page int, language string, firstAirDateYear int) (*models.TMDBTVResponse, error) {
 	params := url.Values{}
 	params.Set("query", query)
 	params.Set("page", strconv.Itoa(page))
 	params.Set("include_adult", "false")
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
 		params.Set("language", "ru-RU")
 	}
-	
+
 	if firstAirDateYear > 0 {
 		params.Set("first_air_date_year", strconv.Itoa(firstAirDateYear))
 	}
 
 	endpoint := fmt.Sprintf("%s/search/tv?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBTVResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -144,7 +149,7 @@ func (s *TMDBService) SearchTVShows(query string, page int, language string, fir
 
 func (s *TMDBService) GetMovie(id int, language string) (*models.Movie, error) {
 	params := url.Values{}
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -152,7 +157,7 @@ func (s *TMDBService) GetMovie(id int, language string) (*models.Movie, error) {
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/%d?%s", s.baseURL, id, params.Encode())
-	
+
 	var movie models.Movie
 	err := s.makeRequest(endpoint, &movie)
 	return &movie, err
@@ -160,7 +165,7 @@ func (s *TMDBService) GetMovie(id int, language string) (*models.Movie, error) {
 
 func (s *TMDBService) GetTVShow(id int, language string) (*models.TVShow, error) {
 	params := url.Values{}
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -168,7 +173,7 @@ func (s *TMDBService) GetTVShow(id int, language string) (*models.TVShow, error)
 	}
 
 	endpoint := fmt.Sprintf("%s/tv/%d?%s", s.baseURL, id, params.Encode())
-	
+
 	var tvShow models.TVShow
 	err := s.makeRequest(endpoint, &tvShow)
 	return &tvShow, err
@@ -176,7 +181,7 @@ func (s *TMDBService) GetTVShow(id int, language string) (*models.TVShow, error)
 
 func (s *TMDBService) GetGenres(mediaType string, language string) (*models.GenresResponse, error) {
 	params := url.Values{}
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -184,7 +189,7 @@ func (s *TMDBService) GetGenres(mediaType string, language string) (*models.Genr
 	}
 
 	endpoint := fmt.Sprintf("%s/genre/%s/list?%s", s.baseURL, mediaType, params.Encode())
-	
+
 	var response models.GenresResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -205,11 +210,11 @@ func (s *TMDBService) GetAllGenres() (*models.GenresResponse, error) {
 
 	// Объединяем жанры, убирая дубликаты
 	allGenres := make(map[int]models.Genre)
-	
+
 	for _, genre := range movieGenres.Genres {
 		allGenres[genre.ID] = genre
 	}
-	
+
 	for _, genre := range tvGenres.Genres {
 		allGenres[genre.ID] = genre
 	}
@@ -226,19 +231,19 @@ func (s *TMDBService) GetAllGenres() (*models.GenresResponse, error) {
 func (s *TMDBService) GetPopularMovies(page int, language, region string) (*models.TMDBResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
 		params.Set("language", "ru-RU")
 	}
-	
+
 	if region != "" {
 		params.Set("region", region)
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/popular?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -247,19 +252,19 @@ func (s *TMDBService) GetPopularMovies(page int, language, region string) (*mode
 func (s *TMDBService) GetTopRatedMovies(page int, language, region string) (*models.TMDBResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
 		params.Set("language", "ru-RU")
 	}
-	
+
 	if region != "" {
 		params.Set("region", region)
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/top_rated?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -268,19 +273,19 @@ func (s *TMDBService) GetTopRatedMovies(page int, language, region string) (*mod
 func (s *TMDBService) GetUpcomingMovies(page int, language, region string) (*models.TMDBResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
 		params.Set("language", "ru-RU")
 	}
-	
+
 	if region != "" {
 		params.Set("region", region)
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/upcoming?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -289,19 +294,19 @@ func (s *TMDBService) GetUpcomingMovies(page int, language, region string) (*mod
 func (s *TMDBService) GetNowPlayingMovies(page int, language, region string) (*models.TMDBResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
 		params.Set("language", "ru-RU")
 	}
-	
+
 	if region != "" {
 		params.Set("region", region)
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/now_playing?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -310,7 +315,7 @@ func (s *TMDBService) GetNowPlayingMovies(page int, language, region string) (*m
 func (s *TMDBService) GetMovieRecommendations(id, page int, language string) (*models.TMDBResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -318,7 +323,7 @@ func (s *TMDBService) GetMovieRecommendations(id, page int, language string) (*m
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/%d/recommendations?%s", s.baseURL, id, params.Encode())
-	
+
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -327,7 +332,7 @@ func (s *TMDBService) GetMovieRecommendations(id, page int, language string) (*m
 func (s *TMDBService) GetSimilarMovies(id, page int, language string) (*models.TMDBResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -335,7 +340,7 @@ func (s *TMDBService) GetSimilarMovies(id, page int, language string) (*models.T
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/%d/similar?%s", s.baseURL, id, params.Encode())
-	
+
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -344,7 +349,7 @@ func (s *TMDBService) GetSimilarMovies(id, page int, language string) (*models.T
 func (s *TMDBService) GetPopularTVShows(page int, language string) (*models.TMDBTVResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -352,7 +357,7 @@ func (s *TMDBService) GetPopularTVShows(page int, language string) (*models.TMDB
 	}
 
 	endpoint := fmt.Sprintf("%s/tv/popular?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBTVResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -361,7 +366,7 @@ func (s *TMDBService) GetPopularTVShows(page int, language string) (*models.TMDB
 func (s *TMDBService) GetTopRatedTVShows(page int, language string) (*models.TMDBTVResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -369,7 +374,7 @@ func (s *TMDBService) GetTopRatedTVShows(page int, language string) (*models.TMD
 	}
 
 	endpoint := fmt.Sprintf("%s/tv/top_rated?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBTVResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -378,7 +383,7 @@ func (s *TMDBService) GetTopRatedTVShows(page int, language string) (*models.TMD
 func (s *TMDBService) GetOnTheAirTVShows(page int, language string) (*models.TMDBTVResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -386,7 +391,7 @@ func (s *TMDBService) GetOnTheAirTVShows(page int, language string) (*models.TMD
 	}
 
 	endpoint := fmt.Sprintf("%s/tv/on_the_air?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBTVResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -395,7 +400,7 @@ func (s *TMDBService) GetOnTheAirTVShows(page int, language string) (*models.TMD
 func (s *TMDBService) GetAiringTodayTVShows(page int, language string) (*models.TMDBTVResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -403,7 +408,7 @@ func (s *TMDBService) GetAiringTodayTVShows(page int, language string) (*models.
 	}
 
 	endpoint := fmt.Sprintf("%s/tv/airing_today?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBTVResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -412,7 +417,7 @@ func (s *TMDBService) GetAiringTodayTVShows(page int, language string) (*models.
 func (s *TMDBService) GetTVRecommendations(id, page int, language string) (*models.TMDBTVResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -420,7 +425,7 @@ func (s *TMDBService) GetTVRecommendations(id, page int, language string) (*mode
 	}
 
 	endpoint := fmt.Sprintf("%s/tv/%d/recommendations?%s", s.baseURL, id, params.Encode())
-	
+
 	var response models.TMDBTVResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -429,7 +434,7 @@ func (s *TMDBService) GetTVRecommendations(id, page int, language string) (*mode
 func (s *TMDBService) GetSimilarTVShows(id, page int, language string) (*models.TMDBTVResponse, error) {
 	params := url.Values{}
 	params.Set("page", strconv.Itoa(page))
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -437,7 +442,7 @@ func (s *TMDBService) GetSimilarTVShows(id, page int, language string) (*models.
 	}
 
 	endpoint := fmt.Sprintf("%s/tv/%d/similar?%s", s.baseURL, id, params.Encode())
-	
+
 	var response models.TMDBTVResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -445,7 +450,7 @@ func (s *TMDBService) GetSimilarTVShows(id, page int, language string) (*models.
 
 func (s *TMDBService) GetMovieExternalIDs(id int) (*models.ExternalIDs, error) {
 	endpoint := fmt.Sprintf("%s/movie/%d/external_ids", s.baseURL, id)
-	
+
 	var ids models.ExternalIDs
 	err := s.makeRequest(endpoint, &ids)
 	return &ids, err
@@ -453,7 +458,7 @@ func (s *TMDBService) GetMovieExternalIDs(id int) (*models.ExternalIDs, error) {
 
 func (s *TMDBService) GetTVExternalIDs(id int) (*models.ExternalIDs, error) {
 	endpoint := fmt.Sprintf("%s/tv/%d/external_ids", s.baseURL, id)
-	
+
 	var ids models.ExternalIDs
 	err := s.makeRequest(endpoint, &ids)
 	return &ids, err
@@ -464,7 +469,7 @@ func (s *TMDBService) DiscoverMoviesByGenre(genreID, page int, language string) 
 	params.Set("page", strconv.Itoa(page))
 	params.Set("with_genres", strconv.Itoa(genreID))
 	params.Set("sort_by", "popularity.desc")
-	
+
 	if language != "" {
 		params.Set("language", language)
 	} else {
@@ -472,8 +477,39 @@ func (s *TMDBService) DiscoverMoviesByGenre(genreID, page int, language string) 
 	}
 
 	endpoint := fmt.Sprintf("%s/discover/movie?%s", s.baseURL, params.Encode())
-	
+
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
+}
+
+func (s *TMDBService) DiscoverTVByGenre(genreID, page int, language string) (*models.TMDBResponse, error) {
+	params := url.Values{}
+	params.Set("page", strconv.Itoa(page))
+	params.Set("with_genres", strconv.Itoa(genreID))
+	params.Set("sort_by", "popularity.desc")
+
+	if language != "" {
+		params.Set("language", language)
+	} else {
+		params.Set("language", "ru-RU")
+	}
+
+	endpoint := fmt.Sprintf("%s/discover/tv?%s", s.baseURL, params.Encode())
+
+	var response models.TMDBResponse
+	err := s.makeRequest(endpoint, &response)
+	return &response, err
+}
+
+func (s *TMDBService) GetTVSeason(tvID, seasonNumber int, language string) (*models.SeasonDetails, error) {
+	if language == "" {
+		language = "ru-RU"
+	}
+
+	endpoint := fmt.Sprintf("%s/tv/%d/season/%d?language=%s", s.baseURL, tvID, seasonNumber, language)
+
+	var season models.SeasonDetails
+	err := s.makeRequest(endpoint, &season)
+	return &season, err
 }
