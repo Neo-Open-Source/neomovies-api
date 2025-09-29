@@ -374,76 +374,8 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 				},
 			},
-			"/api/v1/webtorrent/player": map[string]interface{}{
-				"get": map[string]interface{}{
-					"summary":     "WebTorrent плеер",
-					"description": "Открытие WebTorrent плеера с магнет ссылкой. Плеер работает полностью на стороне клиента.",
-					"tags":        []string{"WebTorrent"},
-					"parameters": []map[string]interface{}{
-						{
-							"name":        "magnet",
-							"in":          "query",
-							"required":    false,
-							"schema":      map[string]string{"type": "string"},
-							"description": "Магнет ссылка торрента",
-						},
-						{
-							"name":        "X-Magnet-Link",
-							"in":          "header",
-							"required":    false,
-							"schema":      map[string]string{"type": "string"},
-							"description": "Магнет ссылка через заголовок (альтернативный способ)",
-						},
-					},
-					"responses": map[string]interface{}{
-						"200": map[string]interface{}{
-							"description": "HTML страница с WebTorrent плеером",
-							"content": map[string]interface{}{
-								"text/html": map[string]interface{}{
-									"schema": map[string]string{"type": "string"},
-								},
-							},
-						},
-						"400": map[string]interface{}{
-							"description": "Отсутствует магнет ссылка",
-						},
-					},
-				},
-			},
-			"/api/v1/webtorrent/metadata": map[string]interface{}{
-				"get": map[string]interface{}{
-					"summary":     "Метаданные медиа",
-					"description": "Получение метаданных фильма или сериала по названию для WebTorrent плеера",
-					"tags":        []string{"WebTorrent"},
-					"parameters": []map[string]interface{}{
-						{
-							"name":        "query",
-							"in":          "query",
-							"required":    true,
-							"schema":      map[string]string{"type": "string"},
-							"description": "Название для поиска (извлеченное из торрента)",
-						},
-					},
-					"responses": map[string]interface{}{
-						"200": map[string]interface{}{
-							"description": "Метаданные найдены",
-							"content": map[string]interface{}{
-								"application/json": map[string]interface{}{
-									"schema": map[string]interface{}{
-										"$ref": "#/components/schemas/WebTorrentMetadata",
-									},
-								},
-							},
-						},
-						"400": map[string]interface{}{
-							"description": "Отсутствует параметр query",
-						},
-						"404": map[string]interface{}{
-							"description": "Метаданные не найдены",
-						},
-					},
-				},
-			},
+
+
 			"/api/v1/torrents/search/{imdbId}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Поиск торрентов",
