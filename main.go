@@ -129,12 +129,30 @@ func main() {
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.RemoveReaction).Methods("DELETE")
 	protected.HandleFunc("/reactions/my", reactionsHandler.GetMyReactions).Methods("GET")
 
+	// CORS configuration - allow all origins
 	corsHandler := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-CSRF-Token"}),
-		handlers.AllowCredentials(),
-		handlers.ExposedHeaders([]string{"Authorization", "Content-Type"}),
+		handlers.AllowedOrigins([]string{
+			"*", // Allow all origins
+		}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"}),
+		handlers.AllowedHeaders([]string{
+			"Authorization",
+			"Content-Type",
+			"Accept",
+			"Origin",
+			"X-Requested-With",
+			"X-CSRF-Token",
+			"Access-Control-Allow-Origin",
+			"Access-Control-Allow-Headers",
+			"Access-Control-Allow-Methods",
+			"Access-Control-Allow-Credentials",
+		}),
+		handlers.ExposedHeaders([]string{
+			"Authorization",
+			"Content-Type",
+			"X-Total-Count",
+		}),
+		handlers.MaxAge(3600),
 	)
 
 	var finalHandler http.Handler
