@@ -81,11 +81,6 @@ func main() {
 	api.HandleFunc("/players/vidsrc/{media_type}/{imdb_id}", playersHandler.GetVidsrcPlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/movie/{imdb_id}", playersHandler.GetVidlinkMoviePlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/tv/{tmdb_id}", playersHandler.GetVidlinkTVPlayer).Methods("GET")
-	
-	// Client-side parsing players (custom player with HLS support)
-	api.HandleFunc("/players/vidsrc-parse/{media_type}/{imdb_id}", playersHandler.GetVidsrcParserPlayer).Methods("GET")
-	api.HandleFunc("/players/vidlink-parse/movie/{imdb_id}", playersHandler.GetVidlinkParserMoviePlayer).Methods("GET")
-	api.HandleFunc("/players/vidlink-parse/tv/{tmdb_id}", playersHandler.GetVidlinkParserTVPlayer).Methods("GET")
 
 	api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
 	api.HandleFunc("/torrents/movies", torrentsHandler.SearchMovies).Methods("GET")
