@@ -532,7 +532,8 @@ func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request)
 	
 	log.Printf("Generated Vidsrc URL: %s", playerURL)
 	
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
+	// Sandbox блокирует всплывающие окна и нежелательные редиректы
+	iframe := fmt.Sprintf(`<iframe src="%s" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" referrerpolicy="no-referrer"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidsrc Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
@@ -557,7 +558,8 @@ func (h *PlayersHandler) GetVidlinkMoviePlayer(w http.ResponseWriter, r *http.Re
 	
 	log.Printf("Generated Vidlink Movie URL: %s", playerURL)
 	
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
+	// Sandbox блокирует всплывающие окна и нежелательные редиректы
+	iframe := fmt.Sprintf(`<iframe src="%s" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" referrerpolicy="no-referrer"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
@@ -589,7 +591,8 @@ func (h *PlayersHandler) GetVidlinkTVPlayer(w http.ResponseWriter, r *http.Reque
 	
 	log.Printf("Generated Vidlink TV URL: %s", playerURL)
 	
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
+	// Sandbox блокирует всплывающие окна и нежелательные редиректы
+	iframe := fmt.Sprintf(`<iframe src="%s" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" referrerpolicy="no-referrer"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
