@@ -160,17 +160,16 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 	log.Printf("🎬 Lumex Query Params - Season: '%s', Episode: '%s'", season, episode)
 
 	// Lumex использует формат:
-	// Movie: {LUMEX_URL}/movie/{id}?autoplay=1
-	// TV: {LUMEX_URL}/tv-series/{id}?season=1&episode=3&autoplay=1
-	// ID может быть IMDb или числовым
+	// Movie: {LUMEX_URL}?imdb_id={imdb_id}
+	// TV: {LUMEX_URL}?imdb_id={imdb_id}&season=1&episode=3
 	var playerURL string
 	if season != "" && episode != "" {
 		// Сериал
-		playerURL = fmt.Sprintf("%s/tv-series/%s?season=%s&episode=%s&autoplay=1", h.config.LumexURL, imdbID, season, episode)
+		playerURL = fmt.Sprintf("%s?imdb_id=%s&season=%s&episode=%s", h.config.LumexURL, imdbID, season, episode)
 		log.Printf("✅ Lumex: TV series mode with season/episode")
 	} else {
 		// Фильм
-		playerURL = fmt.Sprintf("%s/movie/%s?autoplay=1", h.config.LumexURL, imdbID)
+		playerURL = fmt.Sprintf("%s?imdb_id=%s", h.config.LumexURL, imdbID)
 		log.Printf("✅ Lumex: Movie mode")
 	}
 	log.Printf("🔗 Final Lumex URL: %s", playerURL)
