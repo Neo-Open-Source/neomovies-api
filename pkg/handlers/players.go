@@ -436,22 +436,22 @@ func (h *PlayersHandler) GetStreamAPI(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Successfully served stream API for provider: %s, tmdb_id: %s", provider, tmdbID)
 }
 
-// GetVidsrcPlayer handles Vidsrc.to player
+// GetVidsrcPlayer handles Vidsrc.to player (uses IMDb ID for both movies and TV shows)
 func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GetVidsrcPlayer called: %s %s", r.Method, r.URL.Path)
 	
 	vars := mux.Vars(r)
-	id := vars["id"]
+	imdbId := vars["imdb_id"]
 	mediaType := vars["media_type"] // "movie" or "tv"
 	
-	if id == "" || mediaType == "" {
-		http.Error(w, "id and media_type are required", http.StatusBadRequest)
+	if imdbId == "" || mediaType == "" {
+		http.Error(w, "imdb_id and media_type are required", http.StatusBadRequest)
 		return
 	}
 	
 	var playerURL string
 	if mediaType == "movie" {
-		playerURL = fmt.Sprintf("https://vidsrc.to/embed/movie/%s", id)
+		playerURL = fmt.Sprintf("https://vidsrc.to/embed/movie/%s", imdbId)
 	} else if mediaType == "tv" {
 		season := r.URL.Query().Get("season")
 		episode := r.URL.Query().Get("episode")
@@ -459,7 +459,7 @@ func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "season and episode are required for TV shows", http.StatusBadRequest)
 			return
 		}
-		playerURL = fmt.Sprintf("https://vidsrc.to/embed/tv/%s/%s/%s", id, season, episode)
+		playerURL = fmt.Sprintf("https://vidsrc.to/embed/tv/%s/%s/%s", imdbId, season, episode)
 	} else {
 		http.Error(w, "Invalid media_type. Use 'movie' or 'tv'", http.StatusBadRequest)
 		return
@@ -473,39 +473,24 @@ func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
 	
-	log.Printf("Successfully served Vidsrc player for %s: %s", mediaType, id)
+	log.Printf("Successfully served Vidsrc player for %s: %s", mediaType, imdbId)
 }
 
-// GetVidlinkPlayer handles vidlink.pro player
-func (h *PlayersHandler) GetVidlinkPlayer(w http.ResponseWriter, r *http.Request) {
-	log.Printf("GetVidlinkPlayer called: %s %s", r.Method, r.URL.Path)
+// GetVidlinkMoviePlayer handles vidlink.pro player for movies (uses IMDb ID)
+func (h *PlayersHandler) GetVidlinkMoviePlayer(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetVidlinkMoviePlayer called: %s %s", r.Method, r.URL.Path)
 	
 	vars := mux.Vars(r)
-	id := vars["id"]
-	mediaType := vars["media_type"] // "movie" or "tv"
+	imdbId := vars["imdb_id"]
 	
-	if id == "" || mediaType == "" {
-		http.Error(w, "id and media_type are required", http.StatusBadRequest)
+	if imdbId == "" {
+		http.Error(w, "imdb_id is required", http.StatusBadRequest)
 		return
 	}
 	
-	var playerURL string
-	if mediaType == "movie" {
-		playerURL = fmt.Sprintf("https://vidlink.pro/movie/%s", id)
-	} else if mediaType == "tv" {
-		season := r.URL.Query().Get("season")
-		episode := r.URL.Query().Get("episode")
-		if season == "" || episode == "" {
-			http.Error(w, "season and episode are required for TV shows", http.StatusBadRequest)
-			return
-		}
-		playerURL = fmt.Sprintf("https://vidlink.pro/tv/%s/%s/%s", id, season, episode)
-	} else {
-		http.Error(w, "Invalid media_type. Use 'movie' or 'tv'", http.StatusBadRequest)
-		return
-	}
+	playerURL := fmt.Sprintf("https://vidlink.pro/movie/%s", imdbId)
 	
-	log.Printf("Generated Vidlink URL: %s", playerURL)
+	log.Printf("Generated Vidlink Movie URL: %s", playerURL)
 	
 	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
@@ -513,5 +498,37 @@ func (h *PlayersHandler) GetVidlinkPlayer(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
 	
-	log.Printf("Successfully served Vidlink player for %s: %s", mediaType, id)
+	log.Printf("Successfully served Vidlink movie player: %s", imdbId)
+}
+
+// GetVidlinkTVPlayer handles vidlink.pro player for TV shows (uses TMDB ID)
+func (h *PlayersHandler) GetVidlinkTVPlayer(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetVidlinkTVPlayer called: %s %s", r.Method, r.URL.Path)
+	
+	vars := mux.Vars(r)
+	tmdbId := vars["tmdb_id"]
+	
+	if tmdbId == "" {
+		http.Error(w, "tmdb_id is required", http.StatusBadRequest)
+		return
+	}
+	
+	season := r.URL.Query().Get("season")
+	episode := r.URL.Query().Get("episode")
+	if season == "" || episode == "" {
+		http.Error(w, "season and episode are required for TV shows", http.StatusBadRequest)
+		return
+	}
+	
+	playerURL := fmt.Sprintf("https://vidlink.pro/tv/%s/%s/%s", tmdbId, season, episode)
+	
+	log.Printf("Generated Vidlink TV URL: %s", playerURL)
+	
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
+	
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(htmlDoc))
+	
+	log.Printf("Successfully served Vidlink TV player: %s S%sE%s", tmdbId, season, episode)
 }

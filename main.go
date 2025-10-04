@@ -78,8 +78,9 @@ func main() {
 	api.HandleFunc("/players/alloha/{imdb_id}", playersHandler.GetAllohaPlayer).Methods("GET")
 	api.HandleFunc("/players/lumex/{imdb_id}", playersHandler.GetLumexPlayer).Methods("GET")
 	api.HandleFunc("/players/vibix/{imdb_id}", playersHandler.GetVibixPlayer).Methods("GET")
-	api.HandleFunc("/players/vidsrc/{media_type}/{id}", playersHandler.GetVidsrcPlayer).Methods("GET")
-	api.HandleFunc("/players/vidlink/{media_type}/{id}", playersHandler.GetVidlinkPlayer).Methods("GET")
+	api.HandleFunc("/players/vidsrc/{media_type}/{imdb_id}", playersHandler.GetVidsrcPlayer).Methods("GET")
+	api.HandleFunc("/players/vidlink/movie/{imdb_id}", playersHandler.GetVidlinkMoviePlayer).Methods("GET")
+	api.HandleFunc("/players/vidlink/tv/{tmdb_id}", playersHandler.GetVidlinkTVPlayer).Methods("GET")
 
 	api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
 	api.HandleFunc("/torrents/movies", torrentsHandler.SearchMovies).Methods("GET")
