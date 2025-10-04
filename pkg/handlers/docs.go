@@ -374,6 +374,116 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 				},
 			},
+			"/api/v1/players/vidsrc/{media_type}/{imdb_id}": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "Vidsrc плеер (английский)",
+					"description": "Возвращает HTML-страницу с iframe Vidsrc.to. Использует IMDb ID для фильмов и сериалов. Пример URL для фильма: https://vidsrc.to/embed/movie/tt1234567, для сериала: https://vidsrc.to/embed/tv/tt6385540/1/1",
+					"tags":        []string{"Players"},
+					"parameters": []map[string]interface{}{
+						{
+							"name":        "media_type",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]interface{}{"type": "string", "enum": []string{"movie", "tv"}},
+							"description": "Тип контента: movie (фильм) или tv (сериал)",
+						},
+						{
+							"name":        "imdb_id",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "string"},
+							"description": "IMDb ID, например tt6385540 (с префиксом tt)",
+						},
+						{
+							"name":        "season",
+							"in":          "query",
+							"required":    false,
+							"schema":      map[string]string{"type": "integer"},
+							"description": "Номер сезона (обязательно для TV)",
+						},
+						{
+							"name":        "episode",
+							"in":          "query",
+							"required":    false,
+							"schema":      map[string]string{"type": "integer"},
+							"description": "Номер серии (обязательно для TV)",
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "HTML со встроенным Vidsrc плеером",
+							"content": map[string]interface{}{
+								"text/html": map[string]interface{}{},
+							},
+						},
+						"400": map[string]interface{}{"description": "Отсутствуют обязательные параметры"},
+					},
+				},
+			},
+			"/api/v1/players/vidlink/movie/{imdb_id}": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "Vidlink плеер для фильмов (английский)",
+					"description": "Возвращает HTML-страницу с iframe Vidlink.pro для фильмов. Использует IMDb ID. Пример URL: https://vidlink.pro/movie/tt1234567",
+					"tags":        []string{"Players"},
+					"parameters": []map[string]interface{}{
+						{
+							"name":        "imdb_id",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "string"},
+							"description": "IMDb ID фильма, например tt1234567 (с префиксом tt)",
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "HTML со встроенным Vidlink плеером",
+							"content": map[string]interface{}{
+								"text/html": map[string]interface{}{},
+							},
+						},
+						"400": map[string]interface{}{"description": "IMDb ID не указан"},
+					},
+				},
+			},
+			"/api/v1/players/vidlink/tv/{tmdb_id}": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "Vidlink плеер для сериалов (английский)",
+					"description": "Возвращает HTML-страницу с iframe Vidlink.pro для сериалов. Использует TMDB ID (без префикса tt). Пример URL: https://vidlink.pro/tv/94997/1/1",
+					"tags":        []string{"Players"},
+					"parameters": []map[string]interface{}{
+						{
+							"name":        "tmdb_id",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "integer"},
+							"description": "TMDB ID сериала, например 94997 (числовой идентификатор без префикса)",
+						},
+						{
+							"name":        "season",
+							"in":          "query",
+							"required":    true,
+							"schema":      map[string]string{"type": "integer"},
+							"description": "Номер сезона (обязательно)",
+						},
+						{
+							"name":        "episode",
+							"in":          "query",
+							"required":    true,
+							"schema":      map[string]string{"type": "integer"},
+							"description": "Номер серии (обязательно)",
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "HTML со встроенным Vidlink плеером",
+							"content": map[string]interface{}{
+								"text/html": map[string]interface{}{},
+							},
+						},
+						"400": map[string]interface{}{"description": "Отсутствуют обязательные параметры (tmdb_id, season, episode)"},
+					},
+				},
+			},
 
 
 			"/api/v1/torrents/search/{imdbId}": map[string]interface{}{
