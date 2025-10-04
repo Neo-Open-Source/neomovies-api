@@ -78,7 +78,8 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 	var allohaResponse struct {
 		Status string `json:"status"`
 		Data   struct {
-			Iframe string `json:"iframe"`
+			TokenMovie string `json:"token_movie"`
+			Iframe     string `json:"iframe"`
 		} `json:"data"`
 	}
 
@@ -88,22 +89,41 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if allohaResponse.Status != "success" || allohaResponse.Data.Iframe == "" {
-		log.Printf("Video not found or empty iframe")
+	if allohaResponse.Status != "success" {
+		log.Printf("Video not found")
 		http.Error(w, "Video not found", http.StatusNotFound)
 		return
 	}
 
-	iframeCode := allohaResponse.Data.Iframe
-	if !strings.Contains(iframeCode, "<") {
-		iframeCode = fmt.Sprintf(`<iframe src="%s" allowfullscreen style="border:none;width:100%%;height:100%%"></iframe>`, iframeCode)
+	// Получаем параметры для сериалов
+	season := r.URL.Query().Get("season")
+	episode := r.URL.Query().Get("episode")
+	translation := r.URL.Query().Get("translation")
+	if translation == "" {
+		translation = "66" // дефолтная озвучка
 	}
 
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Alloha Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframeCode)
+	// Строим URL плеера
+	var playerURL string
+	if allohaResponse.Data.TokenMovie != "" {
+		// Используем новый API с token_movie
+		baseURL := "https://torso.as.allohafr.live"
+		playerURL = fmt.Sprintf("%s/%s", baseURL, allohaResponse.Data.TokenMovie)
+		if season != "" && episode != "" {
+			playerURL = fmt.Sprintf("%s?season=%s&episode=%s&translation=%s", playerURL, season, episode, translation)
+		}
+	} else if allohaResponse.Data.Iframe != "" {
+		// Fallback на старый iframe
+		playerURL = allohaResponse.Data.Iframe
+	} else {
+		http.Error(w, "Video not found", http.StatusNotFound)
+		return
+	}
 
-	// Авто-исправление экранированных кавычек
-	htmlDoc = strings.ReplaceAll(htmlDoc, `\"`, `"`)
-	htmlDoc = strings.ReplaceAll(htmlDoc, `\'`, `'`)
+	log.Printf("Generated Alloha player URL: %s", playerURL)
+
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen"></iframe>`, playerURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Alloha Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
 
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
@@ -132,8 +152,16 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	url := fmt.Sprintf("%s?imdb_id=%s", h.config.LumexURL, url.QueryEscape(imdbID))
-	log.Printf("Generated Lumex URL: %s", url)
+	// Получаем параметры для сериалов
+	season := r.URL.Query().Get("season")
+	episode := r.URL.Query().Get("episode")
+
+	playerURL := fmt.Sprintf("%s?imdb_id=%s", h.config.LumexURL, url.QueryEscape(imdbID))
+	if season != "" && episode != "" {
+		playerURL = fmt.Sprintf("%s&season=%s&episode=%s", playerURL, season, episode)
+	}
+	log.Printf("Generated Lumex URL: %s", playerURL)
+	url := playerURL
 
 	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, url)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Lumex Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
@@ -227,9 +255,24 @@ func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	log.Printf("Generated Vibix iframe URL: %s", vibixResponse.IframeURL)
+	// Получаем параметры для сериалов
+	season := r.URL.Query().Get("season")
+	episode := r.URL.Query().Get("episode")
 
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, vibixResponse.IframeURL)
+	// Строим итоговый URL плеера
+	playerURL := vibixResponse.IframeURL
+	if season != "" && episode != "" {
+		// Добавляем параметры сезона и серии
+		separator := "?"
+		if strings.Contains(playerURL, "?") {
+			separator = "&"
+		}
+		playerURL = fmt.Sprintf("%s%sseason=%s&episode=%s", playerURL, separator, season, episode)
+	}
+
+	log.Printf("Generated Vibix iframe URL: %s", playerURL)
+
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vibix Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
 
 	w.Header().Set("Content-Type", "text/html")
