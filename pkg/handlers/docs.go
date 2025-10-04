@@ -377,7 +377,7 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 				},
 			},
 		},
-			"/api/v1/players/vidsrc/{media_type}/{imdb_id}": map[string]interface{}{
+		"/api/v1/players/vidsrc/{media_type}/{imdb_id}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Vidsrc плеер (английский)",
 					"description": "Возвращает HTML-страницу с iframe Vidsrc.to. Использует IMDb ID для фильмов и сериалов. Пример URL для фильма: https://vidsrc.to/embed/movie/tt1234567, для сериала: https://vidsrc.to/embed/tv/tt6385540/1/1",
