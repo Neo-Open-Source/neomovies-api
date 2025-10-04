@@ -98,8 +98,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/players/lumex/{imdb_id}", playersHandler.GetLumexPlayer).Methods("GET")
 	api.HandleFunc("/players/vibix/{imdb_id}", playersHandler.GetVibixPlayer).Methods("GET")
 	api.HandleFunc("/players/vidsrc/{media_type}/{id}", playersHandler.GetVidsrcPlayer).Methods("GET")
-	api.HandleFunc("/players/twoembed/{media_type}/{id}", playersHandler.Get2EmbedPlayer).Methods("GET")
-	api.HandleFunc("/players/autoembed/{media_type}/{tmdb_id}", playersHandler.GetAutoembedPlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/{media_type}/{id}", playersHandler.GetVidlinkPlayer).Methods("GET")
 	api.HandleFunc("/players/rgshows/{tmdb_id}", playersHandler.GetRgShowsPlayer).Methods("GET")
 	api.HandleFunc("/players/rgshows/{tmdb_id}/{season}/{episode}", playersHandler.GetRgShowsTVPlayer).Methods("GET")

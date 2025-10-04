@@ -441,7 +441,6 @@ func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request)
 	log.Printf("GetVidsrcPlayer called: %s %s", r.Method, r.URL.Path)
 	
 	vars := mux.Vars(r)
-	idType := vars["id_type"] // "imdb" or "tmdb"
 	id := vars["id"]
 	mediaType := vars["media_type"] // "movie" or "tv"
 	
@@ -475,86 +474,6 @@ func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request)
 	w.Write([]byte(htmlDoc))
 	
 	log.Printf("Successfully served Vidsrc player for %s: %s", mediaType, id)
-}
-
-// Get2EmbedPlayer handles 2embed.cc player
-func (h *PlayersHandler) Get2EmbedPlayer(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Get2EmbedPlayer called: %s %s", r.Method, r.URL.Path)
-	
-	vars := mux.Vars(r)
-	id := vars["id"]
-	mediaType := vars["media_type"] // "movie" or "tv"
-	
-	if id == "" || mediaType == "" {
-		http.Error(w, "id and media_type are required", http.StatusBadRequest)
-		return
-	}
-	
-	var playerURL string
-	if mediaType == "movie" {
-		playerURL = fmt.Sprintf("https://www.2embed.cc/embed/%s", id)
-	} else if mediaType == "tv" {
-		season := r.URL.Query().Get("season")
-		episode := r.URL.Query().Get("episode")
-		if season == "" || episode == "" {
-			http.Error(w, "season and episode are required for TV shows", http.StatusBadRequest)
-			return
-		}
-		playerURL = fmt.Sprintf("https://www.2embed.cc/embedtv/%s&s=%s&e=%s", id, season, episode)
-	} else {
-		http.Error(w, "Invalid media_type. Use 'movie' or 'tv'", http.StatusBadRequest)
-		return
-	}
-	
-	log.Printf("Generated 2Embed URL: %s", playerURL)
-	
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>2Embed Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
-	
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(htmlDoc))
-	
-	log.Printf("Successfully served 2Embed player for %s: %s", mediaType, id)
-}
-
-// GetAutoembedPlayer handles autoembed.cc player
-func (h *PlayersHandler) GetAutoembedPlayer(w http.ResponseWriter, r *http.Request) {
-	log.Printf("GetAutoembedPlayer called: %s %s", r.Method, r.URL.Path)
-	
-	vars := mux.Vars(r)
-	tmdbId := vars["tmdb_id"]
-	mediaType := vars["media_type"] // "movie" or "tv"
-	
-	if tmdbId == "" || mediaType == "" {
-		http.Error(w, "tmdb_id and media_type are required", http.StatusBadRequest)
-		return
-	}
-	
-	var playerURL string
-	if mediaType == "movie" {
-		playerURL = fmt.Sprintf("https://autoembed.cc/movie/tmdb/%s", tmdbId)
-	} else if mediaType == "tv" {
-		season := r.URL.Query().Get("season")
-		episode := r.URL.Query().Get("episode")
-		if season == "" || episode == "" {
-			http.Error(w, "season and episode are required for TV shows", http.StatusBadRequest)
-			return
-		}
-		playerURL = fmt.Sprintf("https://autoembed.cc/tv/tmdb/%s-%s-%s", tmdbId, season, episode)
-	} else {
-		http.Error(w, "Invalid media_type. Use 'movie' or 'tv'", http.StatusBadRequest)
-		return
-	}
-	
-	log.Printf("Generated Autoembed URL: %s", playerURL)
-	
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Autoembed Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
-	
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(htmlDoc))
-	
-	log.Printf("Successfully served Autoembed player for %s: %s", mediaType, tmdbId)
 }
 
 // GetVidlinkPlayer handles vidlink.pro player
