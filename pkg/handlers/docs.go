@@ -330,7 +330,7 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 		"/api/v1/players/lumex/{imdb_id}": map[string]interface{}{
 			"get": map[string]interface{}{
 				"summary":     "Плеер Lumex",
-				"description": "Получение плеера Lumex по IMDb ID. Формат URL: /movie/{id} для фильмов, /tv-series/{id}?season=X&episode=Y для сериалов",
+				"description": "Получение плеера Lumex по IMDb ID. Не поддерживает выбор сезона/серии - плеер работает напрямую с IMDb ID",
 				"tags":        []string{"Players"},
 				"parameters": []map[string]interface{}{
 					{
@@ -339,20 +339,6 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 						"required":    true,
 						"schema":      map[string]string{"type": "string"},
 						"description": "IMDb ID фильма или сериала (например, tt0133093)",
-					},
-					{
-						"name":        "season",
-						"in":          "query",
-						"required":    false,
-						"schema":      map[string]string{"type": "integer"},
-						"description": "Номер сезона (для сериалов)",
-					},
-					{
-						"name":        "episode",
-						"in":          "query",
-						"required":    false,
-						"schema":      map[string]string{"type": "integer"},
-						"description": "Номер серии (для сериалов)",
 					},
 				},
 				"responses": map[string]interface{}{
@@ -365,32 +351,32 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 				},
 			},
 		},
-			"/api/v1/players/vibix/{imdb_id}": map[string]interface{}{
-				"get": map[string]interface{}{
-					"summary":     "Vibix плеер по IMDb ID",
-					"description": "Возвращает HTML-страницу с iframe Vibix для указанного IMDb ID",
-					"tags":        []string{"Players"},
-					"parameters": []map[string]interface{}{
-						{
-							"name":        "imdb_id",
-							"in":          "path",
-							"required":    true,
-							"schema":      map[string]string{"type": "string"},
-							"description": "IMDb ID, например tt0133093",
-						},
-					},
-					"responses": map[string]interface{}{
-						"200": map[string]interface{}{
-							"description": "HTML со встроенным Vibix плеером",
-							"content": map[string]interface{}{
-								"text/html": map[string]interface{}{},
-							},
-						},
-						"404": map[string]interface{}{"description": "Фильм не найден"},
-						"503": map[string]interface{}{"description": "VIBIX_TOKEN не настроен"},
+		"/api/v1/players/vibix/{imdb_id}": map[string]interface{}{
+			"get": map[string]interface{}{
+				"summary":     "Vibix плеер по IMDb ID",
+				"description": "Возвращает HTML-страницу с iframe Vibix для указанного IMDb ID. Не поддерживает выбор сезона/серии - плеер работает напрямую с IMDb ID",
+				"tags":        []string{"Players"},
+				"parameters": []map[string]interface{}{
+					{
+						"name":        "imdb_id",
+						"in":          "path",
+						"required":    true,
+						"schema":      map[string]string{"type": "string"},
+						"description": "IMDb ID, например tt0133093",
 					},
 				},
+				"responses": map[string]interface{}{
+					"200": map[string]interface{}{
+						"description": "HTML со встроенным Vibix плеером",
+						"content": map[string]interface{}{
+							"text/html": map[string]interface{}{},
+						},
+					},
+					"404": map[string]interface{}{"description": "Фильм не найден"},
+					"503": map[string]interface{}{"description": "VIBIX_TOKEN не настроен"},
+				},
 			},
+		},
 			"/api/v1/players/vidsrc/{media_type}/{imdb_id}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Vidsrc плеер (английский)",

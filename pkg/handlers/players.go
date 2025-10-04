@@ -153,26 +153,9 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Получаем параметры для сериалов
-	season := r.URL.Query().Get("season")
-	episode := r.URL.Query().Get("episode")
-
-	log.Printf("🎬 Lumex Query Params - Season: '%s', Episode: '%s'", season, episode)
-
-	// Lumex использует формат:
-	// Movie: {LUMEX_URL}?imdb_id={imdb_id}
-	// TV: {LUMEX_URL}?imdb_id={imdb_id}&season=1&episode=3
-	var playerURL string
-	if season != "" && episode != "" {
-		// Сериал
-		playerURL = fmt.Sprintf("%s?imdb_id=%s&season=%s&episode=%s", h.config.LumexURL, imdbID, season, episode)
-		log.Printf("✅ Lumex: TV series mode with season/episode")
-	} else {
-		// Фильм
-		playerURL = fmt.Sprintf("%s?imdb_id=%s", h.config.LumexURL, imdbID)
-		log.Printf("✅ Lumex: Movie mode")
-	}
-	log.Printf("🔗 Final Lumex URL: %s", playerURL)
+	// Lumex использует только IMDb ID без season/episode
+	playerURL := fmt.Sprintf("%s?imdb_id=%s", h.config.LumexURL, imdbID)
+	log.Printf("🔗 Lumex URL: %s", playerURL)
 
 	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Lumex Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
@@ -266,32 +249,9 @@ func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Получаем параметры для сериалов
-	season := r.URL.Query().Get("season")
-	episode := r.URL.Query().Get("episode")
-
-	log.Printf("🎬 Vibix Query Params - Season: '%s', Episode: '%s'", season, episode)
-	log.Printf("🔗 Vibix Base iframe_url: %s", vibixResponse.IframeURL)
-
-	// Строим итоговый URL плеера
+	// Vibix использует только iframe_url без season/episode
 	playerURL := vibixResponse.IframeURL
-	if season != "" && episode != "" {
-		// Добавляем параметры сезона и серии
-		separator := "?"
-		if strings.Contains(playerURL, "?") {
-			separator = "&"
-			log.Printf("✅ Vibix: iframe_url already has query params, using '&'")
-		} else {
-			log.Printf("✅ Vibix: iframe_url has no query params, using '?'")
-		}
-		playerURL = fmt.Sprintf("%s%sseason=%s&episode=%s", playerURL, separator, season, episode)
-		log.Printf("✅ Vibix: Added season/episode params")
-	} else {
-		log.Printf("⚠️ Vibix: No season/episode params (movie mode)")
-	}
-	log.Printf("🔗 Final Vibix URL: %s", playerURL)
-
-	log.Printf("Generated Vibix iframe URL: %s", playerURL)
+	log.Printf("🔗 Vibix iframe URL: %s", playerURL)
 
 	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vibix Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
@@ -531,9 +491,9 @@ func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request)
 	
 	log.Printf("Generated Vidsrc URL: %s", playerURL)
 	
-	// Продвинутая защита от всплывающих окон и редиректов
+	// Максимальная защита от всплывающих окон и редиректов
 	iframe := fmt.Sprintf(`<iframe id="player" src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidsrc Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});window.addEventListener("beforeunload",function(e){if(document.activeElement&&document.activeElement.tagName==="IFRAME"){e.preventDefault();e.returnValue="";return""}});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation()}});</script></head><body>%s</body></html>`, iframe)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidsrc Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};window.close=function(){};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});Object.defineProperty(window,'close',{value:function(){},writable:false,configurable:false});var originalLocation=window.location.href;Object.defineProperty(window,'location',{get:function(){return{href:originalLocation,replace:function(){},assign:function(){}}},set:function(){}});window.addEventListener("beforeunload",function(e){e.preventDefault();e.returnValue="";return""});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation();e.preventDefault()}},true);document.addEventListener("mousedown",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation();e.preventDefault()}},true);setInterval(function(){if(window.location.href!==originalLocation){window.history.pushState(null,'',originalLocation)}},100);</script></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
@@ -557,9 +517,9 @@ func (h *PlayersHandler) GetVidlinkMoviePlayer(w http.ResponseWriter, r *http.Re
 	
 	log.Printf("Generated Vidlink Movie URL: %s", playerURL)
 	
-	// Продвинутая защита от всплывающих окон и редиректов
+	// Максимальная защита от всплывающих окон и редиректов
 	iframe := fmt.Sprintf(`<iframe id="player" src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});window.addEventListener("beforeunload",function(e){if(document.activeElement&&document.activeElement.tagName==="IFRAME"){e.preventDefault();e.returnValue="";return""}});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation()}});</script></head><body>%s</body></html>`, iframe)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};window.close=function(){};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});Object.defineProperty(window,'close',{value:function(){},writable:false,configurable:false});var originalLocation=window.location.href;Object.defineProperty(window,'location',{get:function(){return{href:originalLocation,replace:function(){},assign:function(){}}},set:function(){}});window.addEventListener("beforeunload",function(e){e.preventDefault();e.returnValue="";return""});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation();e.preventDefault()}},true);document.addEventListener("mousedown",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation();e.preventDefault()}},true);setInterval(function(){if(window.location.href!==originalLocation){window.history.pushState(null,'',originalLocation)}},100);</script></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
@@ -590,9 +550,9 @@ func (h *PlayersHandler) GetVidlinkTVPlayer(w http.ResponseWriter, r *http.Reque
 	
 	log.Printf("Generated Vidlink TV URL: %s", playerURL)
 	
-	// Продвинутая защита от всплывающих окон и редиректов
+	// Максимальная защита от всплывающих окон и редиректов
 	iframe := fmt.Sprintf(`<iframe id="player" src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});window.addEventListener("beforeunload",function(e){if(document.activeElement&&document.activeElement.tagName==="IFRAME"){e.preventDefault();e.returnValue="";return""}});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation()}});</script></head><body>%s</body></html>`, iframe)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};window.close=function(){};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});Object.defineProperty(window,'close',{value:function(){},writable:false,configurable:false});var originalLocation=window.location.href;Object.defineProperty(window,'location',{get:function(){return{href:originalLocation,replace:function(){},assign:function(){}}},set:function(){}});window.addEventListener("beforeunload",function(e){e.preventDefault();e.returnValue="";return""});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation();e.preventDefault()}},true);document.addEventListener("mousedown",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation();e.preventDefault()}},true);setInterval(function(){if(window.location.href!==originalLocation){window.history.pushState(null,'',originalLocation)}},100);</script></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
