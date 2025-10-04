@@ -557,7 +557,7 @@ func (h *PlayersHandler) GetVidlinkTVPlayer(w http.ResponseWriter, r *http.Reque
 	log.Printf("Successfully served Vidlink TV player: %s S%sE%s", tmdbId, season, episode)
 }
 
-// getPlayerWithControlsHTML возвращает HTML с плеером, overlay и кастомными контролами
+// getPlayerWithControlsHTML возвращает HTML с плеером и overlay для блокировки кликов
 func getPlayerWithControlsHTML(playerURL, title string) string {
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html>
@@ -570,14 +570,10 @@ html,body{margin:0;height:100%%;overflow:hidden;background:#000;font-family:Aria
 #player-iframe{position:absolute;top:0;left:0;width:100%%;height:100%%;border:none;}
 #overlay{position:absolute;top:0;left:0;width:100%%;height:100%%;z-index:10;pointer-events:none;}
 #controls{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.8));padding:20px;opacity:0;transition:opacity 0.3s;pointer-events:auto;z-index:20;}
-#container:hover #controls,#controls.show{opacity:1;}
-.btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:10px 15px;margin:0 5px;border-radius:5px;cursor:pointer;font-size:16px;transition:background 0.2s;}
+#container:hover #controls{opacity:1;}
+.btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:12px 20px;margin:0 5px;border-radius:5px;cursor:pointer;font-size:16px;transition:background 0.2s;}
 .btn:hover{background:rgba(255,255,255,0.4);}
 .btn:active{background:rgba(255,255,255,0.6);}
-#volume-slider{width:100px;vertical-align:middle;margin:0 10px;}
-#hotkeys{position:absolute;top:50%%;left:50%%;transform:translate(-50%%,-50%%);background:rgba(0,0,0,0.9);color:#fff;padding:20px 30px;border-radius:10px;display:none;z-index:30;}
-#hotkeys.show{display:block;}
-.key{display:inline-block;background:#333;padding:5px 10px;border-radius:3px;margin:0 5px;font-weight:bold;}
 </style>
 </head>
 <body>
@@ -585,143 +581,23 @@ html,body{margin:0;height:100%%;overflow:hidden;background:#000;font-family:Aria
   <iframe id="player-iframe" src="%s" allowfullscreen allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>
   <div id="overlay"></div>
   <div id="controls">
-    <button class="btn" id="btn-play" title="Play/Pause (Space)">▶️</button>
-    <button class="btn" id="btn-volume" title="Mute/Unmute (M)">🔊</button>
-    <input type="range" id="volume-slider" min="0" max="100" value="100" title="Volume"/>
-    <button class="btn" id="btn-rewind" title="Rewind 10s (←)">⏪ 10s</button>
-    <button class="btn" id="btn-forward" title="Forward 10s (→)">⏩ 10s</button>
-    <button class="btn" id="btn-fullscreen" title="Fullscreen (F)">⛶</button>
-    <button class="btn" id="btn-help" title="Hotkeys (?)">❓</button>
-  </div>
-  <div id="hotkeys">
-    <h3 style="margin-top:0;">⌨️ Горячие клавиши:</h3>
-    <p><span class="key">Space</span> - Play/Pause</p>
-    <p><span class="key">M</span> - Mute/Unmute</p>
-    <p><span class="key">←</span> - Перемотка назад 10s</p>
-    <p><span class="key">→</span> - Перемотка вперед 10s</p>
-    <p><span class="key">↑</span> - Увеличить громкость</p>
-    <p><span class="key">↓</span> - Уменьшить громкость</p>
-    <p><span class="key">F</span> - Fullscreen</p>
-    <p><span class="key">?</span> - Показать/скрыть подсказки</p>
-    <button class="btn" onclick="toggleHotkeys()" style="margin-top:10px;">Закрыть</button>
+    <button class="btn" id="btn-fullscreen" title="Fullscreen">⛶ Fullscreen</button>
   </div>
 </div>
 <script>
-const iframe=document.getElementById('player-iframe');
 const overlay=document.getElementById('overlay');
-const controls=document.getElementById('controls');
-const hotkeysDiv=document.getElementById('hotkeys');
-let isPlaying=false;
-let isMuted=false;
-let volume=100;
 
 // Блокируем клики на iframe (защита от рекламы)
 overlay.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();});
 overlay.addEventListener('mousedown',(e)=>{e.preventDefault();e.stopPropagation();});
 
-// Кнопки
-document.getElementById('btn-play').addEventListener('click',()=>{
-  isPlaying=!isPlaying;
-  document.getElementById('btn-play').textContent=isPlaying?'⏸️':'▶️';
-  showNotification(isPlaying?'Play':'Pause');
-});
-
-document.getElementById('btn-volume').addEventListener('click',()=>{
-  isMuted=!isMuted;
-  document.getElementById('btn-volume').textContent=isMuted?'🔇':'🔊';
-  showNotification(isMuted?'Muted':'Unmuted');
-});
-
-document.getElementById('volume-slider').addEventListener('input',(e)=>{
-  volume=e.target.value;
-  showNotification('Volume: '+volume+'%%');
-});
-
-document.getElementById('btn-rewind').addEventListener('click',()=>{
-  showNotification('⏪ Rewind 10s');
-});
-
-document.getElementById('btn-forward').addEventListener('click',()=>{
-  showNotification('⏩ Forward 10s');
-});
-
+// Fullscreen
 document.getElementById('btn-fullscreen').addEventListener('click',()=>{
   if(!document.fullscreenElement){
     document.getElementById('container').requestFullscreen();
   }else{
     document.exitFullscreen();
   }
-});
-
-document.getElementById('btn-help').addEventListener('click',()=>{
-  toggleHotkeys();
-});
-
-function toggleHotkeys(){
-  hotkeysDiv.classList.toggle('show');
-}
-
-// Hotkeys
-document.addEventListener('keydown',(e)=>{
-  if(e.target.tagName==='INPUT')return;
-  
-  switch(e.key){
-    case' ':
-      e.preventDefault();
-      document.getElementById('btn-play').click();
-      break;
-    case'm':
-    case'M':
-      e.preventDefault();
-      document.getElementById('btn-volume').click();
-      break;
-    case'ArrowLeft':
-      e.preventDefault();
-      document.getElementById('btn-rewind').click();
-      break;
-    case'ArrowRight':
-      e.preventDefault();
-      document.getElementById('btn-forward').click();
-      break;
-    case'ArrowUp':
-      e.preventDefault();
-      volume=Math.min(100,volume+10);
-      document.getElementById('volume-slider').value=volume;
-      showNotification('Volume: '+volume+'%%');
-      break;
-    case'ArrowDown':
-      e.preventDefault();
-      volume=Math.max(0,volume-10);
-      document.getElementById('volume-slider').value=volume;
-      showNotification('Volume: '+volume+'%%');
-      break;
-    case'f':
-    case'F':
-      e.preventDefault();
-      document.getElementById('btn-fullscreen').click();
-      break;
-    case'?':
-      e.preventDefault();
-      toggleHotkeys();
-      break;
-  }
-});
-
-// Показываем уведомления
-function showNotification(text){
-  const notif=document.createElement('div');
-  notif.textContent=text;
-  notif.style.cssText='position:fixed;top:20px;left:50%%;transform:translateX(-50%%);background:rgba(0,0,0,0.8);color:#fff;padding:15px 30px;border-radius:10px;z-index:1000;font-size:18px;';
-  document.body.appendChild(notif);
-  setTimeout(()=>notif.remove(),1500);
-}
-
-// Показываем контролы при движении мыши
-let hideTimeout;
-document.getElementById('container').addEventListener('mousemove',()=>{
-  controls.classList.add('show');
-  clearTimeout(hideTimeout);
-  hideTimeout=setTimeout(()=>controls.classList.remove('show'),3000);
 });
 </script>
 </body>
