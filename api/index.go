@@ -100,11 +100,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/players/vidsrc/{media_type}/{imdb_id}", playersHandler.GetVidsrcPlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/movie/{imdb_id}", playersHandler.GetVidlinkMoviePlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/tv/{tmdb_id}", playersHandler.GetVidlinkTVPlayer).Methods("GET")
-	
-	// Client-side parsing players (custom player with HLS support)
-	api.HandleFunc("/players/vidsrc-parse/{media_type}/{imdb_id}", playersHandler.GetVidsrcParserPlayer).Methods("GET")
-	api.HandleFunc("/players/vidlink-parse/movie/{imdb_id}", playersHandler.GetVidlinkParserMoviePlayer).Methods("GET")
-	api.HandleFunc("/players/vidlink-parse/tv/{tmdb_id}", playersHandler.GetVidlinkParserTVPlayer).Methods("GET")
 	api.HandleFunc("/players/rgshows/{tmdb_id}", playersHandler.GetRgShowsPlayer).Methods("GET")
 	api.HandleFunc("/players/rgshows/{tmdb_id}/{season}/{episode}", playersHandler.GetRgShowsTVPlayer).Methods("GET")
 	api.HandleFunc("/players/iframevideo/{kinopoisk_id}/{imdb_id}", playersHandler.GetIframeVideoPlayer).Methods("GET")
