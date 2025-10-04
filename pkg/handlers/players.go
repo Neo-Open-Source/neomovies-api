@@ -531,9 +531,9 @@ func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request)
 	
 	log.Printf("Generated Vidsrc URL: %s", playerURL)
 	
-	// Блокировка всплывающих окон через JavaScript
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidsrc Player</title><style>html,body{margin:0;height:100%%;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});</script></head><body>%s</body></html>`, iframe)
+	// Продвинутая защита от всплывающих окон и редиректов
+	iframe := fmt.Sprintf(`<iframe id="player" src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidsrc Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});window.addEventListener("beforeunload",function(e){if(document.activeElement&&document.activeElement.tagName==="IFRAME"){e.preventDefault();e.returnValue="";return""}});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation()}});</script></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
@@ -557,9 +557,9 @@ func (h *PlayersHandler) GetVidlinkMoviePlayer(w http.ResponseWriter, r *http.Re
 	
 	log.Printf("Generated Vidlink Movie URL: %s", playerURL)
 	
-	// Блокировка всплывающих окон через JavaScript
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});</script></head><body>%s</body></html>`, iframe)
+	// Продвинутая защита от всплывающих окон и редиректов
+	iframe := fmt.Sprintf(`<iframe id="player" src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});window.addEventListener("beforeunload",function(e){if(document.activeElement&&document.activeElement.tagName==="IFRAME"){e.preventDefault();e.returnValue="";return""}});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation()}});</script></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
@@ -590,9 +590,9 @@ func (h *PlayersHandler) GetVidlinkTVPlayer(w http.ResponseWriter, r *http.Reque
 	
 	log.Printf("Generated Vidlink TV URL: %s", playerURL)
 	
-	// Блокировка всплывающих окон через JavaScript
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
-	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});</script></head><body>%s</body></html>`, iframe)
+	// Продвинутая защита от всплывающих окон и редиректов
+	iframe := fmt.Sprintf(`<iframe id="player" src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`, playerURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Vidlink Player</title><style>html,body{margin:0;height:100%%;overflow:hidden;}</style><script>window.open=function(){return null;};Object.defineProperty(window,'open',{value:function(){return null;},writable:false,configurable:false});window.addEventListener("beforeunload",function(e){if(document.activeElement&&document.activeElement.tagName==="IFRAME"){e.preventDefault();e.returnValue="";return""}});document.addEventListener("click",function(e){if(e.target.tagName==="IFRAME"){e.stopPropagation()}});</script></head><body>%s</body></html>`, iframe)
 	
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
