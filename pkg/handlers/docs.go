@@ -327,27 +327,44 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 				},
 			},
-			"/api/v1/players/lumex/{imdb_id}": map[string]interface{}{
-				"get": map[string]interface{}{
-					"summary":     "Плеер Lumex",
-					"description": "Получение плеера Lumex по IMDb ID",
-					"tags":        []string{"Players"},
-					"parameters": []map[string]interface{}{
-						{
-							"name":        "imdb_id",
-							"in":          "path",
-							"required":    true,
-							"schema":      map[string]string{"type": "string"},
-							"description": "IMDb ID фильма",
-						},
+		"/api/v1/players/lumex/{imdb_id}": map[string]interface{}{
+			"get": map[string]interface{}{
+				"summary":     "Плеер Lumex",
+				"description": "Получение плеера Lumex по IMDb ID. Формат URL: /movie/{id} для фильмов, /tv-series/{id}?season=X&episode=Y для сериалов",
+				"tags":        []string{"Players"},
+				"parameters": []map[string]interface{}{
+					{
+						"name":        "imdb_id",
+						"in":          "path",
+						"required":    true,
+						"schema":      map[string]string{"type": "string"},
+						"description": "IMDb ID фильма или сериала (например, tt0133093)",
 					},
-					"responses": map[string]interface{}{
-						"200": map[string]interface{}{
-							"description": "Данные плеера",
+					{
+						"name":        "season",
+						"in":          "query",
+						"required":    false,
+						"schema":      map[string]string{"type": "integer"},
+						"description": "Номер сезона (для сериалов)",
+					},
+					{
+						"name":        "episode",
+						"in":          "query",
+						"required":    false,
+						"schema":      map[string]string{"type": "integer"},
+						"description": "Номер серии (для сериалов)",
+					},
+				},
+				"responses": map[string]interface{}{
+					"200": map[string]interface{}{
+						"description": "HTML со встроенным Lumex плеером",
+						"content": map[string]interface{}{
+							"text/html": map[string]interface{}{},
 						},
 					},
 				},
 			},
+		},
 			"/api/v1/players/vibix/{imdb_id}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Vibix плеер по IMDb ID",
