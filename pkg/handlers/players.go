@@ -159,17 +159,23 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 
 	log.Printf("🎬 Lumex Query Params - Season: '%s', Episode: '%s'", season, episode)
 
-	playerURL := fmt.Sprintf("%s?imdb_id=%s", h.config.LumexURL, url.QueryEscape(imdbID))
+	// Lumex использует формат:
+	// Movie: {LUMEX_URL}/movie/{id}?autoplay=1
+	// TV: {LUMEX_URL}/tv-series/{id}?season=1&episode=3&autoplay=1
+	// ID может быть IMDb или числовым
+	var playerURL string
 	if season != "" && episode != "" {
-		playerURL = fmt.Sprintf("%s&season=%s&episode=%s", playerURL, season, episode)
-		log.Printf("✅ Lumex: Added season/episode params")
+		// Сериал
+		playerURL = fmt.Sprintf("%s/tv-series/%s?season=%s&episode=%s&autoplay=1", h.config.LumexURL, imdbID, season, episode)
+		log.Printf("✅ Lumex: TV series mode with season/episode")
 	} else {
-		log.Printf("⚠️ Lumex: No season/episode params (movie mode)")
+		// Фильм
+		playerURL = fmt.Sprintf("%s/movie/%s?autoplay=1", h.config.LumexURL, imdbID)
+		log.Printf("✅ Lumex: Movie mode")
 	}
 	log.Printf("🔗 Final Lumex URL: %s", playerURL)
-	url := playerURL
 
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, url)
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Lumex Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
 
 	w.Header().Set("Content-Type", "text/html")
