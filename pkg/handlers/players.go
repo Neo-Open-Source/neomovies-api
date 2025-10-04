@@ -157,11 +157,16 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 	season := r.URL.Query().Get("season")
 	episode := r.URL.Query().Get("episode")
 
+	log.Printf("🎬 Lumex Query Params - Season: '%s', Episode: '%s'", season, episode)
+
 	playerURL := fmt.Sprintf("%s?imdb_id=%s", h.config.LumexURL, url.QueryEscape(imdbID))
 	if season != "" && episode != "" {
 		playerURL = fmt.Sprintf("%s&season=%s&episode=%s", playerURL, season, episode)
+		log.Printf("✅ Lumex: Added season/episode params")
+	} else {
+		log.Printf("⚠️ Lumex: No season/episode params (movie mode)")
 	}
-	log.Printf("Generated Lumex URL: %s", playerURL)
+	log.Printf("🔗 Final Lumex URL: %s", playerURL)
 	url := playerURL
 
 	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, url)
@@ -260,6 +265,9 @@ func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) 
 	season := r.URL.Query().Get("season")
 	episode := r.URL.Query().Get("episode")
 
+	log.Printf("🎬 Vibix Query Params - Season: '%s', Episode: '%s'", season, episode)
+	log.Printf("🔗 Vibix Base iframe_url: %s", vibixResponse.IframeURL)
+
 	// Строим итоговый URL плеера
 	playerURL := vibixResponse.IframeURL
 	if season != "" && episode != "" {
@@ -267,9 +275,16 @@ func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) 
 		separator := "?"
 		if strings.Contains(playerURL, "?") {
 			separator = "&"
+			log.Printf("✅ Vibix: iframe_url already has query params, using '&'")
+		} else {
+			log.Printf("✅ Vibix: iframe_url has no query params, using '?'")
 		}
 		playerURL = fmt.Sprintf("%s%sseason=%s&episode=%s", playerURL, separator, season, episode)
+		log.Printf("✅ Vibix: Added season/episode params")
+	} else {
+		log.Printf("⚠️ Vibix: No season/episode params (movie mode)")
 	}
+	log.Printf("🔗 Final Vibix URL: %s", playerURL)
 
 	log.Printf("Generated Vibix iframe URL: %s", playerURL)
 
