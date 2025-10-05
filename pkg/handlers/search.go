@@ -26,10 +26,7 @@ func (h *SearchHandler) MultiSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := getIntQuery(r, "page", 1)
-	language := r.URL.Query().Get("language")
-	if language == "" {
-		language = "ru-RU"
-	}
+	language := GetLanguage(r)
 
 	results, err := h.tmdbService.SearchMulti(query, page, language)
 	if err != nil {
