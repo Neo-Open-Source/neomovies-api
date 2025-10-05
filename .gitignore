@@ -10,3 +10,4 @@ main
 *.dll
 *.so
 *.dylib
+neomovies-api
