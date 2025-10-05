@@ -29,7 +29,7 @@ func (h *MovieHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := getIntQuery(r, "page", 1)
-	language := r.URL.Query().Get("language")
+	language := GetLanguage(r)
 	region := r.URL.Query().Get("region")
 	year := getIntQuery(r, "year", 0)
 
@@ -54,7 +54,7 @@ func (h *MovieHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	language := r.URL.Query().Get("language")
+	language := GetLanguage(r)
 
 	movie, err := h.movieService.GetByID(id, language)
 	if err != nil {
@@ -71,7 +71,7 @@ func (h *MovieHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *MovieHandler) Popular(w http.ResponseWriter, r *http.Request) {
 	page := getIntQuery(r, "page", 1)
-	language := r.URL.Query().Get("language")
+	language := GetLanguage(r)
 	region := r.URL.Query().Get("region")
 
 	movies, err := h.movieService.GetPopular(page, language, region)
@@ -89,7 +89,7 @@ func (h *MovieHandler) Popular(w http.ResponseWriter, r *http.Request) {
 
 func (h *MovieHandler) TopRated(w http.ResponseWriter, r *http.Request) {
 	page := getIntQuery(r, "page", 1)
-	language := r.URL.Query().Get("language")
+	language := GetLanguage(r)
 	region := r.URL.Query().Get("region")
 
 	movies, err := h.movieService.GetTopRated(page, language, region)
@@ -107,7 +107,7 @@ func (h *MovieHandler) TopRated(w http.ResponseWriter, r *http.Request) {
 
 func (h *MovieHandler) Upcoming(w http.ResponseWriter, r *http.Request) {
 	page := getIntQuery(r, "page", 1)
-	language := r.URL.Query().Get("language")
+	language := GetLanguage(r)
 	region := r.URL.Query().Get("region")
 
 	movies, err := h.movieService.GetUpcoming(page, language, region)
@@ -125,7 +125,7 @@ func (h *MovieHandler) Upcoming(w http.ResponseWriter, r *http.Request) {
 
 func (h *MovieHandler) NowPlaying(w http.ResponseWriter, r *http.Request) {
 	page := getIntQuery(r, "page", 1)
-	language := r.URL.Query().Get("language")
+	language := GetLanguage(r)
 	region := r.URL.Query().Get("region")
 
 	movies, err := h.movieService.GetNowPlaying(page, language, region)
@@ -150,7 +150,7 @@ func (h *MovieHandler) GetRecommendations(w http.ResponseWriter, r *http.Request
 	}
 
 	page := getIntQuery(r, "page", 1)
-	language := r.URL.Query().Get("language")
+	language := GetLanguage(r)
 
 	movies, err := h.movieService.GetRecommendations(id, page, language)
 	if err != nil {
@@ -174,7 +174,7 @@ func (h *MovieHandler) GetSimilar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := getIntQuery(r, "page", 1)
-	language := r.URL.Query().Get("language")
+	language := GetLanguage(r)
 
 	movies, err := h.movieService.GetSimilar(id, page, language)
 	if err != nil {
