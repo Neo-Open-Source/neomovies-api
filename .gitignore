@@ -3,3 +3,10 @@
 node_modules
 package-lock.json
 yarn.lock
+# Binaries
+bin/
+main
+*.exe
+*.dll
+*.so
+*.dylib
