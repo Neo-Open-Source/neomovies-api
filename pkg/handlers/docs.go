@@ -37,8 +37,16 @@ func (h *DocsHandler) GetOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DocsHandler) ServeDocs(w http.ResponseWriter, r *http.Request) {
+	spec := getOpenAPISpecWithURL("/")
+	specJSON, err := json.Marshal(spec)
+	if err != nil {
+		fmt.Printf("Error marshaling OpenAPI spec: %v", err)
+		http.Error(w, fmt.Sprintf("Error marshaling spec: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	htmlContent, err := scalar.ApiReferenceHTML(&scalar.Options{
-		SpecURL: "/openapi.json",
+		SpecContent: string(specJSON),
 		CustomOptions: scalar.CustomOptions{
 			PageTitle: "Neo Movies API Documentation",
 		},
