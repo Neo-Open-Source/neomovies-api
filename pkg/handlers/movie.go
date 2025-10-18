@@ -55,8 +55,9 @@ func (h *MovieHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	language := GetLanguage(r)
+	idType := r.URL.Query().Get("id_type") // kp or tmdb
 
-	movie, err := h.movieService.GetByID(id, language)
+	movie, err := h.movieService.GetByID(id, language, idType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

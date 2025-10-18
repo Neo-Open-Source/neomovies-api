@@ -54,8 +54,9 @@ func (h *TVHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	language := GetLanguage(r)
+	idType := r.URL.Query().Get("id_type") // kp or tmdb
 
-	tvShow, err := h.tvService.GetByID(id, language)
+	tvShow, err := h.tvService.GetByID(id, language, idType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

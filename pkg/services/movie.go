@@ -28,8 +28,19 @@ func (s *MovieService) Search(query string, page int, language, region string, y
 	return s.tmdb.SearchMovies(query, page, language, region, year)
 }
 
-func (s *MovieService) GetByID(id int, language string) (*models.Movie, error) {
-	if ShouldUseKinopoisk(language) && s.kpService != nil {
+func (s *MovieService) GetByID(id int, language string, idType string) (*models.Movie, error) {
+	// Если указан id_type, используем его; иначе определяем по языку
+	useKP := false
+	if idType == "kp" {
+		useKP = true
+	} else if idType == "tmdb" {
+		useKP = false
+	} else {
+		// Если id_type не указан, используем старую логику по языку
+		useKP = ShouldUseKinopoisk(language)
+	}
+	
+	if useKP && s.kpService != nil {
 		kpFilm, err := s.kpService.GetFilmByKinopoiskId(id)
 		if err == nil {
 			return MapKPFilmToTMDBMovie(kpFilm), nil
