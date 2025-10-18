@@ -25,6 +25,9 @@ type Config struct {
 	FrontendURL        string
 	VibixHost          string
 	VibixToken         string
+	KPAPIKey           string
+	HDVBToken          string
+	KPAPIBaseURL       string
 }
 
 func New() *Config {
@@ -50,6 +53,9 @@ func New() *Config {
 		FrontendURL:        getEnv(EnvFrontendURL, ""),
 		VibixHost:          getEnv(EnvVibixHost, DefaultVibixHost),
 		VibixToken:         getEnv(EnvVibixToken, ""),
+		KPAPIKey:           getEnv(EnvKPAPIKey, ""),
+		HDVBToken:          getEnv(EnvHDVBToken, ""),
+		KPAPIBaseURL:       getEnv("KPAPI_BASE_URL", DefaultKPAPIBase),
 	}
 }
 

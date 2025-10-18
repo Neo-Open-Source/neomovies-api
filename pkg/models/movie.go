@@ -40,6 +40,7 @@ type Movie struct {
 	Tagline             string              `json:"tagline,omitempty"`
 	Homepage            string              `json:"homepage,omitempty"`
 	IMDbID              string              `json:"imdb_id,omitempty"`
+	KinopoiskID         int                 `json:"kinopoisk_id,omitempty"`
 	BelongsToCollection *Collection         `json:"belongs_to_collection,omitempty"`
 	ProductionCompanies []ProductionCompany `json:"production_companies,omitempty"`
 	ProductionCountries []ProductionCountry `json:"production_countries,omitempty"`
@@ -76,6 +77,8 @@ type TVShow struct {
 	CreatedBy           []Creator           `json:"created_by,omitempty"`
 	EpisodeRunTime      []int               `json:"episode_run_time,omitempty"`
 	Seasons             []Season            `json:"seasons,omitempty"`
+	IMDbID              string              `json:"imdb_id,omitempty"`
+	KinopoiskID         int                 `json:"kinopoisk_id,omitempty"`
 }
 
 // MultiSearchResult для мультипоиска
@@ -119,6 +122,7 @@ type GenresResponse struct {
 type ExternalIDs struct {
 	ID          int    `json:"id"`
 	IMDbID      string `json:"imdb_id"`
+	KinopoiskID int    `json:"kinopoisk_id,omitempty"`
 	TVDBID      int    `json:"tvdb_id,omitempty"`
 	WikidataID  string `json:"wikidata_id"`
 	FacebookID  string `json:"facebook_id"`

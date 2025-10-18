@@ -7,14 +7,16 @@ import (
 )
 
 type TVService struct {
-	db   *mongo.Database
-	tmdb *TMDBService
+	db        *mongo.Database
+	tmdb      *TMDBService
+	kpService *KinopoiskService
 }
 
-func NewTVService(db *mongo.Database, tmdb *TMDBService) *TVService {
+func NewTVService(db *mongo.Database, tmdb *TMDBService, kpService *KinopoiskService) *TVService {
 	return &TVService{
-		db:   db,
-		tmdb: tmdb,
+		db:        db,
+		tmdb:      tmdb,
+		kpService: kpService,
 	}
 }
 
@@ -23,6 +25,12 @@ func (s *TVService) Search(query string, page int, language string, year int) (*
 }
 
 func (s *TVService) GetByID(id int, language string) (*models.TVShow, error) {
+	if ShouldUseKinopoisk(language) && s.kpService != nil {
+		kpFilm, err := s.kpService.GetFilmByKinopoiskId(id)
+		if err == nil && kpFilm != nil {
+			return MapKPFilmToTVShow(kpFilm), nil
+		}
+	}
 	return s.tmdb.GetTVShow(id, language)
 }
 

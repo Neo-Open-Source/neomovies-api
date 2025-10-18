@@ -39,7 +39,6 @@ func (h *DocsHandler) GetOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 func (h *DocsHandler) ServeDocs(w http.ResponseWriter, r *http.Request) {
 	baseURL := determineBaseURL(r)
 
-	// Use absolute SpecURL so the library does not try to read a local file path
 	htmlContent, err := scalar.ApiReferenceHTML(&scalar.Options{
 		SpecURL: fmt.Sprintf("%s/openapi.json", baseURL),
 		CustomOptions: scalar.CustomOptions{
@@ -56,6 +55,7 @@ func (h *DocsHandler) ServeDocs(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	fmt.Fprintln(w, htmlContent)
 }
 

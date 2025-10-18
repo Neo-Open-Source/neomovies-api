@@ -20,6 +20,8 @@ const (
 	EnvFrontendURL        = "FRONTEND_URL"
 	EnvVibixHost          = "VIBIX_HOST"
 	EnvVibixToken         = "VIBIX_TOKEN"
+	EnvKPAPIKey           = "KPAPI_KEY"
+	EnvHDVBToken          = "HDVB_TOKEN"
 
 	// Default values
 	DefaultJWTSecret   = "your-secret-key"
@@ -29,6 +31,7 @@ const (
 	DefaultRedAPIBase  = "http://redapi.cfhttp.top"
 	DefaultMongoDBName = "database"
 	DefaultVibixHost   = "https://vibix.org"
+	DefaultKPAPIBase   = "https://kinopoiskapiunofficial.tech/api"
 
 	// Static constants
 	TMDBImageBaseURL = "https://image.tmdb.org/t/p"

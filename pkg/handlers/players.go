@@ -30,16 +30,22 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 	log.Printf("GetAllohaPlayer called: %s %s", r.Method, r.URL.Path)
 
 	vars := mux.Vars(r)
-	log.Printf("Route vars: %+v", vars)
+	idType := vars["id_type"]
+	id := vars["id"]
 
-	imdbID := vars["imdb_id"]
-	if imdbID == "" {
-		log.Printf("Error: imdb_id is empty")
-		http.Error(w, "imdb_id path param is required", http.StatusBadRequest)
+	if idType == "" || id == "" {
+		log.Printf("Error: id_type or id is empty")
+		http.Error(w, "id_type and id are required", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Processing imdb_id: %s", imdbID)
+	if idType != "kp" && idType != "imdb" {
+		log.Printf("Error: invalid id_type: %s", idType)
+		http.Error(w, "id_type must be 'kp' or 'imdb'", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Processing %s ID: %s", idType, id)
 
 	if h.config.AllohaToken == "" {
 		log.Printf("Error: ALLOHA_TOKEN is missing")
@@ -47,7 +53,7 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	idParam := fmt.Sprintf("imdb=%s", url.QueryEscape(imdbID))
+	idParam := fmt.Sprintf("%s=%s", idType, url.QueryEscape(id))
 	apiURL := fmt.Sprintf("https://api.alloha.tv/?token=%s&%s", h.config.AllohaToken, idParam)
 	log.Printf("Calling Alloha API: %s", apiURL)
 
@@ -104,7 +110,7 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 
 	// Используем iframe URL из API
 	iframeCode := allohaResponse.Data.Iframe
-	
+
 	// Если это не HTML код, а просто URL
 	var playerURL string
 	if !strings.Contains(iframeCode, "<") {
@@ -129,23 +135,29 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
 
-	log.Printf("Successfully served Alloha player for imdb_id: %s", imdbID)
+	log.Printf("Successfully served Alloha player for %s: %s", idType, id)
 }
 
 func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GetLumexPlayer called: %s %s", r.Method, r.URL.Path)
 
 	vars := mux.Vars(r)
-	log.Printf("Route vars: %+v", vars)
+	idType := vars["id_type"]
+	id := vars["id"]
 
-	imdbID := vars["imdb_id"]
-	if imdbID == "" {
-		log.Printf("Error: imdb_id is empty")
-		http.Error(w, "imdb_id path param is required", http.StatusBadRequest)
+	if idType == "" || id == "" {
+		log.Printf("Error: id_type or id is empty")
+		http.Error(w, "id_type and id are required", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Processing imdb_id: %s", imdbID)
+	if idType != "kp" && idType != "imdb" {
+		log.Printf("Error: invalid id_type: %s", idType)
+		http.Error(w, "id_type must be 'kp' or 'imdb'", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Processing %s ID: %s", idType, id)
 
 	if h.config.LumexURL == "" {
 		log.Printf("Error: LUMEX_URL is missing")
@@ -153,9 +165,15 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Lumex использует только IMDb ID без season/episode
-	playerURL := fmt.Sprintf("%s?imdb_id=%s", h.config.LumexURL, imdbID)
-	log.Printf("🔗 Lumex URL: %s", playerURL)
+	var paramName string
+	if idType == "kp" {
+		paramName = "kinopoisk_id"
+	} else {
+		paramName = "imdb_id"
+	}
+
+	playerURL := fmt.Sprintf("%s?%s=%s", h.config.LumexURL, paramName, id)
+	log.Printf("Lumex URL: %s", playerURL)
 
 	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>Lumex Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
@@ -163,23 +181,29 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
 
-	log.Printf("Successfully served Lumex player for imdb_id: %s", imdbID)
+	log.Printf("Successfully served Lumex player for %s: %s", idType, id)
 }
 
 func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GetVibixPlayer called: %s %s", r.Method, r.URL.Path)
 
 	vars := mux.Vars(r)
-	log.Printf("Route vars: %+v", vars)
+	idType := vars["id_type"]
+	id := vars["id"]
 
-	imdbID := vars["imdb_id"]
-	if imdbID == "" {
-		log.Printf("Error: imdb_id is empty")
-		http.Error(w, "imdb_id path param is required", http.StatusBadRequest)
+	if idType == "" || id == "" {
+		log.Printf("Error: id_type or id is empty")
+		http.Error(w, "id_type and id are required", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Processing imdb_id: %s", imdbID)
+	if idType != "kp" && idType != "imdb" {
+		log.Printf("Error: invalid id_type: %s", idType)
+		http.Error(w, "id_type must be 'kp' or 'imdb'", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Processing %s ID: %s", idType, id)
 
 	if h.config.VibixToken == "" {
 		log.Printf("Error: VIBIX_TOKEN is missing")
@@ -192,7 +216,14 @@ func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) 
 		vibixHost = "https://vibix.org"
 	}
 
-	apiURL := fmt.Sprintf("%s/api/v1/publisher/videos/imdb/%s", vibixHost, imdbID)
+	var endpoint string
+	if idType == "kp" {
+		endpoint = "kinopoisk"
+	} else {
+		endpoint = "imdb"
+	}
+
+	apiURL := fmt.Sprintf("%s/api/v1/publisher/videos/%s/%s", vibixHost, endpoint, id)
 	log.Printf("Calling Vibix API: %s", apiURL)
 
 	req, err := http.NewRequest("GET", apiURL, nil)
@@ -203,7 +234,7 @@ func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) 
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+h.config.VibixToken)
+	req.Header.Set("Authorization", h.config.VibixToken)
 	req.Header.Set("X-CSRF-TOKEN", "")
 
 	client := &http.Client{Timeout: 8 * time.Second}
@@ -259,7 +290,7 @@ func (h *PlayersHandler) GetVibixPlayer(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
 
-	log.Printf("Successfully served Vibix player for imdb_id: %s", imdbID)
+	log.Printf("Successfully served Vibix player for %s: %s", idType, id)
 }
 
 // GetRgShowsPlayer handles RgShows streaming requests
@@ -463,16 +494,16 @@ func (h *PlayersHandler) GetStreamAPI(w http.ResponseWriter, r *http.Request) {
 // GetVidsrcPlayer handles Vidsrc.to player (uses IMDb ID for both movies and TV shows)
 func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GetVidsrcPlayer called: %s %s", r.Method, r.URL.Path)
-	
+
 	vars := mux.Vars(r)
 	imdbId := vars["imdb_id"]
 	mediaType := vars["media_type"] // "movie" or "tv"
-	
+
 	if imdbId == "" || mediaType == "" {
 		http.Error(w, "imdb_id and media_type are required", http.StatusBadRequest)
 		return
 	}
-	
+
 	var playerURL string
 	if mediaType == "movie" {
 		playerURL = fmt.Sprintf("https://vidsrc.to/embed/movie/%s", imdbId)
@@ -488,72 +519,116 @@ func (h *PlayersHandler) GetVidsrcPlayer(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Invalid media_type. Use 'movie' or 'tv'", http.StatusBadRequest)
 		return
 	}
-	
+
 	log.Printf("Generated Vidsrc URL: %s", playerURL)
-	
+
 	// Используем общий шаблон с кастомными контролами
 	htmlDoc := getPlayerWithControlsHTML(playerURL, "Vidsrc Player")
-	
+
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
-	
+
 	log.Printf("Successfully served Vidsrc player for %s: %s", mediaType, imdbId)
 }
 
 // GetVidlinkMoviePlayer handles vidlink.pro player for movies (uses IMDb ID)
 func (h *PlayersHandler) GetVidlinkMoviePlayer(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GetVidlinkMoviePlayer called: %s %s", r.Method, r.URL.Path)
-	
+
 	vars := mux.Vars(r)
 	imdbId := vars["imdb_id"]
-	
+
 	if imdbId == "" {
 		http.Error(w, "imdb_id is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	playerURL := fmt.Sprintf("https://vidlink.pro/movie/%s", imdbId)
-	
+
 	log.Printf("Generated Vidlink Movie URL: %s", playerURL)
-	
+
 	// Используем общий шаблон с кастомными контролами
 	htmlDoc := getPlayerWithControlsHTML(playerURL, "Vidlink Player")
-	
+
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
-	
+
 	log.Printf("Successfully served Vidlink movie player: %s", imdbId)
 }
 
 // GetVidlinkTVPlayer handles vidlink.pro player for TV shows (uses TMDB ID)
+func (h *PlayersHandler) GetHDVBPlayer(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetHDVBPlayer called: %s %s", r.Method, r.URL.Path)
+
+	vars := mux.Vars(r)
+	idType := vars["id_type"]
+	id := vars["id"]
+
+	if idType == "" || id == "" {
+		log.Printf("Error: id_type or id is empty")
+		http.Error(w, "id_type and id are required", http.StatusBadRequest)
+		return
+	}
+
+	if idType != "kp" && idType != "imdb" {
+		log.Printf("Error: invalid id_type: %s", idType)
+		http.Error(w, "id_type must be 'kp' or 'imdb'", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Processing %s ID: %s", idType, id)
+
+	if h.config.HDVBToken == "" {
+		log.Printf("Error: HDVB_TOKEN is missing")
+		http.Error(w, "Server misconfiguration: HDVB_TOKEN missing", http.StatusInternalServerError)
+		return
+	}
+
+	var playerURL string
+	if idType == "kp" {
+		playerURL = fmt.Sprintf("https://apivb.com/api/videos.json?id_kp=%s&token=%s", id, h.config.HDVBToken)
+	} else {
+		playerURL = fmt.Sprintf("https://apivb.com/api/videos.json?imdb_id=%s&token=%s", id, h.config.HDVBToken)
+	}
+	log.Printf("Generated HDVB URL: %s", playerURL)
+
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
+	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>HDVB Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(htmlDoc))
+
+	log.Printf("Successfully served HDVB player for %s: %s", idType, id)
+}
+
 func (h *PlayersHandler) GetVidlinkTVPlayer(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GetVidlinkTVPlayer called: %s %s", r.Method, r.URL.Path)
-	
+
 	vars := mux.Vars(r)
 	tmdbId := vars["tmdb_id"]
-	
+
 	if tmdbId == "" {
 		http.Error(w, "tmdb_id is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	season := r.URL.Query().Get("season")
 	episode := r.URL.Query().Get("episode")
 	if season == "" || episode == "" {
 		http.Error(w, "season and episode are required for TV shows", http.StatusBadRequest)
 		return
 	}
-	
+
 	playerURL := fmt.Sprintf("https://vidlink.pro/tv/%s/%s/%s", tmdbId, season, episode)
-	
+
 	log.Printf("Generated Vidlink TV URL: %s", playerURL)
-	
+
 	// Используем общий шаблон с кастомными контролами
 	htmlDoc := getPlayerWithControlsHTML(playerURL, "Vidlink Player")
-	
+
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(htmlDoc))
-	
+
 	log.Printf("Successfully served Vidlink TV player: %s S%sE%s", tmdbId, season, episode)
 }
 
