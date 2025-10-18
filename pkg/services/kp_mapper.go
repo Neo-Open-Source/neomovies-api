@@ -82,7 +82,7 @@ func MapKPFilmToTMDBMovie(kpFilm *KPFilm) *models.Movie {
 		Genres:          genres,
 		Tagline:         kpFilm.Slogan,
 		ProductionCountries: countries,
-		ImdbID:          kpFilm.ImdbId,
+		IMDbID:          kpFilm.ImdbId,
 		KinopoiskID:     kpFilm.KinopoiskId,
 	}
 }
@@ -161,10 +161,8 @@ func MapKPFilmToTVShow(kpFilm *KPFilm) *models.TVShow {
 		Popularity:      float64(kpFilm.RatingKinopoisk * 100),
 		OriginalLanguage: detectLanguage(kpFilm),
 		Genres:          genres,
-		Tagline:         kpFilm.Slogan,
 		Status:          status,
 		InProduction:    !kpFilm.Completed,
-		ImdbID:          kpFilm.ImdbId,
 		KinopoiskID:     kpFilm.KinopoiskId,
 	}
 }
@@ -271,7 +269,7 @@ func MapKPExternalIDsToTMDB(kpFilm *KPFilm) *models.ExternalIDs {
 
 	return &models.ExternalIDs{
 		ID:          kpFilm.KinopoiskId,
-		ImdbID:      kpFilm.ImdbId,
+		IMDbID:      kpFilm.ImdbId,
 		KinopoiskID: kpFilm.KinopoiskId,
 	}
 }

@@ -221,11 +221,11 @@ func TmdbIdToKPId(tmdbService *TMDBService, kpService *KinopoiskService, tmdbId 
 		return 0, err
 	}
 	
-	if externalIds.ImdbID == "" {
+	if externalIds.IMDbID == "" {
 		return 0, fmt.Errorf("no IMDb ID found for TMDB ID %d", tmdbId)
 	}
 	
-	return ImdbIdToKPId(kpService, externalIds.ImdbID)
+	return ImdbIdToKPId(kpService, externalIds.IMDbID)
 }
 
 func KPIdToTmdbId(tmdbService *TMDBService, kpService *KinopoiskService, kpId int) (int, error) {
@@ -244,7 +244,7 @@ func KPIdToTmdbId(tmdbService *TMDBService, kpService *KinopoiskService, kpId in
 		if err != nil {
 			continue
 		}
-		if ids.ImdbID == imdbId {
+		if ids.IMDbID == imdbId {
 			return movie.ID, nil
 		}
 	}
