@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"neomovies-api/pkg/models"
@@ -41,11 +42,28 @@ func (s *MovieService) GetByID(id int, language string, idType string) (*models.
 	}
 	
 	if useKP && s.kpService != nil {
+		// Сначала пробуем напрямую по KP ID
 		kpFilm, err := s.kpService.GetFilmByKinopoiskId(id)
 		if err == nil {
 			return MapKPFilmToTMDBMovie(kpFilm), nil
 		}
+		
+		// Если не найдено и явно указан id_type=kp, возможно это TMDB ID
+		// Пробуем конвертировать TMDB -> KP
+		if idType == "kp" {
+			kpId, convErr := TmdbIdToKPId(s.tmdb, s.kpService, id)
+			if convErr == nil {
+				kpFilm, err := s.kpService.GetFilmByKinopoiskId(kpId)
+				if err == nil {
+					return MapKPFilmToTMDBMovie(kpFilm), nil
+				}
+			}
+			// Если конвертация не удалась, возвращаем ошибку вместо fallback
+			return nil, fmt.Errorf("film not found in Kinopoisk with id %d", id)
+		}
 	}
+	
+	// Для TMDB или если KP не указан
 	return s.tmdb.GetMovie(id, language)
 }
 
