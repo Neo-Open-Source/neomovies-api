@@ -600,7 +600,7 @@ func (h *PlayersHandler) GetHDVBPlayer(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("Error reading HDVB response: %v", err)
 		http.Error(w, "Failed to read player data", http.StatusInternalServerError)
