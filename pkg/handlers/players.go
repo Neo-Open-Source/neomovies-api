@@ -584,15 +584,52 @@ func (h *PlayersHandler) GetHDVBPlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var playerURL string
+	var apiURL string
 	if idType == "kp" {
-		playerURL = fmt.Sprintf("https://apivb.com/api/videos.json?id_kp=%s&token=%s", id, h.config.HDVBToken)
+		apiURL = fmt.Sprintf("https://apivb.com/api/videos.json?id_kp=%s&token=%s", id, h.config.HDVBToken)
 	} else {
-		playerURL = fmt.Sprintf("https://apivb.com/api/videos.json?imdb_id=%s&token=%s", id, h.config.HDVBToken)
+		apiURL = fmt.Sprintf("https://apivb.com/api/videos.json?imdb_id=%s&token=%s", id, h.config.HDVBToken)
 	}
-	log.Printf("Generated HDVB URL: %s", playerURL)
+	log.Printf("HDVB API URL: %s", apiURL)
 
-	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		log.Printf("Error fetching HDVB data: %v", err)
+		http.Error(w, "Failed to fetch player data", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading HDVB response: %v", err)
+		http.Error(w, "Failed to read player data", http.StatusInternalServerError)
+		return
+	}
+
+	var hdvbData []map[string]interface{}
+	if err := json.Unmarshal(body, &hdvbData); err != nil {
+		log.Printf("Error parsing HDVB JSON: %v, body: %s", err, string(body))
+		http.Error(w, "Failed to parse player data", http.StatusInternalServerError)
+		return
+	}
+
+	if len(hdvbData) == 0 {
+		log.Printf("No HDVB data found for ID: %s", id)
+		http.Error(w, "No player data found", http.StatusNotFound)
+		return
+	}
+
+	iframeURL, ok := hdvbData[0]["iframe_url"].(string)
+	if !ok || iframeURL == "" {
+		log.Printf("No iframe_url in HDVB response for ID: %s", id)
+		http.Error(w, "No player URL found", http.StatusNotFound)
+		return
+	}
+
+	log.Printf("HDVB iframe URL: %s", iframeURL)
+
+	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, iframeURL)
 	htmlDoc := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset='utf-8'/><title>HDVB Player</title><style>html,body{margin:0;height:100%%;}</style></head><body>%s</body></html>`, iframe)
 
 	w.Header().Set("Content-Type", "text/html")
