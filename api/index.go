@@ -52,11 +52,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tmdbService := services.NewTMDBService(globalCfg.TMDBAccessToken)
+	kpService := services.NewKinopoiskService(globalCfg.KPAPIKey, globalCfg.KPAPIBaseURL)
 	emailService := services.NewEmailService(globalCfg)
 	authService := services.NewAuthService(globalDB, globalCfg.JWTSecret, emailService, globalCfg.BaseURL, globalCfg.GoogleClientID, globalCfg.GoogleClientSecret, globalCfg.GoogleRedirectURL, globalCfg.FrontendURL)
 
-	movieService := services.NewMovieService(globalDB, tmdbService)
-	tvService := services.NewTVService(globalDB, tmdbService)
+	movieService := services.NewMovieService(globalDB, tmdbService, kpService)
+	tvService := services.NewTVService(globalDB, tmdbService, kpService)
 	favoritesService := services.NewFavoritesService(globalDB, tmdbService)
 	torrentService := services.NewTorrentServiceWithConfig(globalCfg.RedAPIBaseURL, globalCfg.RedAPIKey)
 	reactionsService := services.NewReactionsService(globalDB)
@@ -94,9 +95,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/categories/{id}/movies", categoriesHandler.GetMoviesByCategory).Methods("GET")
 	api.HandleFunc("/categories/{id}/media", categoriesHandler.GetMediaByCategory).Methods("GET")
 
-	api.HandleFunc("/players/alloha/{imdb_id}", playersHandler.GetAllohaPlayer).Methods("GET")
-	api.HandleFunc("/players/lumex/{imdb_id}", playersHandler.GetLumexPlayer).Methods("GET")
-	api.HandleFunc("/players/vibix/{imdb_id}", playersHandler.GetVibixPlayer).Methods("GET")
+	api.HandleFunc("/players/alloha/{id_type}/{id}", playersHandler.GetAllohaPlayer).Methods("GET")
+	api.HandleFunc("/players/lumex/{id_type}/{id}", playersHandler.GetLumexPlayer).Methods("GET")
+	api.HandleFunc("/players/vibix/{id_type}/{id}", playersHandler.GetVibixPlayer).Methods("GET")
+	api.HandleFunc("/players/hdvb/{id_type}/{id}", playersHandler.GetHDVBPlayer).Methods("GET")
 	api.HandleFunc("/players/vidsrc/{media_type}/{imdb_id}", playersHandler.GetVidsrcPlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/movie/{imdb_id}", playersHandler.GetVidlinkMoviePlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/tv/{tmdb_id}", playersHandler.GetVidlinkTVPlayer).Methods("GET")
