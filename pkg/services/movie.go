@@ -75,6 +75,15 @@ func (s *MovieService) GetSimilar(id, page int, language string) (*models.TMDBRe
 }
 
 func (s *MovieService) GetExternalIDs(id int) (*models.ExternalIDs, error) {
+	if s.kpService != nil {
+		kpFilm, err := s.kpService.GetFilmByKinopoiskId(id)
+		if err == nil && kpFilm != nil {
+			externalIDs := MapKPExternalIDsToTMDB(kpFilm)
+			externalIDs.ID = id
+			return externalIDs, nil
+		}
+	}
+	
 	tmdbIDs, err := s.tmdb.GetMovieExternalIDs(id)
 	if err != nil {
 		return nil, err
