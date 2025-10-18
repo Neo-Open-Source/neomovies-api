@@ -4,13 +4,14 @@ REST API для поиска и получения информации о фи�
 
 ## Особенности
 
-- Поиск фильмов
+- Интеграция с Kinopoisk API для русского контента
+- Автоматическое переключение между TMDB и Kinopoisk
+- Поиск фильмов и сериалов
 - Информация о фильмах
-- Популярные фильмы
-- Топ рейтинговые фильмы
-- Предстоящие фильмы
+- Популярные, топ-рейтинговые, предстоящие фильмы
+- Поддержка русских плееров (Alloha, Lumex, Vibix, HDVB)
 - Swagger документация
-- Поддержка русского языка
+- Полная поддержка русского языка
 
 ## 🛠 Быстрый старт
 
@@ -50,32 +51,39 @@ API будет доступен на `http://localhost:3000`
 
 ```bash
 # Обязательные
-MONGO_URI=
-MONGO_DB_NAME=database
+MONGO_URI=mongodb://localhost:27017/neomovies
+MONGO_DB_NAME=neomovies
 TMDB_ACCESS_TOKEN=your_tmdb_access_token
 JWT_SECRET=your_jwt_secret_key
+
+# Kinopoisk API
+KPAPI_KEY=your_kp_api_key
+KPAPI_BASE_URL=https://kinopoiskapiunofficial.tech/api
 
 # Сервис
 PORT=3000
 BASE_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3001
 NODE_ENV=development
 
 # Email (Gmail)
-GMAIL_USER=
+GMAIL_USER=your_gmail@gmail.com
 GMAIL_APP_PASSWORD=your_gmail_app_password
 
-# Плееры
-LUMEX_URL=
+# Русские плееры
+LUMEX_URL=https://p.lumex.space
 ALLOHA_TOKEN=your_alloha_token
+VIBIX_HOST=https://vibix.org
 VIBIX_TOKEN=your_vibix_token
+HDVB_TOKEN=your_hdvb_token
 
 # Торренты (RedAPI)
 REDAPI_BASE_URL=http://redapi.cfhttp.top
 REDAPI_KEY=your_redapi_key
 
 # Google OAuth
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URL=http://localhost:3000/api/v1/auth/google/callback
 ```
 
@@ -120,10 +128,14 @@ GET  /api/v1/tv/{id}                         # Детали сериала
 GET  /api/v1/tv/{id}/recommendations         # Рекомендации
 GET  /api/v1/tv/{id}/similar                 # Похожие
 
-# Плееры
-GET  /api/v1/players/alloha/{imdb_id}          # Alloha плеер по IMDb ID
-GET  /api/v1/players/lumex/{imdb_id}           # Lumex плеер по IMDb ID
-GET  /api/v1/players/vibix/{imdb_id}           # Vibix плеер по IMDb ID
+# Плееры (новый формат с типом ID)
+GET  /api/v1/players/alloha/{id_type}/{id}    # Alloha плеер (kp/301 или imdb/tt0133093)
+GET  /api/v1/players/lumex/{id_type}/{id}     # Lumex плеер (kp/301 или imdb/tt0133093)
+GET  /api/v1/players/vibix/{id_type}/{id}     # Vibix плеер (kp/301 или imdb/tt0133093)
+GET  /api/v1/players/hdvb/{id_type}/{id}      # HDVB плеер (kp/301 или imdb/tt0133093)
+GET  /api/v1/players/vidsrc/{media_type}/{imdb_id}  # Vidsrc (только IMDB)
+GET  /api/v1/players/vidlink/movie/{imdb_id}       # Vidlink фильмы (только IMDB)
+GET  /api/v1/players/vidlink/tv/{tmdb_id}          # Vidlink сериалы (только TMDB)
 
 # Торренты
 GET  /api/v1/torrents/search/{imdbId}        # Поиск торрентов
@@ -243,9 +255,41 @@ curl "https://api.neomovies.ru/api/v1/torrents/search/tt0111161?type=movie&quali
 - **Gorilla Mux** - HTTP роутер
 - **MongoDB** - база данных
 - **JWT** - аутентификация
-- **TMDB API** - данные о фильмах
+- **TMDB API** - данные о фильмах (международный контент)
+- **Kinopoisk API Unofficial** - данные о русском контенте
 - **Gmail SMTP** - email уведомления
 - **Vercel** - деплой и хостинг
+
+## 🌍 Kinopoisk API интеграция
+
+API автоматически переключается между TMDB и Kinopoisk в зависимости от языка запроса:
+
+- **Русский язык (`lang=ru`)** → Kinopoisk API
+  - Русские названия фильмов
+  - Рейтинги Кинопоиска
+  - Поддержка Kinopoisk ID
+  
+- **Английский язык (`lang=en`)** → TMDB API
+  - Международные названия
+  - Рейтинги IMDB/TMDB
+  - Поддержка IMDB/TMDB ID
+
+### Формат ID в плеерах
+
+Все русские плееры поддерживают два типа идентификаторов:
+
+```bash
+# По Kinopoisk ID (приоритет для русского контента)
+GET /api/v1/players/alloha/kp/301
+
+# По IMDB ID (fallback)
+GET /api/v1/players/alloha/imdb/tt0133093
+
+# Примеры для других плееров
+GET /api/v1/players/lumex/kp/301
+GET /api/v1/players/vibix/kp/301
+GET /api/v1/players/hdvb/kp/301
+```
 
 ## 🚀 Производительность
 

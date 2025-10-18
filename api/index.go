@@ -67,7 +67,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	tvHandler := handlersPkg.NewTVHandler(tvService)
 	favoritesHandler := handlersPkg.NewFavoritesHandler(favoritesService, globalCfg)
 	docsHandler := handlersPkg.NewDocsHandler()
-	searchHandler := handlersPkg.NewSearchHandler(tmdbService)
+	searchHandler := handlersPkg.NewSearchHandler(tmdbService, kpService)
 	categoriesHandler := handlersPkg.NewCategoriesHandler(tmdbService)
 	playersHandler := handlersPkg.NewPlayersHandler(globalCfg)
 	torrentsHandler := handlersPkg.NewTorrentsHandler(torrentService, tmdbService)
