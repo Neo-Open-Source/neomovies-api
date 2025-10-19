@@ -43,6 +43,31 @@ type UnifiedContent struct {
     Revenue       *int64              `json:"revenue"`
     IMDbID        string              `json:"imdbId"`
     ExternalIDs   UnifiedExternalIDs  `json:"externalIds"`
+    // For TV shows
+    Seasons       []UnifiedSeason     `json:"seasons,omitempty"`
+}
+
+type UnifiedSeason struct {
+    ID           string           `json:"id"`
+    SourceID     string           `json:"sourceId"`
+    Name         string           `json:"name"`
+    SeasonNumber int              `json:"seasonNumber"`
+    EpisodeCount int              `json:"episodeCount"`
+    ReleaseDate  string           `json:"releaseDate"`
+    PosterURL    string           `json:"posterUrl"`
+    Episodes     []UnifiedEpisode `json:"episodes,omitempty"`
+}
+
+type UnifiedEpisode struct {
+    ID           string `json:"id"`
+    SourceID     string `json:"sourceId"`
+    Name         string `json:"name"`
+    EpisodeNumber int   `json:"episodeNumber"`
+    SeasonNumber  int   `json:"seasonNumber"`
+    AirDate      string `json:"airDate"`
+    Duration     int    `json:"duration"`
+    Description  string `json:"description"`
+    StillURL     string `json:"stillUrl"`
 }
 
 type UnifiedSearchItem struct {

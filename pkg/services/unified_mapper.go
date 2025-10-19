@@ -125,7 +125,7 @@ func MapTMDBTVToUnified(tv *models.TVShow, external *models.ExternalIDs) *models
         duration = tv.EpisodeRunTime[0]
     }
 
-    return &models.UnifiedContent{
+    unified := &models.UnifiedContent{
         ID:            strconv.Itoa(tv.ID),
         SourceID:      "tmdb_" + strconv.Itoa(tv.ID),
         Title:         tv.Name,
@@ -148,6 +148,24 @@ func MapTMDBTVToUnified(tv *models.TVShow, external *models.ExternalIDs) *models
         IMDbID:        imdb,
         ExternalIDs:   ext,
     }
+
+    // Map seasons basic info
+    if len(tv.Seasons) > 0 {
+        unified.Seasons = make([]models.UnifiedSeason, 0, len(tv.Seasons))
+        for _, s := range tv.Seasons {
+            unified.Seasons = append(unified.Seasons, models.UnifiedSeason{
+                ID:           strconv.Itoa(s.ID),
+                SourceID:     "tmdb_" + strconv.Itoa(s.ID),
+                Name:         s.Name,
+                SeasonNumber: s.SeasonNumber,
+                EpisodeCount: s.EpisodeCount,
+                ReleaseDate:  s.AirDate,
+                PosterURL:    BuildTMDBImageURL(s.PosterPath, "w500"),
+            })
+        }
+    }
+
+    return unified
 }
 
 func MapTMDBMultiToUnifiedItems(m *models.MultiSearchResponse) []models.UnifiedSearchItem {
