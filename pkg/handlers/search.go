@@ -30,51 +30,60 @@ func (h *SearchHandler) MultiSearch(w http.ResponseWriter, r *http.Request) {
 	page := getIntQuery(r, "page", 1)
 	language := GetLanguage(r)
 
-	if services.ShouldUseKinopoisk(language) && h.kpService != nil {
-		kpSearch, err := h.kpService.SearchFilms(query, page)
-		if err == nil {
-			tmdbResp := services.MapKPSearchToTMDBResponse(kpSearch)
-			multiResults := make([]models.MultiSearchResult, 0)
-			for _, movie := range tmdbResp.Results {
-				multiResults = append(multiResults, models.MultiSearchResult{
-					ID:               movie.ID,
-					MediaType:        "movie",
-					Title:            movie.Title,
-					OriginalTitle:    movie.OriginalTitle,
-					Overview:         movie.Overview,
-					PosterPath:       movie.PosterPath,
-					BackdropPath:     movie.BackdropPath,
-					ReleaseDate:      movie.ReleaseDate,
-					VoteAverage:      movie.VoteAverage,
-					VoteCount:        movie.VoteCount,
-					Popularity:       movie.Popularity,
-					Adult:            movie.Adult,
-					OriginalLanguage: movie.OriginalLanguage,
-				})
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(models.APIResponse{
-				Success: true,
-				Data: models.MultiSearchResponse{
-					Page:         page,
-					Results:      multiResults,
-					TotalPages:   tmdbResp.TotalPages,
-					TotalResults: tmdbResp.TotalResults,
-				},
-			})
-			return
-		}
-	}
+    if services.ShouldUseKinopoisk(language) {
+        if h.kpService == nil {
+            http.Error(w, "Kinopoisk service is not configured", http.StatusBadGateway)
+            return
+        }
 
-	results, err := h.tmdbService.SearchMulti(query, page, language)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+        kpSearch, err := h.kpService.SearchFilms(query, page)
+        if err != nil {
+            http.Error(w, err.Error(), http.StatusBadGateway)
+            return
+        }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{
-		Success: true,
-		Data:    results,
-	})
+        tmdbResp := services.MapKPSearchToTMDBResponse(kpSearch)
+        multiResults := make([]models.MultiSearchResult, 0)
+        for _, movie := range tmdbResp.Results {
+            multiResults = append(multiResults, models.MultiSearchResult{
+                ID:               movie.ID,
+                MediaType:        "movie",
+                Title:            movie.Title,
+                OriginalTitle:    movie.OriginalTitle,
+                Overview:         movie.Overview,
+                PosterPath:       movie.PosterPath,
+                BackdropPath:     movie.BackdropPath,
+                ReleaseDate:      movie.ReleaseDate,
+                VoteAverage:      movie.VoteAverage,
+                VoteCount:        movie.VoteCount,
+                Popularity:       movie.Popularity,
+                Adult:            movie.Adult,
+                OriginalLanguage: movie.OriginalLanguage,
+            })
+        }
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(models.APIResponse{
+            Success: true,
+            Data: models.MultiSearchResponse{
+                Page:         page,
+                Results:      multiResults,
+                TotalPages:   tmdbResp.TotalPages,
+                TotalResults: tmdbResp.TotalResults,
+            },
+        })
+        return
+    }
+
+    // EN/прочие языки — TMDB
+    results, err := h.tmdbService.SearchMulti(query, page, language)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(models.APIResponse{
+        Success: true,
+        Data:    results,
+    })
 }
