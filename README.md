@@ -1,4 +1,4 @@
-# Neo Movies API
+# Neo Movies API (Unified)
 
 REST API для поиска и получения информации о фильмах, использующий TMDB API.
 
@@ -89,7 +89,7 @@ GOOGLE_REDIRECT_URL=http://localhost:3000/api/v1/auth/google/callback
 
 ## 📋 API Endpoints
 
-### 🔓 Публичные маршруты
+### 🔓 Публичные маршруты (старые)
 
 ```http
 # Система
@@ -114,7 +114,7 @@ GET  /api/v1/movies/popular                  # Популярные
 GET  /api/v1/movies/top-rated                # Топ-рейтинговые
 GET  /api/v1/movies/upcoming                 # Предстоящие
 GET  /api/v1/movies/now-playing              # В прокате
-GET  /api/v1/movies/{id}                     # Детали фильма
+GET  /api/v1/movies/{id}                     # Детали фильма (устар.)
 GET  /api/v1/movies/{id}/recommendations     # Рекомендации
 GET  /api/v1/movies/{id}/similar             # Похожие
 
@@ -124,7 +124,86 @@ GET  /api/v1/tv/popular                      # Популярные
 GET  /api/v1/tv/top-rated                    # Топ-рейтинговые
 GET  /api/v1/tv/on-the-air                   # В эфире
 GET  /api/v1/tv/airing-today                 # Сегодня в эфире
-GET  /api/v1/tv/{id}                         # Детали сериала
+GET  /api/v1/tv/{id}                         # Детали сериала (устар.)
+### 🔓 Публичные маршруты (унифицированные)
+
+```http
+# Единый формат ID: SOURCE_ID = kp_123 | tmdb_456
+GET  /api/v1/movie/{SOURCE_ID}               # Детали фильма (унифицированный ответ)
+GET  /api/v1/tv/{SOURCE_ID}                  # Детали сериала (унифицированный ответ, с seasons[])
+GET  /api/v1/search?query=...&source=kp|tmdb # Мультипоиск (унифицированные элементы)
+```
+
+Примеры:
+
+```http
+GET /api/v1/movie/tmdb_550
+GET /api/v1/movie/kp_666
+GET /api/v1/tv/tmdb_1399
+GET /api/v1/search?query=matrix&source=tmdb
+```
+
+Схема ответа см. раздел «Unified responses» ниже.
+
+## Unified responses
+
+Пример карточки:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550",
+    "sourceId": "tmdb_550",
+    "title": "Fight Club",
+    "originalTitle": "Fight Club",
+    "description": "…",
+    "releaseDate": "1999-10-15",
+    "endDate": null,
+    "type": "movie",
+    "genres": [{ "id": "drama", "name": "Drama" }],
+    "rating": 8.8,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/...jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/...jpg",
+    "director": "",
+    "cast": [],
+    "duration": 139,
+    "country": "US",
+    "language": "en",
+    "budget": 63000000,
+    "revenue": 100853753,
+    "imdbId": "0137523",
+    "externalIds": { "kp": null, "tmdb": 550, "imdb": "0137523" },
+    "seasons": []
+  },
+  "source": "tmdb",
+  "metadata": { "fetchedAt": "...", "apiVersion": "3.0", "responseTime": 12 }
+}
+```
+
+Пример мультипоиска:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "550",
+      "sourceId": "tmdb_550",
+      "title": "Fight Club",
+      "type": "movie",
+      "releaseDate": "1999-10-15",
+      "posterUrl": "https://image.tmdb.org/t/p/w500/...jpg",
+      "rating": 8.8,
+      "description": "…",
+      "externalIds": { "kp": null, "tmdb": 550, "imdb": "" }
+    }
+  ],
+  "source": "tmdb",
+  "pagination": { "page": 1, "totalPages": 5, "totalResults": 42, "pageSize": 20 },
+  "metadata": { "fetchedAt": "...", "apiVersion": "3.0", "responseTime": 20, "query": "fight" }
+}
+```
 GET  /api/v1/tv/{id}/recommendations         # Рекомендации
 GET  /api/v1/tv/{id}/similar                 # Похожие
 
