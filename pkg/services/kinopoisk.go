@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -139,7 +140,7 @@ func (s *KinopoiskService) GetFilmByKinopoiskId(id int) (*KPFilm, error) {
 }
 
 func (s *KinopoiskService) GetFilmByImdbId(imdbId string) (*KPFilm, error) {
-	endpoint := fmt.Sprintf("%s/v2.2/films?imdbId=%s", s.baseURL, imdbId)
+    endpoint := fmt.Sprintf("%s/v2.2/films?imdbId=%s", s.baseURL, url.QueryEscape(imdbId))
 	
 	var response struct {
 		Films []KPFilm `json:"items"`
@@ -158,7 +159,7 @@ func (s *KinopoiskService) GetFilmByImdbId(imdbId string) (*KPFilm, error) {
 }
 
 func (s *KinopoiskService) SearchFilms(keyword string, page int) (*KPSearchResponse, error) {
-	endpoint := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s&page=%d", s.baseURL, keyword, page)
+    endpoint := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s&page=%d", s.baseURL, url.QueryEscape(keyword), page)
 	var response KPSearchResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
