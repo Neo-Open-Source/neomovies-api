@@ -122,6 +122,14 @@ func (s *MovieService) GetExternalIDs(id int) (*models.ExternalIDs, error) {
 		if err == nil && kpFilm != nil {
 			externalIDs := MapKPExternalIDsToTMDB(kpFilm)
 			externalIDs.ID = id
+			
+			// Пытаемся получить TMDB ID через IMDB ID
+			if kpFilm.ImdbId != "" && s.tmdb != nil {
+				if tmdbID, tmdbErr := s.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, "movie", "ru-RU"); tmdbErr == nil {
+					externalIDs.TMDBID = tmdbID
+				}
+			}
+			
 			return externalIDs, nil
 		}
 	}

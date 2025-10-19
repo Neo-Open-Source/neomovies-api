@@ -61,6 +61,10 @@ func (h *UnifiedHandler) GetMovie(w http.ResponseWriter, r *http.Request) {
             return
         }
         data = services.MapKPToUnified(kpFilm)
+        // Обогащаем TMDB ID если есть IMDB ID
+        if h.tmdb != nil {
+            services.EnrichKPWithTMDBID(data, h.tmdb)
+        }
     } else {
         // tmdb
         movie, err := h.tmdb.GetMovie(id, language)
@@ -99,6 +103,10 @@ func (h *UnifiedHandler) GetTV(w http.ResponseWriter, r *http.Request) {
             return
         }
         data = services.MapKPToUnified(kpFilm)
+        // Обогащаем TMDB ID если есть IMDB ID
+        if h.tmdb != nil {
+            services.EnrichKPWithTMDBID(data, h.tmdb)
+        }
     } else {
         tv, err := h.tmdb.GetTVShow(id, language)
         if err != nil {
@@ -139,6 +147,23 @@ func (h *UnifiedHandler) Search(w http.ResponseWriter, r *http.Request) {
             return
         }
         items := services.MapKPSearchToUnifiedItems(kpSearch)
+        // Обогащаем результаты поиска TMDB ID через получение полной информации о фильмах
+        if h.tmdb != nil {
+            for i := range items {
+                if kpID, err := strconv.Atoi(items[i].ID); err == nil {
+                    if kpFilm, err := h.kp.GetFilmByKinopoiskId(kpID); err == nil && kpFilm.ImdbId != "" {
+                        items[i].ExternalIDs.IMDb = kpFilm.ImdbId
+                        mediaType := "movie"
+                        if items[i].Type == "tv" {
+                            mediaType = "tv"
+                        }
+                        if tmdbID, err := h.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, mediaType, "ru-RU"); err == nil {
+                            items[i].ExternalIDs.TMDB = &tmdbID
+                        }
+                    }
+                }
+            }
+        }
         resp := models.UnifiedSearchResponse{
             Success: true,
             Data:    items,

@@ -86,5 +86,34 @@ func (s *TVService) GetSimilar(id, page int, language string) (*models.TMDBTVRes
 }
 
 func (s *TVService) GetExternalIDs(id int) (*models.ExternalIDs, error) {
-	return s.tmdb.GetTVExternalIDs(id)
+	if s.kpService != nil {
+		kpFilm, err := s.kpService.GetFilmByKinopoiskId(id)
+		if err == nil && kpFilm != nil {
+			externalIDs := MapKPExternalIDsToTMDB(kpFilm)
+			externalIDs.ID = id
+			
+			// Пытаемся получить TMDB ID через IMDB ID
+			if kpFilm.ImdbId != "" && s.tmdb != nil {
+				if tmdbID, tmdbErr := s.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, "tv", "ru-RU"); tmdbErr == nil {
+					externalIDs.TMDBID = tmdbID
+				}
+			}
+			
+			return externalIDs, nil
+		}
+	}
+	
+	tmdbIDs, err := s.tmdb.GetTVExternalIDs(id)
+	if err != nil {
+		return nil, err
+	}
+	
+	if s.kpService != nil && tmdbIDs.IMDbID != "" {
+		kpFilm, err := s.kpService.GetFilmByImdbId(tmdbIDs.IMDbID)
+		if err == nil && kpFilm != nil {
+			tmdbIDs.KinopoiskID = kpFilm.KinopoiskId
+		}
+	}
+	
+	return tmdbIDs, nil
 }

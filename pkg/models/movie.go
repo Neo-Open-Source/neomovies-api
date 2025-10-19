@@ -123,6 +123,7 @@ type ExternalIDs struct {
 	ID          int    `json:"id"`
 	IMDbID      string `json:"imdb_id"`
 	KinopoiskID int    `json:"kinopoisk_id,omitempty"`
+	TMDBID      int    `json:"tmdb_id,omitempty"`
 	TVDBID      int    `json:"tvdb_id,omitempty"`
 	WikidataID  string `json:"wikidata_id"`
 	FacebookID  string `json:"facebook_id"`

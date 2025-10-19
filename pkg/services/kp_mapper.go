@@ -388,3 +388,37 @@ func FormatKPDate(year int) string {
 	}
 	return fmt.Sprintf("%d-01-01", year)
 }
+
+// EnrichKPWithTMDBID обогащает KP контент TMDB ID через IMDB ID
+func EnrichKPWithTMDBID(content *models.UnifiedContent, tmdbService *TMDBService) {
+	if content == nil || content.IMDbID == "" || content.ExternalIDs.TMDB != nil {
+		return
+	}
+	
+	mediaType := "movie"
+	if content.Type == "tv" {
+		mediaType = "tv"
+	}
+	
+	if tmdbID, err := tmdbService.FindTMDBIdByIMDB(content.IMDbID, mediaType, "ru-RU"); err == nil {
+		content.ExternalIDs.TMDB = &tmdbID
+	}
+}
+
+// EnrichKPSearchItemsWithTMDBID обогащает массив поисковых элементов TMDB ID
+func EnrichKPSearchItemsWithTMDBID(items []models.UnifiedSearchItem, tmdbService *TMDBService) {
+	for i := range items {
+		if items[i].ExternalIDs.IMDb == "" || items[i].ExternalIDs.TMDB != nil {
+			continue
+		}
+		
+		mediaType := "movie"
+		if items[i].Type == "tv" {
+			mediaType = "tv"
+		}
+		
+		if tmdbID, err := tmdbService.FindTMDBIdByIMDB(items[i].ExternalIDs.IMDb, mediaType, "ru-RU"); err == nil {
+			items[i].ExternalIDs.TMDB = &tmdbID
+		}
+	}
+}
