@@ -45,29 +45,84 @@ func (h *ImagesHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	}
 
     var imageURL string
-    if strings.HasPrefix(decodedPath, "http://") || strings.HasPrefix(decodedPath, "https://") {
+    // Нормализуем абсолютные ссылки вида "https:/..." → "https://...", а также "//..." → "https://..."
+    normalized := decodedPath
+    if strings.HasPrefix(normalized, "//") {
+        normalized = "https:" + normalized
+    }
+    if strings.HasPrefix(normalized, "http:/") && !strings.HasPrefix(normalized, "http://") {
+        normalized = strings.Replace(normalized, "http:/", "http://", 1)
+    }
+    if strings.HasPrefix(normalized, "https:/") && !strings.HasPrefix(normalized, "https://") {
+        normalized = strings.Replace(normalized, "https:/", "https://", 1)
+    }
+
+    if strings.HasPrefix(normalized, "http://") || strings.HasPrefix(normalized, "https://") {
         // Проксируем внешний абсолютный URL (например, Kinopoisk)
-        imageURL = decodedPath
+        imageURL = normalized
     } else {
         // TMDB относительный путь
         imageURL = fmt.Sprintf("%s/%s/%s", config.TMDBImageBaseURL, size, imagePath)
     }
 
-    client := &http.Client{Timeout: 10 * time.Second}
-    req, err := http.NewRequest("GET", imageURL, nil)
-    if err != nil {
-        h.servePlaceholder(w, r)
-        return
+    client := &http.Client{Timeout: 12 * time.Second}
+
+    // Подготовим несколько вариантов заголовков для обхода ограничений источников
+    buildRequest := func(targetURL string, attempt int) (*http.Request, error) {
+        req, err := http.NewRequest("GET", targetURL, nil)
+        if err != nil {
+            return nil, err
+        }
+        // Универсальные заголовки как у браузера
+        req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+        req.Header.Set("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7")
+        if ua := r.Header.Get("User-Agent"); ua != "" {
+            req.Header.Set("User-Agent", ua)
+        } else {
+            req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0 Safari/537.36")
+        }
+
+        // Настройка Referer: для Yandex/Kinopoisk ставим kinopoisk.ru, иначе — origin URL
+        parsed, _ := url.Parse(targetURL)
+        host := strings.ToLower(parsed.Host)
+        switch attempt {
+        case 0:
+            if strings.Contains(host, "kinopoisk") || strings.Contains(host, "yandex") {
+                req.Header.Set("Referer", "https://www.kinopoisk.ru/")
+            } else if parsed.Scheme != "" && parsed.Host != "" {
+                req.Header.Set("Referer", parsed.Scheme+"://"+parsed.Host+"/")
+            }
+        case 1:
+            // Без Referer
+        default:
+            // Оставляем как есть
+        }
+
+        return req, nil
     }
-    // Проксируем важные заголовки, чтобы источники не резали по UA
-    if ua := r.Header.Get("User-Agent"); ua != "" { req.Header.Set("User-Agent", ua) }
-    if ref := r.Header.Get("Referer"); ref != "" { req.Header.Set("Referer", ref) }
-    resp, err := client.Do(req)
+
+    // До 2-х попыток: с реферером источника и без реферера
+    var resp *http.Response
+    var err error
+    for attempt := 0; attempt < 2; attempt++ {
+        var req *http.Request
+        req, err = buildRequest(imageURL, attempt)
+        if err != nil {
+            continue
+        }
+        resp, err = client.Do(req)
+        if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
+            break
+        }
+        if resp != nil {
+            resp.Body.Close()
+        }
+    }
 	if err != nil {
 		h.servePlaceholder(w, r)
 		return
 	}
-	defer resp.Body.Close()
+    defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		h.servePlaceholder(w, r)
