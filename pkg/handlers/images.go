@@ -28,7 +28,13 @@ func (h *ImagesHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if imagePath == "placeholder.jpg" {
+    // Попробуем декодировать путь заранее (на фронте абсолютные URL передаются как encodeURIComponent)
+    decodedPath := imagePath
+    if dp, err := url.QueryUnescape(imagePath); err == nil {
+        decodedPath = dp
+    }
+
+    if imagePath == "placeholder.jpg" || decodedPath == "placeholder.jpg" {
 		h.servePlaceholder(w, r)
 		return
 	}
@@ -39,11 +45,9 @@ func (h *ImagesHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	}
 
     var imageURL string
-    if strings.HasPrefix(imagePath, "http://") || strings.HasPrefix(imagePath, "https://") {
+    if strings.HasPrefix(decodedPath, "http://") || strings.HasPrefix(decodedPath, "https://") {
         // Проксируем внешний абсолютный URL (например, Kinopoisk)
-        // Поддержим случай, когда на фронте параметр уже был url-encoded
-        decoded, _ := url.QueryUnescape(imagePath)
-        imageURL = decoded
+        imageURL = decodedPath
     } else {
         // TMDB относительный путь
         imageURL = fmt.Sprintf("%s/%s/%s", config.TMDBImageBaseURL, size, imagePath)
