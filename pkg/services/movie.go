@@ -30,41 +30,39 @@ func (s *MovieService) Search(query string, page int, language, region string, y
 }
 
 func (s *MovieService) GetByID(id int, language string, idType string) (*models.Movie, error) {
-	// Если указан id_type, используем его; иначе определяем по языку
-	useKP := false
-	if idType == "kp" {
-		useKP = true
-	} else if idType == "tmdb" {
-		useKP = false
-	} else {
-		// Если id_type не указан, используем старую логику по языку
-		useKP = ShouldUseKinopoisk(language)
-	}
-	
-	if useKP && s.kpService != nil {
-		// Сначала пробуем напрямую по KP ID
-		kpFilm, err := s.kpService.GetFilmByKinopoiskId(id)
-		if err == nil {
-			return MapKPFilmToTMDBMovie(kpFilm), nil
-		}
-		
-		// Если не найдено и явно указан id_type=kp, возможно это TMDB ID
-		// Пробуем конвертировать TMDB -> KP
-		if idType == "kp" {
-			kpId, convErr := TmdbIdToKPId(s.tmdb, s.kpService, id)
-			if convErr == nil {
-				kpFilm, err := s.kpService.GetFilmByKinopoiskId(kpId)
-				if err == nil {
-					return MapKPFilmToTMDBMovie(kpFilm), nil
-				}
-			}
-			// Если конвертация не удалась, возвращаем ошибку вместо fallback
-			return nil, fmt.Errorf("film not found in Kinopoisk with id %d", id)
-		}
-	}
-	
-	// Для TMDB или если KP не указан
-	return s.tmdb.GetMovie(id, language)
+    // Строго уважаем явный id_type, без скрытого fallback на TMDB
+    switch idType {
+    case "kp":
+        if s.kpService == nil {
+            return nil, fmt.Errorf("kinopoisk service not configured")
+        }
+
+        // Сначала пробуем как Kinopoisk ID
+        if kpFilm, err := s.kpService.GetFilmByKinopoiskId(id); err == nil {
+            return MapKPFilmToTMDBMovie(kpFilm), nil
+        }
+
+        // Возможно пришел TMDB ID — пробуем конвертировать TMDB -> KP
+        if kpId, convErr := TmdbIdToKPId(s.tmdb, s.kpService, id); convErr == nil {
+            if kpFilm, err := s.kpService.GetFilmByKinopoiskId(kpId); err == nil {
+                return MapKPFilmToTMDBMovie(kpFilm), nil
+            }
+        }
+        // Явно указан KP, но ничего не нашли — возвращаем ошибку
+        return nil, fmt.Errorf("film not found in Kinopoisk with id %d", id)
+
+    case "tmdb":
+        return s.tmdb.GetMovie(id, language)
+    }
+
+    // Если id_type не указан — старая логика по языку
+    if ShouldUseKinopoisk(language) && s.kpService != nil {
+        if kpFilm, err := s.kpService.GetFilmByKinopoiskId(id); err == nil {
+            return MapKPFilmToTMDBMovie(kpFilm), nil
+        }
+    }
+
+    return s.tmdb.GetMovie(id, language)
 }
 
 func (s *MovieService) GetPopular(page int, language, region string) (*models.TMDBResponse, error) {
