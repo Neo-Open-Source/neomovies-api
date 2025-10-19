@@ -161,8 +161,8 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 		OpenAPI: "3.0.0",
 		Info: Info{
 			Title:       "Neo Movies API",
-			Description: "Современный API для поиска фильмов и сериалов с интеграцией TMDB и поддержкой авторизации",
-			Version:     "2.0.0",
+            Description: "Унифицированный API (TMDB/Kinopoisk) с префиксными ID (kp_*, tmdb_*) и единым форматом данных",
+            Version:     "3.0.0",
 			Contact: Contact{
 				Name: "API Support",
 				URL:  "https://github.com/your-username/neomovies-api-go",
@@ -194,10 +194,10 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 				},
 			},
-			"/api/v1/search/multi": map[string]interface{}{
+            "/api/v1/search": map[string]interface{}{
 				"get": map[string]interface{}{
-					"summary":     "Мультипоиск",
-					"description": "Поиск фильмов, сериалов и актеров",
+                    "summary":     "Унифицированный поиск",
+                    "description": "Поиск фильмов и сериалов в источниках TMDB или Kinopoisk",
 					"tags":        []string{"Search"},
 					"parameters": []map[string]interface{}{
 						{
@@ -207,6 +207,13 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 							"schema":      map[string]string{"type": "string"},
 							"description": "Поисковый запрос",
 						},
+                        {
+                            "name":        "source",
+                            "in":          "query",
+                            "required":    true,
+                            "schema":      map[string]interface{}{"type": "string", "enum": []string{"kp", "tmdb"}},
+                            "description": "Источник: kp или tmdb",
+                        },
 						{
 							"name":        "page",
 							"in":          "query",
@@ -216,7 +223,7 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 					"responses": map[string]interface{}{
 						"200": map[string]interface{}{
-							"description": "Результаты поиска",
+                            "description": "Результаты поиска (унифицированные)",
 						},
 					},
 				},
