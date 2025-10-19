@@ -39,12 +39,27 @@ func (s *MovieService) GetByID(id int, language string, idType string) (*models.
 
         // Сначала пробуем как Kinopoisk ID
         if kpFilm, err := s.kpService.GetFilmByKinopoiskId(id); err == nil {
+            // Попробуем обогатить TMDB фильмом через IMDb -> TMDB find
+            if kpFilm.ImdbId != "" {
+                if tmdbID, fErr := s.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, "movie", NormalizeLanguage(language)); fErr == nil {
+                    if tmdbMovie, mErr := s.tmdb.GetMovie(tmdbID, NormalizeLanguage(language)); mErr == nil {
+                        return tmdbMovie, nil
+                    }
+                }
+            }
             return MapKPFilmToTMDBMovie(kpFilm), nil
         }
 
         // Возможно пришел TMDB ID — пробуем конвертировать TMDB -> KP
         if kpId, convErr := TmdbIdToKPId(s.tmdb, s.kpService, id); convErr == nil {
             if kpFilm, err := s.kpService.GetFilmByKinopoiskId(kpId); err == nil {
+                if kpFilm.ImdbId != "" {
+                    if tmdbID, fErr := s.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, "movie", NormalizeLanguage(language)); fErr == nil {
+                        if tmdbMovie, mErr := s.tmdb.GetMovie(tmdbID, NormalizeLanguage(language)); mErr == nil {
+                            return tmdbMovie, nil
+                        }
+                    }
+                }
                 return MapKPFilmToTMDBMovie(kpFilm), nil
             }
         }

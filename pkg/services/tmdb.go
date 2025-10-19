@@ -179,6 +179,48 @@ func (s *TMDBService) GetTVShow(id int, language string) (*models.TVShow, error)
 	return &tvShow, err
 }
 
+// FindTMDBIdByIMDB finds TMDB IDs by external IMDb ID using /find/{external_id}
+// media: "movie" | "tv" | "" (auto)
+func (s *TMDBService) FindTMDBIdByIMDB(imdbID string, media string, language string) (int, error) {
+    if imdbID == "" {
+        return 0, fmt.Errorf("imdb id is empty")
+    }
+    if language == "" {
+        language = "ru-RU"
+    }
+    params := url.Values{}
+    params.Set("external_source", "imdb_id")
+    params.Set("language", language)
+    endpoint := fmt.Sprintf("%s/find/%s?%s", s.baseURL, url.PathEscape(imdbID), params.Encode())
+
+    var resp struct {
+        MovieResults []struct{ ID int `json:"id"` } `json:"movie_results"`
+        TVResults    []struct{ ID int `json:"id"` } `json:"tv_results"`
+    }
+    if err := s.makeRequest(endpoint, &resp); err != nil {
+        return 0, err
+    }
+
+    switch media {
+    case "movie":
+        if len(resp.MovieResults) > 0 {
+            return resp.MovieResults[0].ID, nil
+        }
+    case "tv":
+        if len(resp.TVResults) > 0 {
+            return resp.TVResults[0].ID, nil
+        }
+    default:
+        if len(resp.MovieResults) > 0 {
+            return resp.MovieResults[0].ID, nil
+        }
+        if len(resp.TVResults) > 0 {
+            return resp.TVResults[0].ID, nil
+        }
+    }
+    return 0, fmt.Errorf("tmdb id not found for imdb %s", imdbID)
+}
+
 func (s *TMDBService) GetGenres(mediaType string, language string) (*models.GenresResponse, error) {
 	params := url.Values{}
 
