@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"neomovies-api/pkg/models"
 )
@@ -177,6 +178,80 @@ func (s *TMDBService) GetTVShow(id int, language string) (*models.TVShow, error)
 	var tvShow models.TVShow
 	err := s.makeRequest(endpoint, &tvShow)
 	return &tvShow, err
+}
+
+// Map TMDB movie to unified content with prefixed IDs. Requires optional external IDs for imdbId.
+func MapTMDBToUnifiedMovie(movie *models.Movie, external *models.ExternalIDs) *models.UnifiedContent {
+    if movie == nil {
+        return nil
+    }
+
+    genres := make([]models.UnifiedGenre, 0, len(movie.Genres))
+    for _, g := range movie.Genres {
+        name := strings.TrimSpace(g.Name)
+        id := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
+        if id == "" {
+            id = strconv.Itoa(g.ID)
+        }
+        genres = append(genres, models.UnifiedGenre{ID: id, Name: name})
+    }
+
+    var imdb string
+    if external != nil {
+        imdb = external.IMDbID
+    }
+
+    var budgetPtr *int64
+    if movie.Budget > 0 {
+        v := movie.Budget
+        budgetPtr = &v
+    }
+
+    var revenuePtr *int64
+    if movie.Revenue > 0 {
+        v := movie.Revenue
+        revenuePtr = &v
+    }
+
+    ext := models.UnifiedExternalIDs{
+        KP:   nil,
+        TMDB: &movie.ID,
+        IMDb: imdb,
+    }
+
+    return &models.UnifiedContent{
+        ID:            strconv.Itoa(movie.ID),
+        SourceID:      "tmdb_" + strconv.Itoa(movie.ID),
+        Title:         movie.Title,
+        OriginalTitle: movie.OriginalTitle,
+        Description:   movie.Overview,
+        ReleaseDate:   movie.ReleaseDate,
+        EndDate:       nil,
+        Type:          "movie",
+        Genres:        genres,
+        Rating:        movie.VoteAverage,
+        PosterURL:     movie.PosterPath,
+        BackdropURL:   movie.BackdropPath,
+        Director:      "",
+        Cast:          []models.UnifiedCastMember{},
+        Duration:      movie.Runtime,
+        Country:       firstCountry(movie.ProductionCountries),
+        Language:      movie.OriginalLanguage,
+        Budget:        budgetPtr,
+        Revenue:       revenuePtr,
+        IMDbID:        imdb,
+        ExternalIDs:   ext,
+    }
+}
+
+func firstCountry(countries []models.ProductionCountry) string {
+    if len(countries) == 0 {
+        return ""
+    }
+    if strings.TrimSpace(countries[0].Name) != "" {
+        return countries[0].Name
+    }
+    return countries[0].ISO31661
 }
 
 func (s *TMDBService) GetGenres(mediaType string, language string) (*models.GenresResponse, error) {

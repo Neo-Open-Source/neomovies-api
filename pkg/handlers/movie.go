@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 
@@ -48,14 +49,39 @@ func (h *MovieHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 func (h *MovieHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
-		return
+	rawID := vars["id"]
+
+	// Support formats: "123" (old), "kp_123", "tmdb_123"
+	source := ""
+	var id int
+	if strings.Contains(rawID, "_") {
+		parts := strings.SplitN(rawID, "_", 2)
+		if len(parts) != 2 {
+			http.Error(w, "Invalid ID format", http.StatusBadRequest)
+			return
+		}
+		source = parts[0]
+		parsed, err := strconv.Atoi(parts[1])
+		if err != nil {
+			http.Error(w, "Invalid numeric ID", http.StatusBadRequest)
+			return
+		}
+		id = parsed
+	} else {
+		// Backward compatibility
+		parsed, err := strconv.Atoi(rawID)
+		if err != nil {
+			http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+			return
+		}
+		id = parsed
 	}
 
 	language := GetLanguage(r)
-	idType := r.URL.Query().Get("id_type") // kp or tmdb
+	idType := r.URL.Query().Get("id_type")
+	if source == "kp" || source == "tmdb" {
+		idType = source
+	}
 
 	movie, err := h.movieService.GetByID(id, language, idType)
 	if err != nil {

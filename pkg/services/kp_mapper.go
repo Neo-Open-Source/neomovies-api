@@ -167,6 +167,89 @@ func MapKPFilmToTVShow(kpFilm *KPFilm) *models.TVShow {
 	}
 }
 
+// Unified mappers with prefixed IDs
+func MapKPToUnified(kpFilm *KPFilm) *models.UnifiedContent {
+    if kpFilm == nil {
+        return nil
+    }
+
+    releaseDate := FormatKPDate(kpFilm.Year)
+    endDate := (*string)(nil)
+    if kpFilm.EndYear > 0 {
+        v := FormatKPDate(kpFilm.EndYear)
+        endDate = &v
+    }
+
+    genres := make([]models.UnifiedGenre, 0)
+    for _, g := range kpFilm.Genres {
+        genres = append(genres, models.UnifiedGenre{ID: strings.ToLower(g.Genre), Name: g.Genre})
+    }
+
+    poster := kpFilm.PosterUrlPreview
+    if poster == "" {
+        poster = kpFilm.PosterUrl
+    }
+
+    country := ""
+    if len(kpFilm.Countries) > 0 {
+        country = kpFilm.Countries[0].Country
+    }
+
+    title := kpFilm.NameRu
+    if title == "" {
+        title = kpFilm.NameEn
+    }
+    originalTitle := kpFilm.NameOriginal
+    if originalTitle == "" {
+        originalTitle = kpFilm.NameEn
+    }
+
+    var budgetPtr *int64
+    var revenuePtr *int64
+
+    external := models.UnifiedExternalIDs{KP: &kpFilm.KinopoiskId, TMDB: nil, IMDb: kpFilm.ImdbId}
+
+    return &models.UnifiedContent{
+        ID:            strconv.Itoa(kpFilm.KinopoiskId),
+        SourceID:      "kp_" + strconv.Itoa(kpFilm.KinopoiskId),
+        Title:         title,
+        OriginalTitle: originalTitle,
+        Description:   firstNonEmpty(kpFilm.Description, kpFilm.ShortDescription),
+        ReleaseDate:   releaseDate,
+        EndDate:       endDate,
+        Type:          mapKPTypeToUnified(kpFilm),
+        Genres:        genres,
+        Rating:        kpFilm.RatingKinopoisk,
+        PosterURL:     poster,
+        BackdropURL:   kpFilm.CoverUrl,
+        Director:      "",
+        Cast:          []models.UnifiedCastMember{},
+        Duration:      kpFilm.FilmLength,
+        Country:       country,
+        Language:      detectLanguage(kpFilm),
+        Budget:        budgetPtr,
+        Revenue:       revenuePtr,
+        IMDbID:        kpFilm.ImdbId,
+        ExternalIDs:   external,
+    }
+}
+
+func mapKPTypeToUnified(kp *KPFilm) string {
+    if kp.Serial || kp.Type == "TV_SERIES" || kp.Type == "MINI_SERIES" {
+        return "tv"
+    }
+    return "movie"
+}
+
+func firstNonEmpty(values ...string) string {
+    for _, v := range values {
+        if strings.TrimSpace(v) != "" {
+            return v
+        }
+    }
+    return ""
+}
+
 func MapKPSearchToTMDBResponse(kpSearch *KPSearchResponse) *models.TMDBResponse {
 	if kpSearch == nil {
 		return &models.TMDBResponse{
