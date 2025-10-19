@@ -160,20 +160,27 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 
 	log.Printf("Processing %s ID: %s", idType, id)
 
-	if h.config.LumexURL == "" {
-		log.Printf("Error: LUMEX_URL is missing")
-		http.Error(w, "Server misconfiguration: LUMEX_URL missing", http.StatusInternalServerError)
-		return
-	}
+    if h.config.LumexURL == "" {
+        log.Printf("Error: LUMEX_URL is missing")
+        http.Error(w, "Server misconfiguration: LUMEX_URL missing", http.StatusInternalServerError)
+        return
+    }
 
-	var paramName string
-	if idType == "kp" {
-		paramName = "kinopoisk_id"
-	} else {
-		paramName = "imdb_id"
-	}
+    // Формируем запрос вида: https://portal.lumex.host/api/short?api_token=...&kinopoisk_id=...
+    // Ожидается, что LUMEX_URL уже содержит базовый URL и api_token, например:
+    // LUMEX_URL=https://portal.lumex.host/api/short?api_token=XXXX
+    var paramName string
+    if idType == "kp" {
+        paramName = "kinopoisk_id"
+    } else {
+        paramName = "imdb_id"
+    }
 
-	playerURL := fmt.Sprintf("%s?%s=%s", h.config.LumexURL, paramName, id)
+    separator := "&"
+    if !strings.Contains(h.config.LumexURL, "?") {
+        separator = "?"
+    }
+    playerURL := fmt.Sprintf("%s% s%s=%s", h.config.LumexURL, separator, paramName, id)
 	log.Printf("Lumex URL: %s", playerURL)
 
 	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)
