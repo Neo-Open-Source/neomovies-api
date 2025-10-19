@@ -152,7 +152,9 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if idType != "kp" && idType != "imdb" {
+    // Поддержка алиаса
+    if idType == "kinopoisk_id" { idType = "kp" }
+    if idType != "kp" && idType != "imdb" {
 		log.Printf("Error: invalid id_type: %s", idType)
 		http.Error(w, "id_type must be 'kp' or 'imdb'", http.StatusBadRequest)
 		return
@@ -166,21 +168,20 @@ func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) 
         return
     }
 
-    // Формируем запрос вида: https://portal.lumex.host/api/short?api_token=...&kinopoisk_id=...
-    // Ожидается, что LUMEX_URL уже содержит базовый URL и api_token, например:
-    // LUMEX_URL=https://portal.lumex.host/api/short?api_token=XXXX
+    // Встраивание напрямую через p.lumex.cloud: <iframe src="//p.lumex.cloud/<code>?kp_id=...">
+    // Ожидается, что LUMEX_URL задаёт базу вида: https://p.lumex.cloud/<code>
     var paramName string
     if idType == "kp" {
-        paramName = "kinopoisk_id"
+        paramName = "kp_id"
     } else {
         paramName = "imdb_id"
     }
 
-    separator := "&"
-    if !strings.Contains(h.config.LumexURL, "?") {
-        separator = "?"
+    separator := "?"
+    if strings.Contains(h.config.LumexURL, "?") {
+        separator = "&"
     }
-    playerURL := fmt.Sprintf("%s% s%s=%s", h.config.LumexURL, separator, paramName, id)
+    playerURL := fmt.Sprintf("%s%s%s=%s", h.config.LumexURL, separator, paramName, url.QueryEscape(id))
 	log.Printf("Lumex URL: %s", playerURL)
 
 	iframe := fmt.Sprintf(`<iframe src="%s" allowfullscreen loading="lazy" style="border:none;width:100%%;height:100%%;"></iframe>`, playerURL)

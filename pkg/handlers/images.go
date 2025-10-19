@@ -4,9 +4,11 @@ import (
     "fmt"
     "io"
     "net/http"
+    "net/url"
     "os"
     "path/filepath"
     "strings"
+    "time"
 
     "github.com/gorilla/mux"
     "neomovies-api/pkg/config"
@@ -39,13 +41,24 @@ func (h *ImagesHandler) GetImage(w http.ResponseWriter, r *http.Request) {
     var imageURL string
     if strings.HasPrefix(imagePath, "http://") || strings.HasPrefix(imagePath, "https://") {
         // Проксируем внешний абсолютный URL (например, Kinopoisk)
-        imageURL = imagePath
+        // Поддержим случай, когда на фронте параметр уже был url-encoded
+        decoded, _ := url.QueryUnescape(imagePath)
+        imageURL = decoded
     } else {
         // TMDB относительный путь
         imageURL = fmt.Sprintf("%s/%s/%s", config.TMDBImageBaseURL, size, imagePath)
     }
 
-	resp, err := http.Get(imageURL)
+    client := &http.Client{Timeout: 10 * time.Second}
+    req, err := http.NewRequest("GET", imageURL, nil)
+    if err != nil {
+        h.servePlaceholder(w, r)
+        return
+    }
+    // Проксируем важные заголовки, чтобы источники не резали по UA
+    if ua := r.Header.Get("User-Agent"); ua != "" { req.Header.Set("User-Agent", ua) }
+    if ref := r.Header.Get("Referer"); ref != "" { req.Header.Set("Referer", ref) }
+    resp, err := client.Do(req)
 	if err != nil {
 		h.servePlaceholder(w, r)
 		return
