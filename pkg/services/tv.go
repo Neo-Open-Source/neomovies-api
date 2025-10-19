@@ -35,12 +35,27 @@ func (s *TVService) GetByID(id int, language string, idType string) (*models.TVS
 
         // Сначала пробуем как Kinopoisk ID
         if kpFilm, err := s.kpService.GetFilmByKinopoiskId(id); err == nil && kpFilm != nil {
+            // Попробуем обогатить TMDB сериал через IMDb -> TMDB find
+            if kpFilm.ImdbId != "" {
+                if tmdbID, fErr := s.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, "tv", NormalizeLanguage(language)); fErr == nil {
+                    if tmdbTV, mErr := s.tmdb.GetTVShow(tmdbID, NormalizeLanguage(language)); mErr == nil {
+                        return tmdbTV, nil
+                    }
+                }
+            }
             return MapKPFilmToTVShow(kpFilm), nil
         }
 
         // Возможно пришел TMDB ID — пробуем конвертировать TMDB -> KP
         if kpId, convErr := TmdbIdToKPId(s.tmdb, s.kpService, id); convErr == nil {
             if kpFilm, err := s.kpService.GetFilmByKinopoiskId(kpId); err == nil && kpFilm != nil {
+                if kpFilm.ImdbId != "" {
+                    if tmdbID, fErr := s.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, "tv", NormalizeLanguage(language)); fErr == nil {
+                        if tmdbTV, mErr := s.tmdb.GetTVShow(tmdbID, NormalizeLanguage(language)); mErr == nil {
+                            return tmdbTV, nil
+                        }
+                    }
+                }
                 return MapKPFilmToTVShow(kpFilm), nil
             }
         }

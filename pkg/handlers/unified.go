@@ -61,9 +61,11 @@ func (h *UnifiedHandler) GetMovie(w http.ResponseWriter, r *http.Request) {
             return
         }
         data = services.MapKPToUnified(kpFilm)
-        // Обогащаем TMDB ID если есть IMDB ID
-        if h.tmdb != nil {
-            services.EnrichKPWithTMDBID(data, h.tmdb)
+        // Обогащаем только externalIds.tmdb через /find (берем только поле id)
+        if kpFilm.ImdbId != "" {
+            if tmdbID, fErr := h.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, "movie", GetLanguage(r)); fErr == nil {
+                data.ExternalIDs.TMDB = &tmdbID
+            }
         }
     } else {
         // tmdb
@@ -103,9 +105,10 @@ func (h *UnifiedHandler) GetTV(w http.ResponseWriter, r *http.Request) {
             return
         }
         data = services.MapKPToUnified(kpFilm)
-        // Обогащаем TMDB ID если есть IMDB ID
-        if h.tmdb != nil {
-            services.EnrichKPWithTMDBID(data, h.tmdb)
+        if kpFilm.ImdbId != "" {
+            if tmdbID, fErr := h.tmdb.FindTMDBIdByIMDB(kpFilm.ImdbId, "tv", GetLanguage(r)); fErr == nil {
+                data.ExternalIDs.TMDB = &tmdbID
+            }
         }
     } else {
         tv, err := h.tmdb.GetTVShow(id, language)
