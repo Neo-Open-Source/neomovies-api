@@ -1,15 +1,15 @@
 package handlers
 
 import (
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
+    "fmt"
+    "io"
+    "net/http"
+    "os"
+    "path/filepath"
+    "strings"
 
-	"github.com/gorilla/mux"
-	"neomovies-api/pkg/config"
+    "github.com/gorilla/mux"
+    "neomovies-api/pkg/config"
 )
 
 type ImagesHandler struct{}
@@ -36,7 +36,14 @@ func (h *ImagesHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 		size = "original"
 	}
 
-	imageURL := fmt.Sprintf("%s/%s/%s", config.TMDBImageBaseURL, size, imagePath)
+    var imageURL string
+    if strings.HasPrefix(imagePath, "http://") || strings.HasPrefix(imagePath, "https://") {
+        // Проксируем внешний абсолютный URL (например, Kinopoisk)
+        imageURL = imagePath
+    } else {
+        // TMDB относительный путь
+        imageURL = fmt.Sprintf("%s/%s/%s", config.TMDBImageBaseURL, size, imagePath)
+    }
 
 	resp, err := http.Get(imageURL)
 	if err != nil {

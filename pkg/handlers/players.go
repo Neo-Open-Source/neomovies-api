@@ -30,7 +30,7 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 	log.Printf("GetAllohaPlayer called: %s %s", r.Method, r.URL.Path)
 
 	vars := mux.Vars(r)
-	idType := vars["id_type"]
+    idType := vars["id_type"]
 	id := vars["id"]
 
 	if idType == "" || id == "" {
@@ -39,9 +39,10 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if idType != "kp" && idType != "imdb" {
+    if idType == "kinopoisk_id" { idType = "kp" }
+    if idType != "kp" && idType != "imdb" {
 		log.Printf("Error: invalid id_type: %s", idType)
-		http.Error(w, "id_type must be 'kp' or 'imdb'", http.StatusBadRequest)
+        http.Error(w, "id_type must be 'kp' (kinopoisk_id) or 'imdb'", http.StatusBadRequest)
 		return
 	}
 
