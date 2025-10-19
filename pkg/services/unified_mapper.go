@@ -2,6 +2,7 @@ package services
 
 import (
     "fmt"
+    "net/url"
     "strconv"
     "strings"
 
@@ -10,20 +11,26 @@ import (
 
 const tmdbImageBase = "https://image.tmdb.org/t/p"
 
-func BuildTMDBImageURL(path string, size string) string {
-    if path == "" {
+// BuildAPIImageProxyURL строит относительный URL до нашего прокси-эндпоинта изображений.
+// Если передан абсолютный URL (KP и пр.) — он кодируется и передаётся как path параметр.
+// Если передан относительный TMDB-путь, он используется как есть (без ведущего '/').
+func BuildAPIImageProxyURL(pathOrURL string, size string) string {
+    if strings.TrimSpace(pathOrURL) == "" {
         return ""
-    }
-    if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-        return path
     }
     if size == "" {
         size = "w500"
     }
-    if !strings.HasPrefix(path, "/") {
-        path = "/" + path
+    // Абсолютные ссылки (Kinopoisk и пр.) — кодируем целиком
+    if strings.HasPrefix(pathOrURL, "http://") || strings.HasPrefix(pathOrURL, "https://") {
+        return fmt.Sprintf("/api/v1/images/%s/%s", size, url.QueryEscape(pathOrURL))
     }
-    return fmt.Sprintf("%s/%s%s", tmdbImageBase, size, path)
+    // TMDB относительный путь
+    clean := pathOrURL
+    if strings.HasPrefix(clean, "/") {
+        clean = clean[1:]
+    }
+    return fmt.Sprintf("/api/v1/images/%s/%s", size, clean)
 }
 
 func MapTMDBToUnifiedMovie(movie *models.Movie, external *models.ExternalIDs) *models.UnifiedContent {
@@ -74,8 +81,8 @@ func MapTMDBToUnifiedMovie(movie *models.Movie, external *models.ExternalIDs) *m
         Type:          "movie",
         Genres:        genres,
         Rating:        movie.VoteAverage,
-        PosterURL:     BuildTMDBImageURL(movie.PosterPath, "w500"),
-        BackdropURL:   BuildTMDBImageURL(movie.BackdropPath, "w1280"),
+        PosterURL:     BuildAPIImageProxyURL(movie.PosterPath, "w500"),
+        BackdropURL:   BuildAPIImageProxyURL(movie.BackdropPath, "w1280"),
         Director:      "",
         Cast:          []models.UnifiedCastMember{},
         Duration:      movie.Runtime,
@@ -136,8 +143,8 @@ func MapTMDBTVToUnified(tv *models.TVShow, external *models.ExternalIDs) *models
         Type:          "tv",
         Genres:        genres,
         Rating:        tv.VoteAverage,
-        PosterURL:     BuildTMDBImageURL(tv.PosterPath, "w500"),
-        BackdropURL:   BuildTMDBImageURL(tv.BackdropPath, "w1280"),
+        PosterURL:     BuildAPIImageProxyURL(tv.PosterPath, "w500"),
+        BackdropURL:   BuildAPIImageProxyURL(tv.BackdropPath, "w1280"),
         Director:      "",
         Cast:          []models.UnifiedCastMember{},
         Duration:      duration,
@@ -160,7 +167,7 @@ func MapTMDBTVToUnified(tv *models.TVShow, external *models.ExternalIDs) *models
                 SeasonNumber: s.SeasonNumber,
                 EpisodeCount: s.EpisodeCount,
                 ReleaseDate:  s.AirDate,
-                PosterURL:    BuildTMDBImageURL(s.PosterPath, "w500"),
+                PosterURL:    BuildAPIImageProxyURL(s.PosterPath, "w500"),
             })
         }
     }
@@ -185,7 +192,7 @@ func MapTMDBMultiToUnifiedItems(m *models.MultiSearchResponse) []models.UnifiedS
         if r.MediaType == "tv" {
             release = r.FirstAirDate
         }
-        poster := BuildTMDBImageURL(r.PosterPath, "w500")
+        poster := BuildAPIImageProxyURL(r.PosterPath, "w500")
         tmdbId := r.ID
         items = append(items, models.UnifiedSearchItem{
             ID:          strconv.Itoa(tmdbId),
@@ -216,6 +223,7 @@ func MapKPSearchToUnifiedItems(kps *KPSearchResponse) []models.UnifiedSearchItem
         if poster == "" {
             poster = f.PosterUrl
         }
+        poster = BuildAPIImageProxyURL(poster, "w500")
         rating := 0.0
         if strings.TrimSpace(f.Rating) != "" {
             if v, err := strconv.ParseFloat(f.Rating, 64); err == nil {
