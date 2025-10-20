@@ -1,12 +1,12 @@
 package services
 
 import (
-	"fmt"
-	"strconv"
-	"strings"
-	"time"
+    "fmt"
+    "strconv"
+    "strings"
+    "time"
 
-	"neomovies-api/pkg/models"
+    "neomovies-api/pkg/models"
 )
 
 func MapKPFilmToTMDBMovie(kpFilm *KPFilm) *models.Movie {
@@ -220,8 +220,8 @@ func MapKPToUnified(kpFilm *KPFilm) *models.UnifiedContent {
         Type:          mapKPTypeToUnified(kpFilm),
         Genres:        genres,
         Rating:        kpFilm.RatingKinopoisk,
-        PosterURL:     poster,
-        BackdropURL:   kpFilm.CoverUrl,
+        PosterURL:     BuildAPIImageProxyURL(poster, "w500"),
+        BackdropURL:   BuildAPIImageProxyURL(kpFilm.CoverUrl, "w1280"),
         Director:      "",
         Cast:          []models.UnifiedCastMember{},
         Duration:      kpFilm.FilmLength,
