@@ -75,6 +75,7 @@ type UnifiedSearchItem struct {
     SourceID    string             `json:"sourceId"`
     Title       string             `json:"title"`
     Type        string             `json:"type"`
+    OriginalType string            `json:"originalType,omitempty"`
     ReleaseDate string             `json:"releaseDate"`
     PosterURL   string             `json:"posterUrl"`
     Rating      float64            `json:"rating"`

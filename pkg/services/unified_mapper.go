@@ -236,6 +236,7 @@ func MapKPSearchToUnifiedItems(kps *KPSearchResponse) []models.UnifiedSearchItem
             SourceID:    "kp_" + strconv.Itoa(kpId),
             Title:       title,
             Type:        mapKPTypeToUnifiedShort(f.Type),
+            OriginalType: strings.ToUpper(strings.TrimSpace(f.Type)),
             ReleaseDate: yearToDate(f.Year),
             PosterURL:   poster,
             Rating:      rating,
