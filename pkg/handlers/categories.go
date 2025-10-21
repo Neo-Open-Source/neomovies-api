@@ -12,13 +12,18 @@ import (
 )
 
 type CategoriesHandler struct {
-	tmdbService *services.TMDBService
+    tmdbService *services.TMDBService
+    kpService   *services.KinopoiskService
 }
 
 func NewCategoriesHandler(tmdbService *services.TMDBService) *CategoriesHandler {
-	return &CategoriesHandler{
-		tmdbService: tmdbService,
-	}
+    // Для совместимости, kpService может быть добавлен позже через setter при инициализации в main.go/api/index.go
+    return &CategoriesHandler{tmdbService: tmdbService}
+}
+
+func (h *CategoriesHandler) WithKinopoisk(kp *services.KinopoiskService) *CategoriesHandler {
+    h.kpService = kp
+    return h
 }
 
 type Category struct {
@@ -28,14 +33,14 @@ type Category struct {
 }
 
 func (h *CategoriesHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
-	// Получаем все жанры
-	genresResponse, err := h.tmdbService.GetAllGenres()
+    // Получаем все жанры
+    genresResponse, err := h.tmdbService.GetAllGenres()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Преобразуем жанры в категории
+    // Преобразуем жанры в категории (пока TMDB). Для KP — можно замаппить фиксированный список
 	var categories []Category
 	for _, genre := range genresResponse.Genres {
 		slug := generateSlug(genre.Name)
@@ -67,7 +72,7 @@ func (h *CategoriesHandler) GetMediaByCategory(w http.ResponseWriter, r *http.Re
 		language = "ru-RU"
 	}
 
-	mediaType := r.URL.Query().Get("type")
+    mediaType := r.URL.Query().Get("type")
 	if mediaType == "" {
 		mediaType = "movie" // По умолчанию фильмы для обратной совместимости
 	}
@@ -77,16 +82,28 @@ func (h *CategoriesHandler) GetMediaByCategory(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var data interface{}
-	var err2 error
+    source := r.URL.Query().Get("source") // "kp" | "tmdb"
+    var data interface{}
+    var err2 error
 
-	if mediaType == "movie" {
-		// Используем discover API для получения фильмов по жанру
-		data, err2 = h.tmdbService.DiscoverMoviesByGenre(categoryID, page, language)
-	} else {
-		// Используем discover API для получения сериалов по жанру
-		data, err2 = h.tmdbService.DiscoverTVByGenre(categoryID, page, language)
-	}
+    if source == "kp" && h.kpService != nil {
+        // KP не имеет прямого discover по genre id TMDB — здесь можно реализовать маппинг slug->поисковый запрос
+        // Для простоты: используем keyword поиск по имени категории (slug как ключевое слово)
+        // Получим человекочитаемое имя жанра из TMDB как приближение
+        if mediaType == "movie" {
+            // Поиском KP (keyword) эмулируем категорию
+            data, err2 = h.kpService.SearchFilms(r.URL.Query().Get("name"), page)
+        } else {
+            // Для сериалов у KP: используем тот же поиск (KP выдаёт и сериалы в некоторых случаях)
+            data, err2 = h.kpService.SearchFilms(r.URL.Query().Get("name"), page)
+        }
+    } else {
+        if mediaType == "movie" {
+            data, err2 = h.tmdbService.DiscoverMoviesByGenre(categoryID, page, language)
+        } else {
+            data, err2 = h.tmdbService.DiscoverTVByGenre(categoryID, page, language)
+        }
+    }
 
 	if err2 != nil {
 		http.Error(w, err2.Error(), http.StatusInternalServerError)

@@ -58,7 +58,8 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 	apiURL := fmt.Sprintf("https://api.alloha.tv/?token=%s&%s", h.config.AllohaToken, idParam)
 	log.Printf("Calling Alloha API: %s", apiURL)
 
-	resp, err := http.Get(apiURL)
+    client := &http.Client{Timeout: 8 * time.Second}
+    resp, err := client.Get(apiURL)
 	if err != nil {
 		log.Printf("Error calling Alloha API: %v", err)
 		http.Error(w, "Failed to fetch from Alloha API", http.StatusInternalServerError)
@@ -137,6 +138,98 @@ func (h *PlayersHandler) GetAllohaPlayer(w http.ResponseWriter, r *http.Request)
 	w.Write([]byte(htmlDoc))
 
 	log.Printf("Successfully served Alloha player for %s: %s", idType, id)
+}
+
+// GetAllohaMetaByKP returns seasons/episodes meta for Alloha by kinopoisk_id
+func (h *PlayersHandler) GetAllohaMetaByKP(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    kpID := vars["kp_id"]
+    if strings.TrimSpace(kpID) == "" {
+        http.Error(w, "kp_id is required", http.StatusBadRequest)
+        return
+    }
+    if h.config.AllohaToken == "" {
+        http.Error(w, "Server misconfiguration: ALLOHA_TOKEN missing", http.StatusInternalServerError)
+        return
+    }
+
+    apiURL := fmt.Sprintf("https://api.alloha.tv/?token=%s&kp=%s", url.QueryEscape(h.config.AllohaToken), url.QueryEscape(kpID))
+    client := &http.Client{Timeout: 8 * time.Second}
+    resp, err := client.Get(apiURL)
+    if err != nil {
+        http.Error(w, "Failed to fetch from Alloha API", http.StatusBadGateway)
+        return
+    }
+    defer resp.Body.Close()
+    if resp.StatusCode != http.StatusOK {
+        http.Error(w, fmt.Sprintf("Alloha API error: %d", resp.StatusCode), http.StatusBadGateway)
+        return
+    }
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        http.Error(w, "Failed to read Alloha response", http.StatusBadGateway)
+        return
+    }
+
+    // Define only the parts we need
+    var raw struct {
+        Status string `json:"status"`
+        Data   struct {
+            Seasons []struct {
+                Key   string `json:"key"`
+                Value struct {
+                    Episodes []struct {
+                        Key   string `json:"key"`
+                        Value struct {
+                            Translation []struct {
+                                Value struct {
+                                    Translation string `json:"translation"`
+                                } `json:"value"`
+                            } `json:"translation"`
+                        } `json:"value"`
+                    } `json:"episodes"`
+                } `json:"value"`
+            } `json:"seasons"`
+        } `json:"data"`
+    }
+
+    if err := json.Unmarshal(body, &raw); err != nil {
+        http.Error(w, "Invalid JSON from Alloha", http.StatusBadGateway)
+        return
+    }
+
+    type episodeMeta struct {
+        Episode      int      `json:"episode"`
+        Translations []string `json:"translations"`
+    }
+    type seasonMeta struct {
+        Season   int           `json:"season"`
+        Episodes []episodeMeta `json:"episodes"`
+    }
+    out := struct {
+        Success bool         `json:"success"`
+        Seasons []seasonMeta `json:"seasons"`
+    }{Success: true}
+
+    for _, s := range raw.Data.Seasons {
+        seasonNum, _ := strconv.Atoi(strings.TrimSpace(s.Key))
+        sm := seasonMeta{Season: seasonNum}
+        for _, e := range s.Value.Episodes {
+            epNum, _ := strconv.Atoi(strings.TrimSpace(e.Key))
+            em := episodeMeta{Episode: epNum}
+            for _, tr := range e.Value.Translation {
+                t := strings.TrimSpace(tr.Value.Translation)
+                if t != "" {
+                    em.Translations = append(em.Translations, t)
+                }
+            }
+            sm.Episodes = append(sm.Episodes, em)
+        }
+        out.Seasons = append(out.Seasons, sm)
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    _ = json.NewEncoder(w).Encode(out)
 }
 
 func (h *PlayersHandler) GetLumexPlayer(w http.ResponseWriter, r *http.Request) {
@@ -601,7 +694,8 @@ func (h *PlayersHandler) GetHDVBPlayer(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("HDVB API URL: %s", apiURL)
 
-	resp, err := http.Get(apiURL)
+    client := &http.Client{Timeout: 8 * time.Second}
+    resp, err := client.Get(apiURL)
 	if err != nil {
 		log.Printf("Error fetching HDVB data: %v", err)
 		http.Error(w, "Failed to fetch player data", http.StatusInternalServerError)

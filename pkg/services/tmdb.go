@@ -6,6 +6,7 @@ import (
     "net/http"
     "net/url"
     "strconv"
+    "time"
 
     "neomovies-api/pkg/models"
 )
@@ -17,11 +18,16 @@ type TMDBService struct {
 }
 
 func NewTMDBService(accessToken string) *TMDBService {
-	return &TMDBService{
-		accessToken: accessToken,
-		baseURL:     "https://api.themoviedb.org/3",
-		client:      &http.Client{},
-	}
+    transport := &http.Transport{
+        MaxIdleConns:        100,
+        MaxIdleConnsPerHost: 10,
+        IdleConnTimeout:     60 * time.Second,
+    }
+    return &TMDBService{
+        accessToken: accessToken,
+        baseURL:     "https://api.themoviedb.org/3",
+        client:      &http.Client{Timeout: 10 * time.Second, Transport: transport},
+    }
 }
 
 func (s *TMDBService) makeRequest(endpoint string, target interface{}) error {
@@ -194,8 +200,10 @@ func (s *TMDBService) FindTMDBIdByIMDB(imdbID string, media string, language str
     endpoint := fmt.Sprintf("%s/find/%s?%s", s.baseURL, url.PathEscape(imdbID), params.Encode())
 
     var resp struct {
-        MovieResults []struct{ ID int `json:"id"` } `json:"movie_results"`
-        TVResults    []struct{ ID int `json:"id"` } `json:"tv_results"`
+        MovieResults     []struct{ ID int `json:"id"` } `json:"movie_results"`
+        TVResults        []struct{ ID int `json:"id"` } `json:"tv_results"`
+        TVEpisodeResults []struct{ ShowID int `json:"show_id"` } `json:"tv_episode_results"`
+        TVSeasonResults  []struct{ ShowID int `json:"show_id"` } `json:"tv_season_results"`
     }
     if err := s.makeRequest(endpoint, &resp); err != nil {
         return 0, err
@@ -216,6 +224,12 @@ func (s *TMDBService) FindTMDBIdByIMDB(imdbID string, media string, language str
         }
         if len(resp.TVResults) > 0 {
             return resp.TVResults[0].ID, nil
+        }
+        if len(resp.TVSeasonResults) > 0 {
+            return resp.TVSeasonResults[0].ShowID, nil
+        }
+        if len(resp.TVEpisodeResults) > 0 {
+            return resp.TVEpisodeResults[0].ShowID, nil
         }
     }
     return 0, fmt.Errorf("tmdb id not found for imdb %s", imdbID)

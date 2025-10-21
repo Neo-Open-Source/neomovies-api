@@ -69,7 +69,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	docsHandler := handlersPkg.NewDocsHandler()
     searchHandler := handlersPkg.NewSearchHandler(tmdbService, kpService)
     unifiedHandler := handlersPkg.NewUnifiedHandler(tmdbService, kpService)
-	categoriesHandler := handlersPkg.NewCategoriesHandler(tmdbService)
+    categoriesHandler := handlersPkg.NewCategoriesHandler(tmdbService).WithKinopoisk(kpService)
 	playersHandler := handlersPkg.NewPlayersHandler(globalCfg)
 	torrentsHandler := handlersPkg.NewTorrentsHandler(torrentService, tmdbService)
 	reactionsHandler := handlersPkg.NewReactionsHandler(reactionsService)
@@ -96,7 +96,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/categories/{id}/movies", categoriesHandler.GetMoviesByCategory).Methods("GET")
 	api.HandleFunc("/categories/{id}/media", categoriesHandler.GetMediaByCategory).Methods("GET")
 
-	api.HandleFunc("/players/alloha/{id_type}/{id}", playersHandler.GetAllohaPlayer).Methods("GET")
+    api.HandleFunc("/players/alloha/{id_type}/{id}", playersHandler.GetAllohaPlayer).Methods("GET")
+    api.HandleFunc("/players/alloha/meta/kp/{kp_id}", playersHandler.GetAllohaMetaByKP).Methods("GET")
 	api.HandleFunc("/players/lumex/{id_type}/{id}", playersHandler.GetLumexPlayer).Methods("GET")
 	api.HandleFunc("/players/vibix/{id_type}/{id}", playersHandler.GetVibixPlayer).Methods("GET")
 	api.HandleFunc("/players/hdvb/{id_type}/{id}", playersHandler.GetHDVBPlayer).Methods("GET")

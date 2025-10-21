@@ -278,18 +278,15 @@ curl -X POST https://api.neomovies.ru/api/v1/auth/login \
   }'
 ```
 
-### Поиск фильмов
+### Поиск (унифицированный)
 
 ```bash
-# Поиск фильмов
-curl "https://api.neomovies.ru/api/v1/movies/search?query=marvel&page=1"
+# Мультипоиск (источник обязателен)
+curl "https://api.neomovies.ru/api/v1/search?query=matrix&source=tmdb&page=1"
 
-# Детали фильма
-curl "https://api.neomovies.ru/api/v1/movies/550"
-
-# Добавить в избранное (с JWT токеном)
-curl -X POST https://api.neomovies.ru/api/v1/favorites/550 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+# Детали по униф. ID
+curl "https://api.neomovies.ru/api/v1/movie/tmdb_550"
+curl "https://api.neomovies.ru/api/v1/tv/kp_61365"
 ```
 
 ### Поиск торрентов

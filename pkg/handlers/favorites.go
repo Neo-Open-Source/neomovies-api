@@ -1,17 +1,18 @@
 package handlers
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "time"
 
-	"github.com/gorilla/mux"
+    "github.com/gorilla/mux"
 
-	"neomovies-api/pkg/config"
-	"neomovies-api/pkg/middleware"
-	"neomovies-api/pkg/models"
-	"neomovies-api/pkg/services"
+    "neomovies-api/pkg/config"
+    "neomovies-api/pkg/middleware"
+    "neomovies-api/pkg/models"
+    "neomovies-api/pkg/services"
 )
 
 type FavoritesHandler struct {
@@ -177,7 +178,8 @@ func (h *FavoritesHandler) fetchMediaInfoRussian(mediaID, mediaType string) (*mo
 		url = fmt.Sprintf("https://api.themoviedb.org/3/tv/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAccessToken)
 	}
 
-	resp, err := http.Get(url)
+    client := &http.Client{Timeout: 6 * time.Second}
+    resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch from TMDB: %w", err)
 	}

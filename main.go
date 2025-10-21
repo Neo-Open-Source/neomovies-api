@@ -49,7 +49,7 @@ func main() {
 	docsHandler := appHandlers.NewDocsHandler()
     searchHandler := appHandlers.NewSearchHandler(tmdbService, kpService)
     unifiedHandler := appHandlers.NewUnifiedHandler(tmdbService, kpService)
-	categoriesHandler := appHandlers.NewCategoriesHandler(tmdbService)
+    categoriesHandler := appHandlers.NewCategoriesHandler(tmdbService).WithKinopoisk(kpService)
 	playersHandler := appHandlers.NewPlayersHandler(cfg)
 	torrentsHandler := appHandlers.NewTorrentsHandler(torrentService, tmdbService)
 	reactionsHandler := appHandlers.NewReactionsHandler(reactionsService)
