@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+    "sort"
 	"strconv"
 	"strings"
 	"time"
@@ -171,24 +172,20 @@ func (h *PlayersHandler) GetAllohaMetaByKP(w http.ResponseWriter, r *http.Reques
         return
     }
 
-    // Define only the parts we need
+    // Define only the parts we need (map-based structure as в примере)
     var raw struct {
         Status string `json:"status"`
         Data   struct {
-            Seasons []struct {
-                Key   string `json:"key"`
-                Value struct {
-                    Episodes []struct {
-                        Key   string `json:"key"`
-                        Value struct {
-                            Translation []struct {
-                                Value struct {
-                                    Translation string `json:"translation"`
-                                } `json:"value"`
-                            } `json:"translation"`
-                        } `json:"value"`
-                    } `json:"episodes"`
-                } `json:"value"`
+            SeasonsCount int `json:"seasons_count"`
+            Seasons      map[string]struct {
+                Season   int `json:"season"`
+                Episodes map[string]struct {
+                    Episode     int                              `json:"episode"`
+                    Translation map[string]struct {
+                        Translation string `json:"translation"`
+                        Name        string `json:"name"`
+                    } `json:"translation"`
+                } `json:"episodes"`
             } `json:"seasons"`
         } `json:"data"`
     }
@@ -209,23 +206,49 @@ func (h *PlayersHandler) GetAllohaMetaByKP(w http.ResponseWriter, r *http.Reques
     out := struct {
         Success bool         `json:"success"`
         Seasons []seasonMeta `json:"seasons"`
-    }{Success: true}
+    }{Success: true, Seasons: make([]seasonMeta, 0)}
 
-    for _, s := range raw.Data.Seasons {
-        seasonNum, _ := strconv.Atoi(strings.TrimSpace(s.Key))
-        sm := seasonMeta{Season: seasonNum}
-        for _, e := range s.Value.Episodes {
-            epNum, _ := strconv.Atoi(strings.TrimSpace(e.Key))
-            em := episodeMeta{Episode: epNum}
-            for _, tr := range e.Value.Translation {
-                t := strings.TrimSpace(tr.Value.Translation)
-                if t != "" {
-                    em.Translations = append(em.Translations, t)
+    if raw.Status == "success" && len(raw.Data.Seasons) > 0 {
+        // sort seasons by numeric key
+        seasonKeys := make([]int, 0, len(raw.Data.Seasons))
+        for k := range raw.Data.Seasons {
+            if n, err := strconv.Atoi(strings.TrimSpace(k)); err == nil {
+                seasonKeys = append(seasonKeys, n)
+            }
+        }
+        sort.Ints(seasonKeys)
+
+        for _, sn := range seasonKeys {
+            s := raw.Data.Seasons[strconv.Itoa(sn)]
+            sm := seasonMeta{Season: sn}
+
+            // sort episodes by numeric key
+            epKeys := make([]int, 0, len(s.Episodes))
+            for ek := range s.Episodes {
+                if en, err := strconv.Atoi(strings.TrimSpace(ek)); err == nil {
+                    epKeys = append(epKeys, en)
                 }
             }
-            sm.Episodes = append(sm.Episodes, em)
+            sort.Ints(epKeys)
+
+            for _, en := range epKeys {
+                e := s.Episodes[strconv.Itoa(en)]
+                em := episodeMeta{Episode: en}
+                // collect translations
+                for _, tr := range e.Translation {
+                    t := strings.TrimSpace(tr.Translation)
+                    if t == "" {
+                        t = strings.TrimSpace(tr.Name)
+                    }
+                    if t != "" {
+                        em.Translations = append(em.Translations, t)
+                    }
+                }
+                sm.Episodes = append(sm.Episodes, em)
+            }
+
+            out.Seasons = append(out.Seasons, sm)
         }
-        out.Seasons = append(out.Seasons, sm)
     }
 
     w.Header().Set("Content-Type", "application/json")
