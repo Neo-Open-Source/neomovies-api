@@ -67,9 +67,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	tvHandler := handlersPkg.NewTVHandler(tvService)
 	favoritesHandler := handlersPkg.NewFavoritesHandler(favoritesService, globalCfg)
 	docsHandler := handlersPkg.NewDocsHandler()
-    searchHandler := handlersPkg.NewSearchHandler(tmdbService, kpService)
-    unifiedHandler := handlersPkg.NewUnifiedHandler(tmdbService, kpService)
-    categoriesHandler := handlersPkg.NewCategoriesHandler(tmdbService).WithKinopoisk(kpService)
+	searchHandler := handlersPkg.NewSearchHandler(tmdbService, kpService)
+	unifiedHandler := handlersPkg.NewUnifiedHandler(tmdbService, kpService)
+	categoriesHandler := handlersPkg.NewCategoriesHandler(tmdbService).WithKinopoisk(kpService)
 	playersHandler := handlersPkg.NewPlayersHandler(globalCfg)
 	torrentsHandler := handlersPkg.NewTorrentsHandler(torrentService, tmdbService)
 	reactionsHandler := handlersPkg.NewReactionsHandler(reactionsService)
@@ -96,8 +96,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/categories/{id}/movies", categoriesHandler.GetMoviesByCategory).Methods("GET")
 	api.HandleFunc("/categories/{id}/media", categoriesHandler.GetMediaByCategory).Methods("GET")
 
-    api.HandleFunc("/players/alloha/{id_type}/{id}", playersHandler.GetAllohaPlayer).Methods("GET")
-    api.HandleFunc("/players/alloha/meta/kp/{kp_id}", playersHandler.GetAllohaMetaByKP).Methods("GET")
+	api.HandleFunc("/players/alloha/{id_type}/{id}", playersHandler.GetAllohaPlayer).Methods("GET")
+	api.HandleFunc("/players/alloha/meta/kp/{kp_id}", playersHandler.GetAllohaMetaByKP).Methods("GET")
 	api.HandleFunc("/players/lumex/{id_type}/{id}", playersHandler.GetLumexPlayer).Methods("GET")
 	api.HandleFunc("/players/vibix/{id_type}/{id}", playersHandler.GetVibixPlayer).Methods("GET")
 	api.HandleFunc("/players/hdvb/{id_type}/{id}", playersHandler.GetHDVBPlayer).Methods("GET")
@@ -118,18 +118,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	api.HandleFunc("/reactions/{mediaType}/{mediaId}/counts", reactionsHandler.GetReactionCounts).Methods("GET")
 
-	api.HandleFunc("/images/{size}/{path:.*}", imagesHandler.GetImage).Methods("GET")
+	api.HandleFunc("/images/{type}/{id}", imagesHandler.GetImage).Methods("GET")
 
 	api.HandleFunc("/movies/search", movieHandler.Search).Methods("GET")
 	api.HandleFunc("/movies/popular", movieHandler.Popular).Methods("GET")
 	api.HandleFunc("/movies/top-rated", movieHandler.TopRated).Methods("GET")
 	api.HandleFunc("/movies/upcoming", movieHandler.Upcoming).Methods("GET")
 	api.HandleFunc("/movies/now-playing", movieHandler.NowPlaying).Methods("GET")
-    api.HandleFunc("/movies/{id}", movieHandler.GetByID).Methods("GET")
-    // Unified prefixed routes
-    api.HandleFunc("/movie/{id}", unifiedHandler.GetMovie).Methods("GET")
-    api.HandleFunc("/tv/{id}", unifiedHandler.GetTV).Methods("GET")
-    api.HandleFunc("/search", unifiedHandler.Search).Methods("GET")
+	api.HandleFunc("/movies/{id}", movieHandler.GetByID).Methods("GET")
+	// Unified prefixed routes
+	api.HandleFunc("/movie/{id}", unifiedHandler.GetMovie).Methods("GET")
+	api.HandleFunc("/tv/{id}", unifiedHandler.GetTV).Methods("GET")
+	api.HandleFunc("/search", unifiedHandler.Search).Methods("GET")
 	api.HandleFunc("/movies/{id}/recommendations", movieHandler.GetRecommendations).Methods("GET")
 	api.HandleFunc("/movies/{id}/similar", movieHandler.GetSimilar).Methods("GET")
 	api.HandleFunc("/movies/{id}/external-ids", movieHandler.GetExternalIDs).Methods("GET")

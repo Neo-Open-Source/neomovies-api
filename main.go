@@ -94,7 +94,7 @@ func main() {
 
 	api.HandleFunc("/reactions/{mediaType}/{mediaId}/counts", reactionsHandler.GetReactionCounts).Methods("GET")
 
-	api.HandleFunc("/images/{size}/{path:.*}", imagesHandler.GetImage).Methods("GET")
+	api.HandleFunc("/images/{type}/{id}", imagesHandler.GetImage).Methods("GET")
 
 	api.HandleFunc("/movies/search", movieHandler.Search).Methods("GET")
 	api.HandleFunc("/movies/popular", movieHandler.Popular).Methods("GET")
