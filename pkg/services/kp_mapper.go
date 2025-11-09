@@ -1,12 +1,12 @@
 package services
 
 import (
-    "fmt"
-    "strconv"
-    "strings"
-    "time"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
 
-    "neomovies-api/pkg/models"
+	"neomovies-api/pkg/models"
 )
 
 func MapKPFilmToTMDBMovie(kpFilm *KPFilm) *models.Movie {
@@ -66,24 +66,24 @@ func MapKPFilmToTMDBMovie(kpFilm *KPFilm) *models.Movie {
 	}
 
 	return &models.Movie{
-		ID:              kpFilm.KinopoiskId,
-		Title:           title,
-		OriginalTitle:   originalTitle,
-		Overview:        overview,
-		PosterPath:      posterPath,
-		BackdropPath:    backdropPath,
-		ReleaseDate:     releaseDate,
-		VoteAverage:     kpFilm.RatingKinopoisk,
-		VoteCount:       kpFilm.RatingKinopoiskVoteCount,
-		Popularity:      float64(kpFilm.RatingKinopoisk * 100),
-		Adult:           false,
-		OriginalLanguage: detectLanguage(kpFilm),
-		Runtime:         kpFilm.FilmLength,
-		Genres:          genres,
-		Tagline:         kpFilm.Slogan,
+		ID:                  kpFilm.KinopoiskId,
+		Title:               title,
+		OriginalTitle:       originalTitle,
+		Overview:            overview,
+		PosterPath:          posterPath,
+		BackdropPath:        backdropPath,
+		ReleaseDate:         releaseDate,
+		VoteAverage:         kpFilm.RatingKinopoisk,
+		VoteCount:           kpFilm.RatingKinopoiskVoteCount,
+		Popularity:          float64(kpFilm.RatingKinopoisk * 100),
+		Adult:               false,
+		OriginalLanguage:    detectLanguage(kpFilm),
+		Runtime:             kpFilm.FilmLength,
+		Genres:              genres,
+		Tagline:             kpFilm.Slogan,
 		ProductionCountries: countries,
-		IMDbID:          kpFilm.ImdbId,
-		KinopoiskID:     kpFilm.KinopoiskId,
+		IMDbID:              kpFilm.ImdbId,
+		KinopoiskID:         kpFilm.KinopoiskId,
 	}
 }
 
@@ -148,106 +148,106 @@ func MapKPFilmToTVShow(kpFilm *KPFilm) *models.TVShow {
 	}
 
 	return &models.TVShow{
-		ID:              kpFilm.KinopoiskId,
-		Name:            name,
-		OriginalName:    originalName,
-		Overview:        overview,
-		PosterPath:      posterPath,
-		BackdropPath:    backdropPath,
-		FirstAirDate:    firstAirDate,
-		LastAirDate:     lastAirDate,
-		VoteAverage:     kpFilm.RatingKinopoisk,
-		VoteCount:       kpFilm.RatingKinopoiskVoteCount,
-		Popularity:      float64(kpFilm.RatingKinopoisk * 100),
+		ID:               kpFilm.KinopoiskId,
+		Name:             name,
+		OriginalName:     originalName,
+		Overview:         overview,
+		PosterPath:       posterPath,
+		BackdropPath:     backdropPath,
+		FirstAirDate:     firstAirDate,
+		LastAirDate:      lastAirDate,
+		VoteAverage:      kpFilm.RatingKinopoisk,
+		VoteCount:        kpFilm.RatingKinopoiskVoteCount,
+		Popularity:       float64(kpFilm.RatingKinopoisk * 100),
 		OriginalLanguage: detectLanguage(kpFilm),
-		Genres:          genres,
-		Status:          status,
-		InProduction:    !kpFilm.Completed,
-		KinopoiskID:     kpFilm.KinopoiskId,
+		Genres:           genres,
+		Status:           status,
+		InProduction:     !kpFilm.Completed,
+		KinopoiskID:      kpFilm.KinopoiskId,
 	}
 }
 
 // Unified mappers with prefixed IDs
 func MapKPToUnified(kpFilm *KPFilm) *models.UnifiedContent {
-    if kpFilm == nil {
-        return nil
-    }
+	if kpFilm == nil {
+		return nil
+	}
 
-    releaseDate := FormatKPDate(kpFilm.Year)
-    endDate := (*string)(nil)
-    if kpFilm.EndYear > 0 {
-        v := FormatKPDate(kpFilm.EndYear)
-        endDate = &v
-    }
+	releaseDate := FormatKPDate(kpFilm.Year)
+	endDate := (*string)(nil)
+	if kpFilm.EndYear > 0 {
+		v := FormatKPDate(kpFilm.EndYear)
+		endDate = &v
+	}
 
-    genres := make([]models.UnifiedGenre, 0)
-    for _, g := range kpFilm.Genres {
-        genres = append(genres, models.UnifiedGenre{ID: strings.ToLower(g.Genre), Name: g.Genre})
-    }
+	genres := make([]models.UnifiedGenre, 0)
+	for _, g := range kpFilm.Genres {
+		genres = append(genres, models.UnifiedGenre{ID: strings.ToLower(g.Genre), Name: g.Genre})
+	}
 
-    poster := kpFilm.PosterUrlPreview
-    if poster == "" {
-        poster = kpFilm.PosterUrl
-    }
+	poster := kpFilm.PosterUrlPreview
+	if poster == "" {
+		poster = kpFilm.PosterUrl
+	}
 
-    country := ""
-    if len(kpFilm.Countries) > 0 {
-        country = kpFilm.Countries[0].Country
-    }
+	country := ""
+	if len(kpFilm.Countries) > 0 {
+		country = kpFilm.Countries[0].Country
+	}
 
-    title := kpFilm.NameRu
-    if title == "" {
-        title = kpFilm.NameEn
-    }
-    originalTitle := kpFilm.NameOriginal
-    if originalTitle == "" {
-        originalTitle = kpFilm.NameEn
-    }
+	title := kpFilm.NameRu
+	if title == "" {
+		title = kpFilm.NameEn
+	}
+	originalTitle := kpFilm.NameOriginal
+	if originalTitle == "" {
+		originalTitle = kpFilm.NameEn
+	}
 
-    var budgetPtr *int64
-    var revenuePtr *int64
+	var budgetPtr *int64
+	var revenuePtr *int64
 
-    external := models.UnifiedExternalIDs{KP: &kpFilm.KinopoiskId, TMDB: nil, IMDb: kpFilm.ImdbId}
+	external := models.UnifiedExternalIDs{KP: &kpFilm.KinopoiskId, TMDB: nil, IMDb: kpFilm.ImdbId}
 
-    return &models.UnifiedContent{
-        ID:            strconv.Itoa(kpFilm.KinopoiskId),
-        SourceID:      "kp_" + strconv.Itoa(kpFilm.KinopoiskId),
-        Title:         title,
-        OriginalTitle: originalTitle,
-        Description:   firstNonEmpty(kpFilm.Description, kpFilm.ShortDescription),
-        ReleaseDate:   releaseDate,
-        EndDate:       endDate,
-        Type:          mapKPTypeToUnified(kpFilm),
-        Genres:        genres,
-        Rating:        kpFilm.RatingKinopoisk,
-        PosterURL:     BuildAPIImageProxyURL(poster, "w500"),
-        BackdropURL:   BuildAPIImageProxyURL(kpFilm.CoverUrl, "w1280"),
-        Director:      "",
-        Cast:          []models.UnifiedCastMember{},
-        Duration:      kpFilm.FilmLength,
-        Country:       country,
-        Language:      detectLanguage(kpFilm),
-        Budget:        budgetPtr,
-        Revenue:       revenuePtr,
-        IMDbID:        kpFilm.ImdbId,
-        ExternalIDs:   external,
-    }
+	return &models.UnifiedContent{
+		ID:            strconv.Itoa(kpFilm.KinopoiskId),
+		SourceID:      "kp_" + strconv.Itoa(kpFilm.KinopoiskId),
+		Title:         title,
+		OriginalTitle: originalTitle,
+		Description:   firstNonEmpty(kpFilm.Description, kpFilm.ShortDescription),
+		ReleaseDate:   releaseDate,
+		EndDate:       endDate,
+		Type:          mapKPTypeToUnified(kpFilm),
+		Genres:        genres,
+		Rating:        kpFilm.RatingKinopoisk,
+		PosterURL:     BuildAPIImageProxyURL(poster, "w300"),
+		BackdropURL:   BuildAPIImageProxyURL(kpFilm.CoverUrl, "w1280"),
+		Director:      "",
+		Cast:          []models.UnifiedCastMember{},
+		Duration:      kpFilm.FilmLength,
+		Country:       country,
+		Language:      detectLanguage(kpFilm),
+		Budget:        budgetPtr,
+		Revenue:       revenuePtr,
+		IMDbID:        kpFilm.ImdbId,
+		ExternalIDs:   external,
+	}
 }
 
 func mapKPTypeToUnified(kp *KPFilm) string {
-    if kp.Serial || kp.Type == "TV_SERIES" || kp.Type == "MINI_SERIES" {
-        return "tv"
-    }
-    return "movie"
+	if kp.Serial || kp.Type == "TV_SERIES" || kp.Type == "MINI_SERIES" {
+		return "tv"
+	}
+	return "movie"
 }
 
 func firstNonEmpty(values ...string) string {
-    for _, v := range values {
-        if strings.TrimSpace(v) != "" {
-            return v
-        }
-    }
-    return ""
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func MapKPSearchToTMDBResponse(kpSearch *KPSearchResponse) *models.TMDBResponse {
@@ -321,17 +321,17 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 	}
 
 	return &models.Movie{
-		ID:               film.FilmId,
-		Title:            title,
-		OriginalTitle:    originalTitle,
-		Overview:         film.Description,
-		PosterPath:       posterPath,
-		ReleaseDate:      releaseDate,
-		VoteAverage:      rating,
-		VoteCount:        film.RatingVoteCount,
-		Popularity:       rating * 100,
-		Genres:           genres,
-		KinopoiskID:      film.FilmId,
+		ID:            film.FilmId,
+		Title:         title,
+		OriginalTitle: originalTitle,
+		Overview:      film.Description,
+		PosterPath:    posterPath,
+		ReleaseDate:   releaseDate,
+		VoteAverage:   rating,
+		VoteCount:     film.RatingVoteCount,
+		Popularity:    rating * 100,
+		Genres:        genres,
+		KinopoiskID:   film.FilmId,
 	}
 }
 
@@ -369,12 +369,12 @@ func NormalizeLanguage(language string) string {
 	if language == "" {
 		return "en-US"
 	}
-	
+
 	lang := strings.ToLower(language)
 	if strings.HasPrefix(lang, "ru") {
 		return "ru-RU"
 	}
-	
+
 	return "en-US"
 }
 
@@ -394,12 +394,12 @@ func EnrichKPWithTMDBID(content *models.UnifiedContent, tmdbService *TMDBService
 	if content == nil || content.IMDbID == "" || content.ExternalIDs.TMDB != nil {
 		return
 	}
-	
+
 	mediaType := "movie"
 	if content.Type == "tv" {
 		mediaType = "tv"
 	}
-	
+
 	if tmdbID, err := tmdbService.FindTMDBIdByIMDB(content.IMDbID, mediaType, "ru-RU"); err == nil {
 		content.ExternalIDs.TMDB = &tmdbID
 	}
@@ -411,12 +411,12 @@ func EnrichKPSearchItemsWithTMDBID(items []models.UnifiedSearchItem, tmdbService
 		if items[i].ExternalIDs.IMDb == "" || items[i].ExternalIDs.TMDB != nil {
 			continue
 		}
-		
+
 		mediaType := "movie"
 		if items[i].Type == "tv" {
 			mediaType = "tv"
 		}
-		
+
 		if tmdbID, err := tmdbService.FindTMDBIdByIMDB(items[i].ExternalIDs.IMDb, mediaType, "ru-RU"); err == nil {
 			items[i].ExternalIDs.TMDB = &tmdbID
 		}
