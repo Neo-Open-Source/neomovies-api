@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"log"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"neomovies-api/pkg/models"
@@ -67,22 +68,42 @@ func (s *MovieService) GetByID(id int, language string, idType string) (*models.
 }
 
 func (s *MovieService) GetPopular(page int, language, region string) (*models.TMDBResponse, error) {
+	log.Printf("[GetPopular] language=%s, region=%s, page=%d", language, region, page)
+	
 	if ShouldUseKinopoisk(language) && s.kpService != nil {
+		log.Printf("[GetPopular] Using Kinopoisk for language: %s", language)
 		kpTop, err := s.kpService.GetTopFilms("TOP_100_POPULAR_FILMS", page)
-		if err == nil {
+		if err != nil {
+			log.Printf("[GetPopular] Kinopoisk error: %v, falling back to TMDB", err)
+		} else if kpTop != nil && len(kpTop.Films) > 0 {
+			log.Printf("[GetPopular] Got %d films from Kinopoisk", len(kpTop.Films))
 			return MapKPSearchToTMDBResponse(kpTop), nil
+		} else {
+			log.Printf("[GetPopular] Kinopoisk returned empty results, falling back to TMDB")
 		}
 	}
+	
+	log.Printf("[GetPopular] Using TMDB for language: %s", language)
 	return s.tmdb.GetPopularMovies(page, language, region)
 }
 
 func (s *MovieService) GetTopRated(page int, language, region string) (*models.TMDBResponse, error) {
+	log.Printf("[GetTopRated] language=%s, region=%s, page=%d", language, region, page)
+	
 	if ShouldUseKinopoisk(language) && s.kpService != nil {
+		log.Printf("[GetTopRated] Using Kinopoisk for language: %s", language)
 		kpTop, err := s.kpService.GetTopFilms("TOP_250_BEST_FILMS", page)
-		if err == nil {
+		if err != nil {
+			log.Printf("[GetTopRated] Kinopoisk error: %v, falling back to TMDB", err)
+		} else if kpTop != nil && len(kpTop.Films) > 0 {
+			log.Printf("[GetTopRated] Got %d films from Kinopoisk", len(kpTop.Films))
 			return MapKPSearchToTMDBResponse(kpTop), nil
+		} else {
+			log.Printf("[GetTopRated] Kinopoisk returned empty results, falling back to TMDB")
 		}
 	}
+	
+	log.Printf("[GetTopRated] Using TMDB for language: %s", language)
 	return s.tmdb.GetTopRatedMovies(page, language, region)
 }
 

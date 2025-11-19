@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -100,12 +101,17 @@ func (h *MovieHandler) Popular(w http.ResponseWriter, r *http.Request) {
 	page := getIntQuery(r, "page", 1)
 	language := GetLanguage(r)
 	region := r.URL.Query().Get("region")
+	
+	log.Printf("[Handler] Popular request: page=%d, language=%s, region=%s", page, language, region)
 
 	movies, err := h.movieService.GetPopular(page, language, region)
 	if err != nil {
+		log.Printf("[Handler] Popular error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	
+	log.Printf("[Handler] Popular response: %d results", len(movies.Results))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.APIResponse{
@@ -118,12 +124,17 @@ func (h *MovieHandler) TopRated(w http.ResponseWriter, r *http.Request) {
 	page := getIntQuery(r, "page", 1)
 	language := GetLanguage(r)
 	region := r.URL.Query().Get("region")
+	
+	log.Printf("[Handler] TopRated request: page=%d, language=%s, region=%s", page, language, region)
 
 	movies, err := h.movieService.GetTopRated(page, language, region)
 	if err != nil {
+		log.Printf("[Handler] TopRated error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	
+	log.Printf("[Handler] TopRated response: %d results", len(movies.Results))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.APIResponse{

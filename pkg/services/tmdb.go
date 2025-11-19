@@ -3,6 +3,7 @@ package services
 import (
     "encoding/json"
     "fmt"
+    "log"
     "net/http"
     "net/url"
     "strconv"
@@ -33,6 +34,7 @@ func NewTMDBService(accessToken string) *TMDBService {
 func (s *TMDBService) makeRequest(endpoint string, target interface{}) error {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
+		log.Printf("[TMDB] makeRequest error creating request: %v", err)
 		return err
 	}
 
@@ -42,11 +44,13 @@ func (s *TMDBService) makeRequest(endpoint string, target interface{}) error {
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		log.Printf("[TMDB] makeRequest HTTP error: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("[TMDB] makeRequest status code: %d", resp.StatusCode)
 		return fmt.Errorf("TMDB API error: %d", resp.StatusCode)
 	}
 
@@ -299,9 +303,15 @@ func (s *TMDBService) GetPopularMovies(page int, language, region string) (*mode
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/popular?%s", s.baseURL, params.Encode())
+	log.Printf("[TMDB] GetPopularMovies: %s", endpoint)
 
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
+	if err != nil {
+		log.Printf("[TMDB] GetPopularMovies error: %v", err)
+	} else {
+		log.Printf("[TMDB] GetPopularMovies got %d results", len(response.Results))
+	}
 	return &response, err
 }
 
@@ -320,9 +330,15 @@ func (s *TMDBService) GetTopRatedMovies(page int, language, region string) (*mod
 	}
 
 	endpoint := fmt.Sprintf("%s/movie/top_rated?%s", s.baseURL, params.Encode())
+	log.Printf("[TMDB] GetTopRatedMovies: %s", endpoint)
 
 	var response models.TMDBResponse
 	err := s.makeRequest(endpoint, &response)
+	if err != nil {
+		log.Printf("[TMDB] GetTopRatedMovies error: %v", err)
+	} else {
+		log.Printf("[TMDB] GetTopRatedMovies got %d results", len(response.Results))
+	}
 	return &response, err
 }
 

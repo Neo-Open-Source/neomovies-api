@@ -300,6 +300,7 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 		releaseDate = fmt.Sprintf("%d-01-01", year)
 	}
 
+	// Приоритет: PosterUrlPreview > PosterUrl
 	posterPath := film.PosterUrlPreview
 	if posterPath == "" {
 		posterPath = film.PosterUrl
