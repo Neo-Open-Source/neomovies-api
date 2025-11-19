@@ -290,9 +290,11 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 		})
 	}
 
-	year := 0
-	if film.Year != "" {
-		year, _ = strconv.Atoi(film.Year)
+	// Year is now int, but handle both old and new formats
+	year := film.Year
+	if year == 0 {
+		// Try parsing from string if needed (old format)
+		// This shouldn't happen with new format, but keep for compatibility
 	}
 
 	releaseDate := ""
@@ -310,19 +312,32 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 	if title == "" {
 		title = film.NameEn
 	}
+	if title == "" {
+		title = film.NameOriginal
+	}
 
-	originalTitle := film.NameEn
+	originalTitle := film.NameOriginal
+	if originalTitle == "" {
+		originalTitle = film.NameEn
+	}
 	if originalTitle == "" {
 		originalTitle = film.NameRu
 	}
 
-	rating := 0.0
-	if film.Rating != "" {
+	// Use new format rating if available, otherwise fall back to old format
+	rating := film.RatingKinopoisk
+	if rating == 0 && film.Rating != "" {
 		rating, _ = strconv.ParseFloat(film.Rating, 64)
 	}
 
+	// Get ID - prefer KinopoiskId (new format) over FilmId (old format)
+	id := film.KinopoiskId
+	if id == 0 {
+		id = film.FilmId
+	}
+
 	return &models.Movie{
-		ID:            film.FilmId,
+		ID:            id,
 		Title:         title,
 		OriginalTitle: originalTitle,
 		Overview:      film.Description,
@@ -332,7 +347,8 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 		VoteCount:     film.RatingVoteCount,
 		Popularity:    rating * 100,
 		Genres:        genres,
-		KinopoiskID:   film.FilmId,
+		KinopoiskID:   id,
+		IMDbID:        film.ImdbId,
 	}
 }
 

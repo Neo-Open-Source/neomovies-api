@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
+	"strings"
 )
 
 // GetLanguage extracts the lang parameter from request and returns it with default "ru"
@@ -20,6 +22,14 @@ func GetLanguage(r *http.Request) string {
 	// Default to "ru" if not specified
 	if lang == "" {
 		return "ru-RU"
+	}
+	
+	// Sanitize - remove any quotes or suspicious characters
+	lang = strings.TrimSpace(lang)
+	lang = strings.Trim(lang, "'\"")
+	
+	if lang != r.URL.Query().Get("language") && lang != r.URL.Query().Get("lang") {
+		log.Printf("[GetLanguage] Sanitized language parameter from %s to %s", r.URL.Query().Get("language"), lang)
 	}
 	
 	// Convert short codes to TMDB format

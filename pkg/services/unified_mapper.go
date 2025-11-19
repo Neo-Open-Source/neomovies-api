@@ -272,12 +272,22 @@ func mapKPTypeToUnifiedShort(t string) string {
 	}
 }
 
-func yearToDate(y string) string {
-	y = strings.TrimSpace(y)
-	if y == "" {
+func yearToDate(y interface{}) string {
+	switch v := y.(type) {
+	case int:
+		if v == 0 {
+			return ""
+		}
+		return fmt.Sprintf("%d-01-01", v)
+	case string:
+		v = strings.TrimSpace(v)
+		if v == "" {
+			return ""
+		}
+		return v + "-01-01"
+	default:
 		return ""
 	}
-	return y + "-01-01"
 }
 
 func firstCountry(countries []models.ProductionCountry) string {

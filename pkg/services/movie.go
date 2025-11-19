@@ -72,14 +72,27 @@ func (s *MovieService) GetPopular(page int, language, region string) (*models.TM
 	
 	if ShouldUseKinopoisk(language) && s.kpService != nil {
 		log.Printf("[GetPopular] Using Kinopoisk for language: %s", language)
+		
+		// Try GetTopFilms first
 		kpTop, err := s.kpService.GetTopFilms("TOP_100_POPULAR_FILMS", page)
 		if err != nil {
-			log.Printf("[GetPopular] Kinopoisk error: %v, falling back to TMDB", err)
+			log.Printf("[GetPopular] GetTopFilms error: %v, trying GetPopularFilms", err)
 		} else if kpTop != nil && len(kpTop.Films) > 0 {
-			log.Printf("[GetPopular] Got %d films from Kinopoisk", len(kpTop.Films))
+			log.Printf("[GetPopular] Got %d films from GetTopFilms", len(kpTop.Films))
 			return MapKPSearchToTMDBResponse(kpTop), nil
 		} else {
-			log.Printf("[GetPopular] Kinopoisk returned empty results, falling back to TMDB")
+			log.Printf("[GetPopular] GetTopFilms returned empty results, trying GetPopularFilms")
+		}
+		
+		// Try GetPopularFilms as fallback
+		kpPopular, err := s.kpService.GetPopularFilms(page)
+		if err != nil {
+			log.Printf("[GetPopular] GetPopularFilms error: %v, falling back to TMDB", err)
+		} else if kpPopular != nil && len(kpPopular.Films) > 0 {
+			log.Printf("[GetPopular] Got %d films from GetPopularFilms", len(kpPopular.Films))
+			return MapKPSearchToTMDBResponse(kpPopular), nil
+		} else {
+			log.Printf("[GetPopular] GetPopularFilms returned empty results, falling back to TMDB")
 		}
 	}
 	
@@ -92,14 +105,27 @@ func (s *MovieService) GetTopRated(page int, language, region string) (*models.T
 	
 	if ShouldUseKinopoisk(language) && s.kpService != nil {
 		log.Printf("[GetTopRated] Using Kinopoisk for language: %s", language)
+		
+		// Try GetTopFilms first
 		kpTop, err := s.kpService.GetTopFilms("TOP_250_BEST_FILMS", page)
 		if err != nil {
-			log.Printf("[GetTopRated] Kinopoisk error: %v, falling back to TMDB", err)
+			log.Printf("[GetTopRated] GetTopFilms error: %v, trying GetPopularFilms", err)
 		} else if kpTop != nil && len(kpTop.Films) > 0 {
-			log.Printf("[GetTopRated] Got %d films from Kinopoisk", len(kpTop.Films))
+			log.Printf("[GetTopRated] Got %d films from GetTopFilms", len(kpTop.Films))
 			return MapKPSearchToTMDBResponse(kpTop), nil
 		} else {
-			log.Printf("[GetTopRated] Kinopoisk returned empty results, falling back to TMDB")
+			log.Printf("[GetTopRated] GetTopFilms returned empty results, trying GetPopularFilms")
+		}
+		
+		// Try GetPopularFilms as fallback (sorted by rating)
+		kpPopular, err := s.kpService.GetPopularFilms(page)
+		if err != nil {
+			log.Printf("[GetTopRated] GetPopularFilms error: %v, falling back to TMDB", err)
+		} else if kpPopular != nil && len(kpPopular.Films) > 0 {
+			log.Printf("[GetTopRated] Got %d films from GetPopularFilms", len(kpPopular.Films))
+			return MapKPSearchToTMDBResponse(kpPopular), nil
+		} else {
+			log.Printf("[GetTopRated] GetPopularFilms returned empty results, falling back to TMDB")
 		}
 	}
 	

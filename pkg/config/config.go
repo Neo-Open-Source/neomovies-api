@@ -32,6 +32,13 @@ type Config struct {
 
 func New() *Config {
 	mongoURI := getMongoURI()
+	
+	kpAPIKey := getEnv(EnvKPAPIKey, "")
+	if kpAPIKey == "" {
+		log.Printf("[Config] ⚠️  KPAPI_KEY is not set")
+	} else {
+		log.Printf("[Config] KPAPI_KEY is set (first 10 chars): %s...", kpAPIKey[:10])
+	}
 
 	return &Config{
 		MongoURI:           mongoURI,
@@ -53,7 +60,7 @@ func New() *Config {
 		FrontendURL:        getEnv(EnvFrontendURL, ""),
 		VibixHost:          getEnv(EnvVibixHost, DefaultVibixHost),
 		VibixToken:         getEnv(EnvVibixToken, ""),
-		KPAPIKey:           getEnv(EnvKPAPIKey, ""),
+		KPAPIKey:           kpAPIKey,
 		HDVBToken:          getEnv(EnvHDVBToken, ""),
 		KPAPIBaseURL:       getEnv("KPAPI_BASE_URL", DefaultKPAPIBase),
 	}
