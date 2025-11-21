@@ -339,6 +339,9 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 		posterPath = film.PosterUrl
 	}
 
+	// Backdrop path from coverUrl
+	backdropPath := film.CoverUrl
+
 	title := film.NameRu
 	if title == "" {
 		title = film.NameEn
@@ -373,6 +376,7 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 		OriginalTitle: originalTitle,
 		Overview:      film.Description,
 		PosterPath:    posterPath,
+		BackdropPath:  backdropPath,
 		ReleaseDate:   releaseDate,
 		VoteAverage:   rating,
 		VoteCount:     film.RatingVoteCount,
@@ -430,18 +434,18 @@ func mapKPFilmShortToTVShow(film KPFilmShort) *models.TVShow {
 	}
 
 	return &models.TVShow{
-		ID:            id,
-		Name:          title,
-		OriginalName:  originalTitle,
-		Overview:      film.Description,
-		PosterPath:    posterPath,
-		FirstAirDate:  releaseDate,
-		VoteAverage:   rating,
-		VoteCount:     film.RatingVoteCount,
-		Popularity:    rating * 100,
-		Genres:        genres,
-		KinopoiskID:   id,
-		IMDbID:        film.ImdbId,
+		ID:           id,
+		Name:         title,
+		OriginalName: originalTitle,
+		Overview:     film.Description,
+		PosterPath:   posterPath,
+		FirstAirDate: releaseDate,
+		VoteAverage:  rating,
+		VoteCount:    film.RatingVoteCount,
+		Popularity:   rating * 100,
+		Genres:       genres,
+		KinopoiskID:  id,
+		IMDbID:       film.ImdbId,
 	}
 }
 

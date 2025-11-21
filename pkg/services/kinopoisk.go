@@ -99,6 +99,9 @@ type KPFilmShort struct {
 	RatingVoteCount int   `json:"ratingVoteCount"`
 	PosterUrl    string   `json:"posterUrl"`
 	PosterUrlPreview string `json:"posterUrlPreview"`
+	CoverUrl     string   `json:"coverUrl"`
+	LogoUrl      string   `json:"logoUrl"`
+	RatingAgeLimits string `json:"ratingAgeLimits"`
 }
 
 type KPCountry struct {

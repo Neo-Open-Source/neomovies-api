@@ -150,24 +150,6 @@ func (h *MovieHandler) Upcoming(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *MovieHandler) NowPlaying(w http.ResponseWriter, r *http.Request) {
-	page := getIntQuery(r, "page", 1)
-	language := GetLanguage(r)
-	region := r.URL.Query().Get("region")
-
-	movies, err := h.movieService.GetNowPlaying(page, language, region)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{
-		Success: true,
-		Data:    movies,
-	})
-}
-
 func (h *MovieHandler) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])

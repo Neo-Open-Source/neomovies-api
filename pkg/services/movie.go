@@ -92,10 +92,6 @@ func (s *MovieService) GetUpcoming(page int, language, region string) (*models.T
 	return s.tmdb.GetUpcomingMovies(page, language, region)
 }
 
-func (s *MovieService) GetNowPlaying(page int, language, region string) (*models.TMDBResponse, error) {
-	return s.tmdb.GetNowPlayingMovies(page, language, region)
-}
-
 func (s *MovieService) GetRecommendations(id, page int, language string) (*models.TMDBResponse, error) {
 	return s.tmdb.GetMovieRecommendations(id, page, language)
 }

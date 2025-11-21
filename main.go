@@ -100,7 +100,6 @@ func main() {
 	api.HandleFunc("/movies/popular", movieHandler.Popular).Methods("GET")
 	api.HandleFunc("/movies/top-rated", movieHandler.TopRated).Methods("GET")
 	api.HandleFunc("/movies/upcoming", movieHandler.Upcoming).Methods("GET")
-	api.HandleFunc("/movies/now-playing", movieHandler.NowPlaying).Methods("GET")
 	api.HandleFunc("/movies/{id}", movieHandler.GetByID).Methods("GET")
 	// Unified prefixed routes
 	api.HandleFunc("/movie/{id}", unifiedHandler.GetMovie).Methods("GET")
