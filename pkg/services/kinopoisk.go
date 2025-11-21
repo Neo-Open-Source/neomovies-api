@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -126,15 +125,7 @@ func NewKinopoiskService(apiKey, baseURL string) *KinopoiskService {
 func (s *KinopoiskService) makeRequest(endpoint string, target interface{}) error {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		log.Printf("[Kinopoisk] makeRequest error creating request: %v", err)
 		return err
-	}
-
-	// Log API key status
-	if s.apiKey == "" {
-		log.Printf("[Kinopoisk] ⚠️  API Key is EMPTY!")
-	} else {
-		log.Printf("[Kinopoisk] Using API Key (first 10 chars): %s...", s.apiKey[:10])
 	}
 
 	req.Header.Set("X-API-KEY", s.apiKey)
@@ -142,13 +133,11 @@ func (s *KinopoiskService) makeRequest(endpoint string, target interface{}) erro
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		log.Printf("[Kinopoisk] makeRequest HTTP error: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("[Kinopoisk] makeRequest status code: %d for endpoint: %s", resp.StatusCode, endpoint)
 		return fmt.Errorf("Kinopoisk API error: %d", resp.StatusCode)
 	}
 
@@ -188,14 +177,9 @@ func (s *KinopoiskService) SearchFilms(keyword string, page int) (*KPSearchRespo
 	return &response, err
 }
 
-// GetPopularFilms tries to get popular films using filters API
-// This is an alternative to GetTopFilms which may not work anymore
-func (s *KinopoiskService) GetPopularFilms(page int) (*KPSearchResponse, error) {
-	// Try using the filters API with popularity sort
-	endpoint := fmt.Sprintf("%s/v2.2/films?sortField=num_vote&sortType=DESC&page=%d", s.baseURL, page)
-	log.Printf("[Kinopoisk] GetPopularFilms (via filters): %s", endpoint)
+func (s *KinopoiskService) GetCollection(collectionType string, page int) (*KPSearchResponse, error) {
+	endpoint := fmt.Sprintf("%s/v2.2/films/collections?type=%s&page=%d", s.baseURL, collectionType, page)
 	
-	// Try new format first (items/total)
 	var responseNew struct {
 		Total      int           `json:"total"`
 		TotalPages int           `json:"totalPages"`
@@ -204,13 +188,10 @@ func (s *KinopoiskService) GetPopularFilms(page int) (*KPSearchResponse, error) 
 	
 	err := s.makeRequest(endpoint, &responseNew)
 	if err != nil {
-		log.Printf("[Kinopoisk] GetPopularFilms error: %v", err)
 		return nil, err
 	}
 	
-	// If we got items, use them
 	if len(responseNew.Items) > 0 {
-		log.Printf("[Kinopoisk] GetPopularFilms got %d films (new format)", len(responseNew.Items))
 		return &KPSearchResponse{
 			PagesCount: responseNew.TotalPages,
 			Films:      responseNew.Items,
@@ -218,7 +199,6 @@ func (s *KinopoiskService) GetPopularFilms(page int) (*KPSearchResponse, error) 
 		}, nil
 	}
 	
-	// Fallback to old format (films/pagesCount)
 	var responseOld struct {
 		PagesCount int           `json:"pagesCount"`
 		Films      []KPFilmShort `json:"films"`
@@ -226,11 +206,8 @@ func (s *KinopoiskService) GetPopularFilms(page int) (*KPSearchResponse, error) 
 	
 	err = s.makeRequest(endpoint, &responseOld)
 	if err != nil {
-		log.Printf("[Kinopoisk] GetPopularFilms error (old format): %v", err)
 		return nil, err
 	}
-	
-	log.Printf("[Kinopoisk] GetPopularFilms got %d films (old format)", len(responseOld.Films))
 	
 	return &KPSearchResponse{
 		PagesCount: responseOld.PagesCount,
@@ -252,35 +229,6 @@ func (s *KinopoiskService) GetExternalSources(kinopoiskId int) ([]KPExternalSour
 	}
 	
 	return response.Items, nil
-}
-
-func (s *KinopoiskService) GetTopFilms(topType string, page int) (*KPSearchResponse, error) {
-	endpoint := fmt.Sprintf("%s/v2.2/films/top?type=%s&page=%d", s.baseURL, topType, page)
-	log.Printf("[Kinopoisk] GetTopFilms: %s", endpoint)
-	
-	var response struct {
-		PagesCount int           `json:"pagesCount"`
-		Films      []KPFilmShort `json:"films"`
-	}
-	
-	err := s.makeRequest(endpoint, &response)
-	if err != nil {
-		log.Printf("[Kinopoisk] GetTopFilms error: %v", err)
-		return nil, err
-	}
-	
-	log.Printf("[Kinopoisk] GetTopFilms got %d films (pagesCount=%d)", len(response.Films), response.PagesCount)
-	
-	// If no films returned, log warning
-	if len(response.Films) == 0 {
-		log.Printf("[Kinopoisk] ⚠️  GetTopFilms returned empty results for type=%s", topType)
-	}
-	
-	return &KPSearchResponse{
-		PagesCount: response.PagesCount,
-		Films:      response.Films,
-		SearchFilmsCountResult: len(response.Films),
-	}, nil
 }
 
 func KPIdToImdbId(kpService *KinopoiskService, kpId int) (string, error) {

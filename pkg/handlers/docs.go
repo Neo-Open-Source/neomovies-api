@@ -996,18 +996,26 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 			"/api/v1/movies/popular": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Популярные фильмы",
-					"description": "Получение списка популярных фильмов",
+					"description": "Получение списка популярных фильмов из Kinopoisk коллекции TOP_POPULAR_ALL (для русского языка) или TMDB (для английского)",
 					"tags":        []string{"Movies"},
 					"parameters": []map[string]interface{}{
 						{
-							"name":   "page",
-							"in":     "query",
-							"schema": map[string]string{"type": "integer", "default": "1"},
+							"name":        "page",
+							"in":          "query",
+							"schema":      map[string]string{"type": "integer", "default": "1"},
+							"description": "Номер страницы",
 						},
 						{
-							"name":   "language",
-							"in":     "query",
-							"schema": map[string]string{"type": "string", "default": "ru-RU"},
+							"name":        "language",
+							"in":          "query",
+							"schema":      map[string]string{"type": "string", "default": "ru-RU"},
+							"description": "Язык: ru-RU (Kinopoisk) или en-US (TMDB)",
+						},
+						{
+							"name":        "region",
+							"in":          "query",
+							"schema":      map[string]string{"type": "string"},
+							"description": "Регион для TMDB (например, US, RU)",
 						},
 					},
 					"responses": map[string]interface{}{
@@ -1171,18 +1179,26 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 			"/api/v1/movies/top-rated": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Топ рейтинг фильмов",
-					"description": "Получение списка фильмов с высоким рейтингом",
+					"description": "Получение списка фильмов с высоким рейтингом из Kinopoisk коллекции TOP_250_MOVIES (для русского языка) или TMDB (для английского)",
 					"tags":        []string{"Movies"},
 					"parameters": []map[string]interface{}{
 						{
-							"name":   "page",
-							"in":     "query",
-							"schema": map[string]string{"type": "integer", "default": "1"},
+							"name":        "page",
+							"in":          "query",
+							"schema":      map[string]string{"type": "integer", "default": "1"},
+							"description": "Номер страницы",
 						},
 						{
-							"name":   "language",
-							"in":     "query",
-							"schema": map[string]string{"type": "string", "default": "ru-RU"},
+							"name":        "language",
+							"in":          "query",
+							"schema":      map[string]string{"type": "string", "default": "ru-RU"},
+							"description": "Язык: ru-RU (Kinopoisk TOP_250_MOVIES) или en-US (TMDB)",
+						},
+						{
+							"name":        "region",
+							"in":          "query",
+							"schema":      map[string]string{"type": "string"},
+							"description": "Регион для TMDB (например, US, RU)",
 						},
 					},
 					"responses": map[string]interface{}{
@@ -1345,18 +1361,20 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 			"/api/v1/tv/popular": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Популярные сериалы",
-					"description": "Получение списка популярных сериалов",
+					"description": "Получение списка популярных сериалов из Kinopoisk коллекции TOP_POPULAR_ALL (для русского языка) или TMDB (для английского)",
 					"tags":        []string{"TV Series"},
 					"parameters": []map[string]interface{}{
 						{
-							"name":   "page",
-							"in":     "query",
-							"schema": map[string]string{"type": "integer", "default": "1"},
+							"name":        "page",
+							"in":          "query",
+							"schema":      map[string]string{"type": "integer", "default": "1"},
+							"description": "Номер страницы",
 						},
 						{
-							"name":   "language",
-							"in":     "query",
-							"schema": map[string]string{"type": "string", "default": "ru-RU"},
+							"name":        "language",
+							"in":          "query",
+							"schema":      map[string]string{"type": "string", "default": "ru-RU"},
+							"description": "Язык: ru-RU (Kinopoisk) или en-US (TMDB)",
 						},
 					},
 					"responses": map[string]interface{}{
@@ -1369,18 +1387,20 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 			"/api/v1/tv/top-rated": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Топ рейтинг сериалов",
-					"description": "Получение списка сериалов с высоким рейтингом",
+					"description": "Получение списка сериалов с высоким рейтингом из Kinopoisk коллекции TOP_250_TV_SHOWS (для русского языка) или TMDB (для английского)",
 					"tags":        []string{"TV Series"},
 					"parameters": []map[string]interface{}{
 						{
-							"name":   "page",
-							"in":     "query",
-							"schema": map[string]string{"type": "integer", "default": "1"},
+							"name":        "page",
+							"in":          "query",
+							"schema":      map[string]string{"type": "integer", "default": "1"},
+							"description": "Номер страницы",
 						},
 						{
-							"name":   "language",
-							"in":     "query",
-							"schema": map[string]string{"type": "string", "default": "ru-RU"},
+							"name":        "language",
+							"in":          "query",
+							"schema":      map[string]string{"type": "string", "default": "ru-RU"},
+							"description": "Язык: ru-RU (Kinopoisk TOP_250_TV_SHOWS) или en-US (TMDB)",
 						},
 					},
 					"responses": map[string]interface{}{

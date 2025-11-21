@@ -281,6 +281,37 @@ func MapKPSearchToTMDBResponse(kpSearch *KPSearchResponse) *models.TMDBResponse 
 	}
 }
 
+func MapKPSearchToTMDBTVResponse(kpSearch *KPSearchResponse) *models.TMDBTVResponse {
+	if kpSearch == nil {
+		return &models.TMDBTVResponse{
+			Page:         1,
+			Results:      []models.TVShow{},
+			TotalPages:   0,
+			TotalResults: 0,
+		}
+	}
+
+	results := make([]models.TVShow, 0)
+	for _, film := range kpSearch.Films {
+		tvShow := mapKPFilmShortToTVShow(film)
+		if tvShow != nil {
+			results = append(results, *tvShow)
+		}
+	}
+
+	totalPages := kpSearch.PagesCount
+	if totalPages == 0 && len(results) > 0 {
+		totalPages = 1
+	}
+
+	return &models.TMDBTVResponse{
+		Page:         1,
+		Results:      results,
+		TotalPages:   totalPages,
+		TotalResults: kpSearch.SearchFilmsCountResult,
+	}
+}
+
 func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 	genres := make([]models.Genre, 0)
 	for _, g := range film.Genres {
@@ -343,6 +374,68 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 		Overview:      film.Description,
 		PosterPath:    posterPath,
 		ReleaseDate:   releaseDate,
+		VoteAverage:   rating,
+		VoteCount:     film.RatingVoteCount,
+		Popularity:    rating * 100,
+		Genres:        genres,
+		KinopoiskID:   id,
+		IMDbID:        film.ImdbId,
+	}
+}
+
+func mapKPFilmShortToTVShow(film KPFilmShort) *models.TVShow {
+	genres := make([]models.Genre, 0)
+	for _, g := range film.Genres {
+		genres = append(genres, models.Genre{
+			ID:   0,
+			Name: g.Genre,
+		})
+	}
+
+	year := film.Year
+	releaseDate := ""
+	if year > 0 {
+		releaseDate = fmt.Sprintf("%d-01-01", year)
+	}
+
+	posterPath := film.PosterUrlPreview
+	if posterPath == "" {
+		posterPath = film.PosterUrl
+	}
+
+	title := film.NameRu
+	if title == "" {
+		title = film.NameEn
+	}
+	if title == "" {
+		title = film.NameOriginal
+	}
+
+	originalTitle := film.NameOriginal
+	if originalTitle == "" {
+		originalTitle = film.NameEn
+	}
+	if originalTitle == "" {
+		originalTitle = film.NameRu
+	}
+
+	rating := film.RatingKinopoisk
+	if rating == 0 && film.Rating != "" {
+		rating, _ = strconv.ParseFloat(film.Rating, 64)
+	}
+
+	id := film.KinopoiskId
+	if id == 0 {
+		id = film.FilmId
+	}
+
+	return &models.TVShow{
+		ID:            id,
+		Name:          title,
+		OriginalName:  originalTitle,
+		Overview:      film.Description,
+		PosterPath:    posterPath,
+		FirstAirDate:  releaseDate,
 		VoteAverage:   rating,
 		VoteCount:     film.RatingVoteCount,
 		Popularity:    rating * 100,
