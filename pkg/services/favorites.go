@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -41,44 +42,56 @@ func (s *FavoritesService) AddToFavorites(userID, mediaID, mediaType string) err
 		return nil
 	}
 
-	var title, posterPath string
-
-	// Получаем информацию из TMDB в зависимости от типа медиа
+	// Получаем информацию из TMDB
 	mediaIDInt, err := strconv.Atoi(mediaID)
 	if err != nil {
 		return fmt.Errorf("invalid media ID: %s", mediaID)
 	}
 
+	var movie *models.Movie
+	var tv *models.TVShow
+
 	if mediaType == "movie" {
-		movie, err := s.tmdb.GetMovie(mediaIDInt, "en-US")
+		movie, err = s.tmdb.GetMovie(mediaIDInt, "ru-RU")
 		if err != nil {
 			return err
 		}
-		title = movie.Title
-		posterPath = movie.PosterPath
 	} else if mediaType == "tv" {
-		tv, err := s.tmdb.GetTVShow(mediaIDInt, "en-US")
+		tv, err = s.tmdb.GetTVShow(mediaIDInt, "ru-RU")
 		if err != nil {
 			return err
 		}
-		title = tv.Name
-		posterPath = tv.PosterPath
 	} else {
 		return fmt.Errorf("invalid media type: %s", mediaType)
 	}
 
-	// Формируем полный URL для постера
-	if posterPath != "" {
-		posterPath = fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", posterPath)
+	favorite := models.Favorite{
+		UserID:    userID,
+		MediaID:   mediaID,
+		MediaType: mediaType,
+		CreatedAt: time.Now(),
 	}
 
-	favorite := models.Favorite{
-		UserID:     userID,
-		MediaID:    mediaID,
-		MediaType:  mediaType,
-		Title:      title,
-		PosterPath: posterPath,
-		CreatedAt:  time.Now(),
+	if movie != nil {
+		favorite.Title = movie.Title
+		favorite.NameRu = movie.Title
+		favorite.NameEn = movie.OriginalTitle
+		favorite.PosterPath = movie.PosterPath
+		if len(movie.ReleaseDate) >= 4 {
+			year, _ := strconv.Atoi(movie.ReleaseDate[:4])
+			favorite.Year = year
+		}
+		favorite.Rating = movie.VoteAverage
+	} else if tv != nil {
+		favorite.Title = tv.Name
+		favorite.NameRu = tv.Name
+		favorite.NameEn = tv.OriginalName
+		favorite.PosterPath = tv.PosterPath
+		if len(tv.FirstAirDate) >= 4 {
+			year, _ := strconv.Atoi(tv.FirstAirDate[:4])
+			favorite.Year = year
+		}
+		favorite.Rating = tv.VoteAverage
 	}
 
 	_, err = collection.InsertOne(context.Background(), favorite)
@@ -103,19 +116,46 @@ func (s *FavoritesService) AddToFavoritesWithInfo(userID, mediaID, mediaType str
 		return nil
 	}
 
-	// Формируем полный URL для постера если он есть
-	posterPath := mediaInfo.PosterPath
-	if posterPath != "" && posterPath[0] == '/' {
-		posterPath = fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", posterPath)
+	// Определяем источник данных и обрабатываем постер соответственно
+	var posterPath, posterUrlPreview string
+	
+	if mediaInfo.PosterPath != "" {
+		// Проверяем, это TMDB путь (начинается с /) или полный URL от Кинопоиска
+		if len(mediaInfo.PosterPath) > 0 && mediaInfo.PosterPath[0] == '/' {
+			// TMDB путь - формируем полный URL
+			posterPath = fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", mediaInfo.PosterPath)
+		} else if len(mediaInfo.PosterPath) > 10 && (mediaInfo.PosterPath[:8] == "https://" || mediaInfo.PosterPath[:7] == "http://") {
+			// Полный URL от Кинопоиска - извлекаем ID и формируем через API
+			// Пример: https://kinopoiskapiunofficial.tech/images/posters/kp_small/6605654.jpg
+			// Нужно получить: /api/v1/images/kp_small/6605654
+			posterUrlPreview = extractKinopoiskImagePath(mediaInfo.PosterPath)
+			posterPath = posterUrlPreview
+		} else {
+			// Другой формат - используем как есть
+			posterPath = mediaInfo.PosterPath
+		}
+	}
+
+	// Извлекаем год из даты
+	year := 0
+	if mediaType == "movie" && len(mediaInfo.ReleaseDate) >= 4 {
+		year, _ = strconv.Atoi(mediaInfo.ReleaseDate[:4])
+	} else if mediaType == "tv" && len(mediaInfo.FirstAirDate) >= 4 {
+		year, _ = strconv.Atoi(mediaInfo.FirstAirDate[:4])
 	}
 
 	favorite := models.Favorite{
-		UserID:     userID,
-		MediaID:    mediaID,
-		MediaType:  mediaType,
-		Title:      mediaInfo.Title,
-		PosterPath: posterPath,
-		CreatedAt:  time.Now(),
+		UserID:           userID,
+		MediaID:          mediaID,
+		MediaType:        mediaType,
+		Title:            mediaInfo.Title,
+		NameRu:           mediaInfo.Title,
+		NameEn:           mediaInfo.OriginalTitle,
+		PosterPath:       posterPath,
+		PosterUrlPreview: posterUrlPreview,
+		Year:             year,
+		Rating:           mediaInfo.VoteAverage,
+		CreatedAt:        time.Now(),
 	}
 
 	_, err = collection.InsertOne(context.Background(), favorite)
@@ -181,4 +221,28 @@ func (s *FavoritesService) IsFavorite(userID, mediaID, mediaType string) (bool, 
 	}
 
 	return true, nil
+}
+
+// extractKinopoiskImagePath извлекает путь изображения Кинопоиска и преобразует его в API путь
+// Пример входа: https://kinopoiskapiunofficial.tech/images/posters/kp_small/6605654.jpg
+// Пример выхода: /api/v1/images/kp_small/6605654
+func extractKinopoiskImagePath(imageURL string) string {
+	// Ищем паттерн /images/posters/
+	pattern := "/images/posters/"
+	idx := strings.Index(imageURL, pattern)
+	if idx == -1 {
+		return imageURL
+	}
+
+	// Получаем часть после /images/posters/
+	// Например: kp_small/6605654.jpg
+	remainder := imageURL[idx+len(pattern):]
+
+	// Удаляем расширение файла
+	if lastDot := strings.LastIndex(remainder, "."); lastDot != -1 {
+		remainder = remainder[:lastDot]
+	}
+
+	// Формируем API путь
+	return fmt.Sprintf("/api/v1/images/%s", remainder)
 }
