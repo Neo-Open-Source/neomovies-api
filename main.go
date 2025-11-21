@@ -96,28 +96,30 @@ func main() {
 
 	api.HandleFunc("/images/{type}/{id}", imagesHandler.GetImage).Methods("GET")
 
+	// Movies routes - specific paths first, then parameterized
 	api.HandleFunc("/movies/search", movieHandler.Search).Methods("GET")
 	api.HandleFunc("/movies/popular", movieHandler.Popular).Methods("GET")
 	api.HandleFunc("/movies/top-rated", movieHandler.TopRated).Methods("GET")
 	api.HandleFunc("/movies/upcoming", movieHandler.Upcoming).Methods("GET")
-	api.HandleFunc("/movies/{id}", movieHandler.GetByID).Methods("GET")
-	// Unified prefixed routes
-	api.HandleFunc("/movie/{id}", unifiedHandler.GetMovie).Methods("GET")
-	api.HandleFunc("/tv/{id}", unifiedHandler.GetTV).Methods("GET")
-	api.HandleFunc("/search", unifiedHandler.Search).Methods("GET")
 	api.HandleFunc("/movies/{id}/recommendations", movieHandler.GetRecommendations).Methods("GET")
 	api.HandleFunc("/movies/{id}/similar", movieHandler.GetSimilar).Methods("GET")
 	api.HandleFunc("/movies/{id}/external-ids", movieHandler.GetExternalIDs).Methods("GET")
+	api.HandleFunc("/movies/{id}", movieHandler.GetByID).Methods("GET")
 
+	// TV routes - specific paths first, then parameterized
 	api.HandleFunc("/tv/search", tvHandler.Search).Methods("GET")
 	api.HandleFunc("/tv/popular", tvHandler.Popular).Methods("GET")
 	api.HandleFunc("/tv/top-rated", tvHandler.TopRated).Methods("GET")
 	api.HandleFunc("/tv/on-the-air", tvHandler.OnTheAir).Methods("GET")
 	api.HandleFunc("/tv/airing-today", tvHandler.AiringToday).Methods("GET")
-	api.HandleFunc("/tv/{id}", tvHandler.GetByID).Methods("GET")
 	api.HandleFunc("/tv/{id}/recommendations", tvHandler.GetRecommendations).Methods("GET")
 	api.HandleFunc("/tv/{id}/similar", tvHandler.GetSimilar).Methods("GET")
 	api.HandleFunc("/tv/{id}/external-ids", tvHandler.GetExternalIDs).Methods("GET")
+	api.HandleFunc("/tv/{id}", tvHandler.GetByID).Methods("GET")
+
+	api.HandleFunc("/movie/{id}", unifiedHandler.GetMovie).Methods("GET")
+	api.HandleFunc("/tv/{id}", unifiedHandler.GetTV).Methods("GET")
+	api.HandleFunc("/search", unifiedHandler.Search).Methods("GET")
 
 	protected := api.PathPrefix("").Subrouter()
 	protected.Use(middleware.JWTAuth(cfg.JWTSecret))

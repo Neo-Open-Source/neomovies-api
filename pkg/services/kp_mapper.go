@@ -321,17 +321,10 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 		})
 	}
 
-	// Year is a string, convert to int
-	year := 0
-	if film.Year != "" {
-		if parsedYear, err := strconv.Atoi(film.Year); err == nil {
-			year = parsedYear
-		}
-	}
-
+	// Year is FlexibleInt, convert to int
 	releaseDate := ""
-	if year > 0 {
-		releaseDate = fmt.Sprintf("%d-01-01", year)
+	if int(film.Year) > 0 {
+		releaseDate = fmt.Sprintf("%d-01-01", int(film.Year))
 	}
 
 	// Приоритет: PosterUrlPreview > PosterUrl
@@ -397,16 +390,10 @@ func mapKPFilmShortToTVShow(film KPFilmShort) *models.TVShow {
 		})
 	}
 
-	// Year is a string, convert to int
-	year := 0
-	if film.Year != "" {
-		if parsedYear, err := strconv.Atoi(film.Year); err == nil {
-			year = parsedYear
-		}
-	}
+	// Year is FlexibleInt, convert to int
 	releaseDate := ""
-	if year > 0 {
-		releaseDate = fmt.Sprintf("%d-01-01", year)
+	if int(film.Year) > 0 {
+		releaseDate = fmt.Sprintf("%d-01-01", int(film.Year))
 	}
 
 	posterPath := film.PosterUrlPreview

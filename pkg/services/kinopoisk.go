@@ -9,6 +9,44 @@ import (
 	"time"
 )
 
+// FlexibleInt can unmarshal int, string, and null JSON values
+type FlexibleInt int
+
+func (fi *FlexibleInt) UnmarshalJSON(data []byte) error {
+	// Handle null values
+	if string(data) == "null" {
+		*fi = 0
+		return nil
+	}
+
+	var i int
+	var s string
+
+	// Try to unmarshal as int first
+	if err := json.Unmarshal(data, &i); err == nil {
+		*fi = FlexibleInt(i)
+		return nil
+	}
+
+	// Try to unmarshal as string
+	if err := json.Unmarshal(data, &s); err == nil {
+		if s == "" || s == "null" {
+			*fi = 0
+			return nil
+		}
+		parsed, err := strconv.Atoi(s)
+		if err != nil {
+			// If parsing fails, return 0 instead of error
+			*fi = 0
+			return nil
+		}
+		*fi = FlexibleInt(parsed)
+		return nil
+	}
+
+	return fmt.Errorf("cannot unmarshal %s into FlexibleInt", string(data))
+}
+
 type KinopoiskService struct {
 	apiKey  string
 	baseURL string
@@ -84,7 +122,7 @@ type KPFilmShort struct {
 	NameOriginal string      `json:"nameOriginal"`
 	ImdbId       string      `json:"imdbId"`
 	Type         string      `json:"type"`
-	Year         string      `json:"year"`
+	Year         FlexibleInt `json:"year"`
 	Description  string      `json:"description"`
 	FilmLength   string      `json:"filmLength"`
 	Countries    []KPCountry `json:"countries"`
@@ -183,6 +221,7 @@ func (s *KinopoiskService) SearchFilms(keyword string, page int) (*KPSearchRespo
 func (s *KinopoiskService) GetCollection(collectionType string, page int) (*KPSearchResponse, error) {
 	endpoint := fmt.Sprintf("%s/v2.2/films/collections?type=%s&page=%d", s.baseURL, collectionType, page)
 
+	// Try new format first
 	var responseNew struct {
 		Total      int           `json:"total"`
 		TotalPages int           `json:"totalPages"`
@@ -190,11 +229,7 @@ func (s *KinopoiskService) GetCollection(collectionType string, page int) (*KPSe
 	}
 
 	err := s.makeRequest(endpoint, &responseNew)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(responseNew.Items) > 0 {
+	if err == nil && len(responseNew.Items) > 0 {
 		return &KPSearchResponse{
 			PagesCount:             responseNew.TotalPages,
 			Films:                  responseNew.Items,
@@ -202,6 +237,7 @@ func (s *KinopoiskService) GetCollection(collectionType string, page int) (*KPSe
 		}, nil
 	}
 
+	// Try old format if new format failed or returned empty
 	var responseOld struct {
 		PagesCount int           `json:"pagesCount"`
 		Films      []KPFilmShort `json:"films"`
