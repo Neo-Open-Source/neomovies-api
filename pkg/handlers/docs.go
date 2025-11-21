@@ -161,8 +161,8 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 		OpenAPI: "3.0.0",
 		Info: Info{
 			Title:       "Neo Movies API",
-            Description: "Унифицированный API (TMDB/Kinopoisk) с префиксными ID (kp_*, tmdb_*) и единым форматом данных",
-            Version:     "3.0.0",
+			Description: "Унифицированный API (TMDB/Kinopoisk) с префиксными ID (kp_*, tmdb_*) и единым форматом данных",
+			Version:     "3.0.0",
 			Contact: Contact{
 				Name: "API Support",
 				URL:  "https://github.com/your-username/neomovies-api-go",
@@ -194,10 +194,10 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 				},
 			},
-            "/api/v1/search": map[string]interface{}{
+			"/api/v1/search": map[string]interface{}{
 				"get": map[string]interface{}{
-                    "summary":     "Унифицированный поиск",
-                    "description": "Поиск фильмов и сериалов в источниках TMDB или Kinopoisk",
+					"summary":     "Унифицированный поиск",
+					"description": "Поиск фильмов и сериалов в источниках TMDB или Kinopoisk",
 					"tags":        []string{"Search"},
 					"parameters": []map[string]interface{}{
 						{
@@ -207,13 +207,13 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 							"schema":      map[string]string{"type": "string"},
 							"description": "Поисковый запрос",
 						},
-                        {
-                            "name":        "source",
-                            "in":          "query",
-                            "required":    true,
-                            "schema":      map[string]interface{}{"type": "string", "enum": []string{"kp", "tmdb"}},
-                            "description": "Источник: kp или tmdb",
-                        },
+						{
+							"name":        "source",
+							"in":          "query",
+							"required":    true,
+							"schema":      map[string]interface{}{"type": "string", "enum": []string{"kp", "tmdb"}},
+							"description": "Источник: kp или tmdb",
+						},
 						{
 							"name":        "page",
 							"in":          "query",
@@ -223,7 +223,7 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 					"responses": map[string]interface{}{
 						"200": map[string]interface{}{
-                            "description": "Результаты поиска (унифицированные)",
+							"description": "Результаты поиска (унифицированные)",
 						},
 					},
 				},
@@ -342,57 +342,57 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 				},
 			},
-		"/api/v1/players/lumex/{imdb_id}": map[string]interface{}{
-			"get": map[string]interface{}{
-				"summary":     "Плеер Lumex",
-				"description": "Получение плеера Lumex по IMDb ID. Не поддерживает выбор сезона/серии - плеер работает напрямую с IMDb ID",
-				"tags":        []string{"Players"},
-				"parameters": []map[string]interface{}{
-					{
-						"name":        "imdb_id",
-						"in":          "path",
-						"required":    true,
-						"schema":      map[string]string{"type": "string"},
-						"description": "IMDb ID фильма или сериала (например, tt0133093)",
+			"/api/v1/players/lumex/{imdb_id}": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "Плеер Lumex",
+					"description": "Получение плеера Lumex по IMDb ID. Не поддерживает выбор сезона/серии - плеер работает напрямую с IMDb ID",
+					"tags":        []string{"Players"},
+					"parameters": []map[string]interface{}{
+						{
+							"name":        "imdb_id",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "string"},
+							"description": "IMDb ID фильма или сериала (например, tt0133093)",
+						},
 					},
-				},
-				"responses": map[string]interface{}{
-					"200": map[string]interface{}{
-						"description": "HTML со встроенным Lumex плеером",
-						"content": map[string]interface{}{
-							"text/html": map[string]interface{}{},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "HTML со встроенным Lumex плеером",
+							"content": map[string]interface{}{
+								"text/html": map[string]interface{}{},
+							},
 						},
 					},
 				},
 			},
-		},
-		"/api/v1/players/vibix/{imdb_id}": map[string]interface{}{
-			"get": map[string]interface{}{
-				"summary":     "Vibix плеер по IMDb ID",
-				"description": "Возвращает HTML-страницу с iframe Vibix для указанного IMDb ID. Не поддерживает выбор сезона/серии - плеер работает напрямую с IMDb ID",
-				"tags":        []string{"Players"},
-				"parameters": []map[string]interface{}{
-					{
-						"name":        "imdb_id",
-						"in":          "path",
-						"required":    true,
-						"schema":      map[string]string{"type": "string"},
-						"description": "IMDb ID, например tt0133093",
-					},
-				},
-				"responses": map[string]interface{}{
-					"200": map[string]interface{}{
-						"description": "HTML со встроенным Vibix плеером",
-						"content": map[string]interface{}{
-							"text/html": map[string]interface{}{},
+			"/api/v1/players/vibix/{imdb_id}": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "Vibix плеер по IMDb ID",
+					"description": "Возвращает HTML-страницу с iframe Vibix для указанного IMDb ID. Не поддерживает выбор сезона/серии - плеер работает напрямую с IMDb ID",
+					"tags":        []string{"Players"},
+					"parameters": []map[string]interface{}{
+						{
+							"name":        "imdb_id",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "string"},
+							"description": "IMDb ID, например tt0133093",
 						},
 					},
-					"404": map[string]interface{}{"description": "Фильм не найден"},
-					"503": map[string]interface{}{"description": "VIBIX_TOKEN не настроен"},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "HTML со встроенным Vibix плеером",
+							"content": map[string]interface{}{
+								"text/html": map[string]interface{}{},
+							},
+						},
+						"404": map[string]interface{}{"description": "Фильм не найден"},
+						"503": map[string]interface{}{"description": "VIBIX_TOKEN не настроен"},
+					},
 				},
 			},
-		},
-		"/api/v1/players/vidsrc/{media_type}/{imdb_id}": map[string]interface{}{
+			"/api/v1/players/vidsrc/{media_type}/{imdb_id}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Vidsrc плеер (английский)",
 					"description": "Возвращает HTML-страницу с iframe Vidsrc.to. Использует IMDb ID для фильмов и сериалов. Пример URL для фильма: https://vidsrc.to/embed/movie/tt1234567, для сериала: https://vidsrc.to/embed/tv/tt6385540/1/1",
@@ -612,7 +612,6 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					},
 				},
 			},
-
 
 			"/api/v1/torrents/search/{imdbId}": map[string]interface{}{
 				"get": map[string]interface{}{
@@ -1228,30 +1227,6 @@ func getOpenAPISpecWithURL(baseURL string) *OpenAPISpec {
 					"responses": map[string]interface{}{
 						"200": map[string]interface{}{
 							"description": "Список фильмов, которые скоро выйдут",
-						},
-					},
-				},
-			},
-			"/api/v1/movies/now-playing": map[string]interface{}{
-				"get": map[string]interface{}{
-					"summary":     "Сейчас в прокате",
-					"description": "Получение списка фильмов, которые сейчас в прокате",
-					"tags":        []string{"Movies"},
-					"parameters": []map[string]interface{}{
-						{
-							"name":   "page",
-							"in":     "query",
-							"schema": map[string]string{"type": "integer", "default": "1"},
-						},
-						{
-							"name":   "language",
-							"in":     "query",
-							"schema": map[string]string{"type": "string", "default": "ru-RU"},
-						},
-					},
-					"responses": map[string]interface{}{
-						"200": map[string]interface{}{
-							"description": "Список фильмов в прокате",
 						},
 					},
 				},
