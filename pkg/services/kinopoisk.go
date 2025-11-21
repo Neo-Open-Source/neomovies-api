@@ -16,92 +16,92 @@ type KinopoiskService struct {
 }
 
 type KPFilm struct {
-	KinopoiskId        int      `json:"kinopoiskId"`
-	ImdbId             string   `json:"imdbId"`
-	NameRu             string   `json:"nameRu"`
-	NameEn             string   `json:"nameEn"`
-	NameOriginal       string   `json:"nameOriginal"`
-	PosterUrl          string   `json:"posterUrl"`
-	PosterUrlPreview   string   `json:"posterUrlPreview"`
-	CoverUrl           string   `json:"coverUrl"`
-	LogoUrl            string   `json:"logoUrl"`
-	ReviewsCount       int      `json:"reviewsCount"`
-	RatingGoodReview   float64  `json:"ratingGoodReview"`
-	RatingGoodReviewVoteCount int `json:"ratingGoodReviewVoteCount"`
-	RatingKinopoisk    float64  `json:"ratingKinopoisk"`
-	RatingKinopoiskVoteCount int `json:"ratingKinopoiskVoteCount"`
-	RatingImdb         float64  `json:"ratingImdb"`
-	RatingImdbVoteCount int     `json:"ratingImdbVoteCount"`
-	RatingFilmCritics  float64  `json:"ratingFilmCritics"`
-	RatingFilmCriticsVoteCount int `json:"ratingFilmCriticsVoteCount"`
-	RatingAwait        float64  `json:"ratingAwait"`
-	RatingAwaitCount   int      `json:"ratingAwaitCount"`
-	RatingRfCritics    float64  `json:"ratingRfCritics"`
-	RatingRfCriticsVoteCount int `json:"ratingRfCriticsVoteCount"`
-	WebUrl             string   `json:"webUrl"`
-	Year               int      `json:"year"`
-	FilmLength         int      `json:"filmLength"`
-	Slogan             string   `json:"slogan"`
-	Description        string   `json:"description"`
-	ShortDescription   string   `json:"shortDescription"`
-	EditorAnnotation   string   `json:"editorAnnotation"`
-	IsTicketsAvailable bool     `json:"isTicketsAvailable"`
-	ProductionStatus   string   `json:"productionStatus"`
-	Type               string   `json:"type"`
-	RatingMpaa         string   `json:"ratingMpaa"`
-	RatingAgeLimits    string   `json:"ratingAgeLimits"`
-	HasImax            bool     `json:"hasImax"`
-	Has3D              bool     `json:"has3d"`
-	LastSync           string   `json:"lastSync"`
-	Countries          []struct {
+	KinopoiskId                int     `json:"kinopoiskId"`
+	ImdbId                     string  `json:"imdbId"`
+	NameRu                     string  `json:"nameRu"`
+	NameEn                     string  `json:"nameEn"`
+	NameOriginal               string  `json:"nameOriginal"`
+	PosterUrl                  string  `json:"posterUrl"`
+	PosterUrlPreview           string  `json:"posterUrlPreview"`
+	CoverUrl                   string  `json:"coverUrl"`
+	LogoUrl                    string  `json:"logoUrl"`
+	ReviewsCount               int     `json:"reviewsCount"`
+	RatingGoodReview           float64 `json:"ratingGoodReview"`
+	RatingGoodReviewVoteCount  int     `json:"ratingGoodReviewVoteCount"`
+	RatingKinopoisk            float64 `json:"ratingKinopoisk"`
+	RatingKinopoiskVoteCount   int     `json:"ratingKinopoiskVoteCount"`
+	RatingImdb                 float64 `json:"ratingImdb"`
+	RatingImdbVoteCount        int     `json:"ratingImdbVoteCount"`
+	RatingFilmCritics          float64 `json:"ratingFilmCritics"`
+	RatingFilmCriticsVoteCount int     `json:"ratingFilmCriticsVoteCount"`
+	RatingAwait                float64 `json:"ratingAwait"`
+	RatingAwaitCount           int     `json:"ratingAwaitCount"`
+	RatingRfCritics            float64 `json:"ratingRfCritics"`
+	RatingRfCriticsVoteCount   int     `json:"ratingRfCriticsVoteCount"`
+	WebUrl                     string  `json:"webUrl"`
+	Year                       int     `json:"year"`
+	FilmLength                 int     `json:"filmLength"`
+	Slogan                     string  `json:"slogan"`
+	Description                string  `json:"description"`
+	ShortDescription           string  `json:"shortDescription"`
+	EditorAnnotation           string  `json:"editorAnnotation"`
+	IsTicketsAvailable         bool    `json:"isTicketsAvailable"`
+	ProductionStatus           string  `json:"productionStatus"`
+	Type                       string  `json:"type"`
+	RatingMpaa                 string  `json:"ratingMpaa"`
+	RatingAgeLimits            string  `json:"ratingAgeLimits"`
+	HasImax                    bool    `json:"hasImax"`
+	Has3D                      bool    `json:"has3d"`
+	LastSync                   string  `json:"lastSync"`
+	Countries                  []struct {
 		Country string `json:"country"`
 	} `json:"countries"`
 	Genres []struct {
 		Genre string `json:"genre"`
 	} `json:"genres"`
-	StartYear int `json:"startYear"`
-	EndYear   int `json:"endYear"`
+	StartYear int  `json:"startYear"`
+	EndYear   int  `json:"endYear"`
 	Serial    bool `json:"serial"`
 	ShortFilm bool `json:"shortFilm"`
 	Completed bool `json:"completed"`
 }
 
 type KPSearchResponse struct {
-	Keyword    string    `json:"keyword"`
-	PagesCount int       `json:"pagesCount"`
-	Films      []KPFilmShort `json:"films"`
-	SearchFilmsCountResult int `json:"searchFilmsCountResult"`
+	Keyword                string        `json:"keyword"`
+	PagesCount             int           `json:"pagesCount"`
+	Films                  []KPFilmShort `json:"films"`
+	SearchFilmsCountResult int           `json:"searchFilmsCountResult"`
 }
 
 type KPFilmShort struct {
 	// Old format fields
-	FilmId       int      `json:"filmId"`
+	FilmId int `json:"filmId"`
 	// New format fields
-	KinopoiskId  int      `json:"kinopoiskId"`
-	
-	NameRu       string   `json:"nameRu"`
-	NameEn       string   `json:"nameEn"`
-	NameOriginal string   `json:"nameOriginal"`
-	ImdbId       string   `json:"imdbId"`
-	Type         string   `json:"type"`
-	Year         int      `json:"year"` // Changed from string to int
-	Description  string   `json:"description"`
-	FilmLength   string   `json:"filmLength"`
+	KinopoiskId int `json:"kinopoiskId"`
+
+	NameRu       string      `json:"nameRu"`
+	NameEn       string      `json:"nameEn"`
+	NameOriginal string      `json:"nameOriginal"`
+	ImdbId       string      `json:"imdbId"`
+	Type         string      `json:"type"`
+	Year         string      `json:"year"`
+	Description  string      `json:"description"`
+	FilmLength   string      `json:"filmLength"`
 	Countries    []KPCountry `json:"countries"`
 	Genres       []KPGenre   `json:"genres"`
-	
+
 	// Old format rating field
-	Rating       string   `json:"rating"`
+	Rating string `json:"rating"`
 	// New format rating fields
 	RatingKinopoisk float64 `json:"ratingKinopoisk"`
 	RatingImdb      float64 `json:"ratingImdb"`
-	
-	RatingVoteCount int   `json:"ratingVoteCount"`
-	PosterUrl    string   `json:"posterUrl"`
+
+	RatingVoteCount  int    `json:"ratingVoteCount"`
+	PosterUrl        string `json:"posterUrl"`
 	PosterUrlPreview string `json:"posterUrlPreview"`
-	CoverUrl     string   `json:"coverUrl"`
-	LogoUrl      string   `json:"logoUrl"`
-	RatingAgeLimits string `json:"ratingAgeLimits"`
+	CoverUrl         string `json:"coverUrl"`
+	LogoUrl          string `json:"logoUrl"`
+	RatingAgeLimits  string `json:"ratingAgeLimits"`
 }
 
 type KPCountry struct {
@@ -155,26 +155,26 @@ func (s *KinopoiskService) GetFilmByKinopoiskId(id int) (*KPFilm, error) {
 }
 
 func (s *KinopoiskService) GetFilmByImdbId(imdbId string) (*KPFilm, error) {
-    endpoint := fmt.Sprintf("%s/v2.2/films?imdbId=%s", s.baseURL, url.QueryEscape(imdbId))
-	
+	endpoint := fmt.Sprintf("%s/v2.2/films?imdbId=%s", s.baseURL, url.QueryEscape(imdbId))
+
 	var response struct {
 		Films []KPFilm `json:"items"`
 	}
-	
+
 	err := s.makeRequest(endpoint, &response)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(response.Films) == 0 {
 		return nil, fmt.Errorf("film not found")
 	}
-	
+
 	return &response.Films[0], nil
 }
 
 func (s *KinopoiskService) SearchFilms(keyword string, page int) (*KPSearchResponse, error) {
-    endpoint := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s&page=%d", s.baseURL, url.QueryEscape(keyword), page)
+	endpoint := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s&page=%d", s.baseURL, url.QueryEscape(keyword), page)
 	var response KPSearchResponse
 	err := s.makeRequest(endpoint, &response)
 	return &response, err
@@ -182,55 +182,55 @@ func (s *KinopoiskService) SearchFilms(keyword string, page int) (*KPSearchRespo
 
 func (s *KinopoiskService) GetCollection(collectionType string, page int) (*KPSearchResponse, error) {
 	endpoint := fmt.Sprintf("%s/v2.2/films/collections?type=%s&page=%d", s.baseURL, collectionType, page)
-	
+
 	var responseNew struct {
 		Total      int           `json:"total"`
 		TotalPages int           `json:"totalPages"`
 		Items      []KPFilmShort `json:"items"`
 	}
-	
+
 	err := s.makeRequest(endpoint, &responseNew)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(responseNew.Items) > 0 {
 		return &KPSearchResponse{
-			PagesCount: responseNew.TotalPages,
-			Films:      responseNew.Items,
+			PagesCount:             responseNew.TotalPages,
+			Films:                  responseNew.Items,
 			SearchFilmsCountResult: len(responseNew.Items),
 		}, nil
 	}
-	
+
 	var responseOld struct {
 		PagesCount int           `json:"pagesCount"`
 		Films      []KPFilmShort `json:"films"`
 	}
-	
+
 	err = s.makeRequest(endpoint, &responseOld)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &KPSearchResponse{
-		PagesCount: responseOld.PagesCount,
-		Films:      responseOld.Films,
+		PagesCount:             responseOld.PagesCount,
+		Films:                  responseOld.Films,
 		SearchFilmsCountResult: len(responseOld.Films),
 	}, nil
 }
 
 func (s *KinopoiskService) GetExternalSources(kinopoiskId int) ([]KPExternalSource, error) {
 	endpoint := fmt.Sprintf("%s/v2.2/films/%d/external_sources", s.baseURL, kinopoiskId)
-	
+
 	var response struct {
 		Items []KPExternalSource `json:"items"`
 	}
-	
+
 	err := s.makeRequest(endpoint, &response)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return response.Items, nil
 }
 
@@ -255,11 +255,11 @@ func TmdbIdToKPId(tmdbService *TMDBService, kpService *KinopoiskService, tmdbId 
 	if err != nil {
 		return 0, err
 	}
-	
+
 	if externalIds.IMDbID == "" {
 		return 0, fmt.Errorf("no IMDb ID found for TMDB ID %d", tmdbId)
 	}
-	
+
 	return ImdbIdToKPId(kpService, externalIds.IMDbID)
 }
 
@@ -268,12 +268,12 @@ func KPIdToTmdbId(tmdbService *TMDBService, kpService *KinopoiskService, kpId in
 	if err != nil {
 		return 0, err
 	}
-	
+
 	movies, err := tmdbService.SearchMovies("", 1, "en-US", "", 0)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	for _, movie := range movies.Results {
 		ids, err := tmdbService.GetMovieExternalIDs(movie.ID)
 		if err != nil {
@@ -283,7 +283,7 @@ func KPIdToTmdbId(tmdbService *TMDBService, kpService *KinopoiskService, kpId in
 			return movie.ID, nil
 		}
 	}
-	
+
 	return 0, fmt.Errorf("TMDB ID not found for KP ID %d", kpId)
 }
 
