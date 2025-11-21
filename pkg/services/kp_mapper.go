@@ -321,11 +321,12 @@ func mapKPFilmShortToMovie(film KPFilmShort) *models.Movie {
 		})
 	}
 
-	// Year is now int, but handle both old and new formats
-	year := film.Year
-	if year == 0 {
-		// Try parsing from string if needed (old format)
-		// This shouldn't happen with new format, but keep for compatibility
+	// Year is a string, convert to int
+	year := 0
+	if film.Year != "" {
+		if parsedYear, err := strconv.Atoi(film.Year); err == nil {
+			year = parsedYear
+		}
 	}
 
 	releaseDate := ""
@@ -396,7 +397,13 @@ func mapKPFilmShortToTVShow(film KPFilmShort) *models.TVShow {
 		})
 	}
 
-	year := film.Year
+	// Year is a string, convert to int
+	year := 0
+	if film.Year != "" {
+		if parsedYear, err := strconv.Atoi(film.Year); err == nil {
+			year = parsedYear
+		}
+	}
 	releaseDate := ""
 	if year > 0 {
 		releaseDate = fmt.Sprintf("%d-01-01", year)
