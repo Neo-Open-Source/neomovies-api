@@ -38,14 +38,14 @@ func main() {
 
 	movieService := services.NewMovieService(db, tmdbService, kpService)
 	tvService := services.NewTVService(db, tmdbService, kpService)
-	favoritesService := services.NewFavoritesService(db, tmdbService)
+	favoritesService := services.NewFavoritesServiceWithKP(db, tmdbService, kpService)
 	torrentService := services.NewTorrentServiceWithConfig(cfg.RedAPIBaseURL, cfg.RedAPIKey)
 	reactionsService := services.NewReactionsService(db)
 
 	authHandler := appHandlers.NewAuthHandler(authService)
 	movieHandler := appHandlers.NewMovieHandler(movieService)
 	tvHandler := appHandlers.NewTVHandler(tvService)
-	favoritesHandler := appHandlers.NewFavoritesHandler(favoritesService, cfg)
+	favoritesHandler := appHandlers.NewFavoritesHandlerWithServices(favoritesService, cfg, tmdbService, kpService)
 	docsHandler := appHandlers.NewDocsHandler()
 	searchHandler := appHandlers.NewSearchHandler(tmdbService, kpService)
 	unifiedHandler := appHandlers.NewUnifiedHandler(tmdbService, kpService)

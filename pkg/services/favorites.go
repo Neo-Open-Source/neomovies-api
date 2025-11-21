@@ -14,14 +14,23 @@ import (
 )
 
 type FavoritesService struct {
-	db   *mongo.Database
-	tmdb *TMDBService
+	db        *mongo.Database
+	tmdb      *TMDBService
+	kinopoisk *KinopoiskService
 }
 
 func NewFavoritesService(db *mongo.Database, tmdb *TMDBService) *FavoritesService {
 	return &FavoritesService{
 		db:   db,
 		tmdb: tmdb,
+	}
+}
+
+func NewFavoritesServiceWithKP(db *mongo.Database, tmdb *TMDBService, kp *KinopoiskService) *FavoritesService {
+	return &FavoritesService{
+		db:        db,
+		tmdb:      tmdb,
+		kinopoisk: kp,
 	}
 }
 

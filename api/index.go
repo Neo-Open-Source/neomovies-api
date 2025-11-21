@@ -58,14 +58,14 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	movieService := services.NewMovieService(globalDB, tmdbService, kpService)
 	tvService := services.NewTVService(globalDB, tmdbService, kpService)
-	favoritesService := services.NewFavoritesService(globalDB, tmdbService)
+	favoritesService := services.NewFavoritesServiceWithKP(globalDB, tmdbService, kpService)
 	torrentService := services.NewTorrentServiceWithConfig(globalCfg.RedAPIBaseURL, globalCfg.RedAPIKey)
 	reactionsService := services.NewReactionsService(globalDB)
 
 	authHandler := handlersPkg.NewAuthHandler(authService)
 	movieHandler := handlersPkg.NewMovieHandler(movieService)
 	tvHandler := handlersPkg.NewTVHandler(tvService)
-	favoritesHandler := handlersPkg.NewFavoritesHandler(favoritesService, globalCfg)
+	favoritesHandler := handlersPkg.NewFavoritesHandlerWithServices(favoritesService, globalCfg, tmdbService, kpService)
 	docsHandler := handlersPkg.NewDocsHandler()
 	searchHandler := handlersPkg.NewSearchHandler(tmdbService, kpService)
 	unifiedHandler := handlersPkg.NewUnifiedHandler(tmdbService, kpService)

@@ -1,29 +1,41 @@
 package handlers
 
 import (
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "time"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+	"time"
 
-    "github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 
-    "neomovies-api/pkg/config"
-    "neomovies-api/pkg/middleware"
-    "neomovies-api/pkg/models"
-    "neomovies-api/pkg/services"
+	"neomovies-api/pkg/config"
+	"neomovies-api/pkg/middleware"
+	"neomovies-api/pkg/models"
+	"neomovies-api/pkg/services"
 )
 
 type FavoritesHandler struct {
 	favoritesService *services.FavoritesService
 	config           *config.Config
+	tmdbService      *services.TMDBService
+	kpService        *services.KinopoiskService
 }
 
 func NewFavoritesHandler(favoritesService *services.FavoritesService, cfg *config.Config) *FavoritesHandler {
 	return &FavoritesHandler{
 		favoritesService: favoritesService,
 		config:           cfg,
+	}
+}
+
+func NewFavoritesHandlerWithServices(favoritesService *services.FavoritesService, cfg *config.Config, tmdb *services.TMDBService, kp *services.KinopoiskService) *FavoritesHandler {
+	return &FavoritesHandler{
+		favoritesService: favoritesService,
+		config:           cfg,
+		tmdbService:      tmdb,
+		kpService:        kp,
 	}
 }
 
@@ -169,8 +181,36 @@ func (h *FavoritesHandler) CheckIsFavorite(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// fetchMediaInfoRussian получает информацию о медиа на русском языке из TMDB
+// fetchMediaInfoRussian получает информацию о медиа на русском языке из TMDB или Kinopoisk
 func (h *FavoritesHandler) fetchMediaInfoRussian(mediaID, mediaType string) (*models.MediaInfo, error) {
+	mediaIDInt, err := strconv.Atoi(mediaID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid media ID: %s", mediaID)
+	}
+
+	// Пробуем Kinopoisk сначала, если доступен
+	if h.kpService != nil {
+		if kpFilm, err := h.kpService.GetFilmByKinopoiskId(mediaIDInt); err == nil {
+			return h.mapKPFilmToMediaInfo(kpFilm, mediaType), nil
+		}
+	}
+
+	// Fallback на TMDB
+	if h.tmdbService != nil {
+		if mediaType == "movie" {
+			movie, err := h.tmdbService.GetMovie(mediaIDInt, "ru-RU")
+			if err == nil {
+				return h.mapTMDBMovieToMediaInfo(movie), nil
+			}
+		} else if mediaType == "tv" {
+			tv, err := h.tmdbService.GetTVShow(mediaIDInt, "ru-RU")
+			if err == nil {
+				return h.mapTMDBTVToMediaInfo(tv), nil
+			}
+		}
+	}
+
+	// Если оба сервиса не доступны, пробуем прямой запрос к TMDB API
 	var url string
 	if mediaType == "movie" {
 		url = fmt.Sprintf("https://api.themoviedb.org/3/movie/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAccessToken)
@@ -178,8 +218,8 @@ func (h *FavoritesHandler) fetchMediaInfoRussian(mediaID, mediaType string) (*mo
 		url = fmt.Sprintf("https://api.themoviedb.org/3/tv/%s?api_key=%s&language=ru-RU", mediaID, h.config.TMDBAccessToken)
 	}
 
-    client := &http.Client{Timeout: 6 * time.Second}
-    resp, err := client.Get(url)
+	client := &http.Client{Timeout: 6 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch from TMDB: %w", err)
 	}
@@ -259,4 +299,64 @@ func (h *FavoritesHandler) fetchMediaInfoRussian(mediaID, mediaType string) (*mo
 	}
 
 	return mediaInfo, nil
+}
+
+// mapKPFilmToMediaInfo преобразует KP фильм в MediaInfo
+func (h *FavoritesHandler) mapKPFilmToMediaInfo(kpFilm *services.KPFilm, mediaType string) *models.MediaInfo {
+	mediaInfo := &models.MediaInfo{
+		ID:            fmt.Sprintf("%d", kpFilm.KinopoiskId),
+		MediaType:     mediaType,
+		Title:         kpFilm.NameRu,
+		OriginalTitle: kpFilm.NameEn,
+		Overview:      kpFilm.Description,
+		PosterPath:    kpFilm.PosterUrl,
+		BackdropPath:  kpFilm.CoverUrl,
+		VoteAverage:   kpFilm.RatingKinopoisk,
+		VoteCount:     kpFilm.RatingKinopoiskVoteCount,
+		Popularity:    kpFilm.RatingImdb,
+	}
+
+	if mediaType == "movie" {
+		mediaInfo.ReleaseDate = fmt.Sprintf("%d", kpFilm.Year)
+	} else {
+		mediaInfo.FirstAirDate = fmt.Sprintf("%d", kpFilm.Year)
+	}
+
+	return mediaInfo
+}
+
+// mapTMDBMovieToMediaInfo преобразует TMDB фильм в MediaInfo
+func (h *FavoritesHandler) mapTMDBMovieToMediaInfo(movie *models.Movie) *models.MediaInfo {
+	mediaInfo := &models.MediaInfo{
+		ID:            fmt.Sprintf("%d", movie.ID),
+		MediaType:     "movie",
+		Title:         movie.Title,
+		OriginalTitle: movie.OriginalTitle,
+		Overview:      movie.Overview,
+		PosterPath:    movie.PosterPath,
+		BackdropPath:  movie.BackdropPath,
+		ReleaseDate:   movie.ReleaseDate,
+		VoteAverage:   movie.VoteAverage,
+		VoteCount:     movie.VoteCount,
+		Popularity:    movie.Popularity,
+	}
+	return mediaInfo
+}
+
+// mapTMDBTVToMediaInfo преобразует TMDB сериал в MediaInfo
+func (h *FavoritesHandler) mapTMDBTVToMediaInfo(tv *models.TVShow) *models.MediaInfo {
+	mediaInfo := &models.MediaInfo{
+		ID:            fmt.Sprintf("%d", tv.ID),
+		MediaType:     "tv",
+		Title:         tv.Name,
+		OriginalTitle: tv.OriginalName,
+		Overview:      tv.Overview,
+		PosterPath:    tv.PosterPath,
+		BackdropPath:  tv.BackdropPath,
+		FirstAirDate:  tv.FirstAirDate,
+		VoteAverage:   tv.VoteAverage,
+		VoteCount:     tv.VoteCount,
+		Popularity:    tv.Popularity,
+	}
+	return mediaInfo
 }
