@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 	"sync"
 
@@ -34,19 +33,15 @@ func initializeApp() {
 	var err error
 	globalDB, err = database.Connect(globalCfg.MongoURI, globalCfg.MongoDBName)
 	if err != nil {
-		log.Printf("Failed to connect to database: %v", err)
 		initError = err
 		return
 	}
-
-	log.Println("Successfully connected to database")
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	initOnce.Do(initializeApp)
 
 	if initError != nil {
-		log.Printf("Initialization error: %v", initError)
 		http.Error(w, "Application initialization failed: "+initError.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -114,6 +109,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/torrents/series", torrentsHandler.SearchSeries).Methods("GET")
 	api.HandleFunc("/torrents/anime", torrentsHandler.SearchAnime).Methods("GET")
 	api.HandleFunc("/torrents/seasons", torrentsHandler.GetAvailableSeasons).Methods("GET")
+	api.HandleFunc("/torrents/by-title", torrentsHandler.SearchByTitle).Methods("GET")
 	api.HandleFunc("/torrents/search", torrentsHandler.SearchByQuery).Methods("GET")
 
 	api.HandleFunc("/reactions/{mediaType}/{mediaId}/counts", reactionsHandler.GetReactionCounts).Methods("GET")

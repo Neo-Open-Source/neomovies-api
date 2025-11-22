@@ -82,11 +82,70 @@ func (s *TorrentService) SearchTorrents(params map[string]string) (*models.Torre
 	}, nil
 }
 
+// SearchTorrentsByTitle - поиск торрентов по названию фильма/сериала
+func (s *TorrentService) SearchTorrentsByTitle(title, originalTitle string, year int, isSerial bool) (*models.TorrentSearchResponse, error) {
+	searchParams := url.Values{}
+
+	// Добавляем основное название
+	if title != "" {
+		searchParams.Add("title", title)
+	}
+
+	// Добавляем оригинальное название
+	if originalTitle != "" {
+		searchParams.Add("title_original", originalTitle)
+	}
+
+	// Добавляем год
+	if year > 0 {
+		searchParams.Add("year", strconv.Itoa(year))
+	}
+
+	// Указываем тип контента
+	if isSerial {
+		searchParams.Add("is_serial", "2")
+	} else {
+		searchParams.Add("is_serial", "1")
+	}
+
+	if s.apiKey != "" {
+		searchParams.Add("apikey", s.apiKey)
+	}
+
+	searchURL := fmt.Sprintf("%s/api/v2.0/indexers/all/results?%s", s.baseURL, searchParams.Encode())
+
+	resp, err := s.client.Get(searchURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search torrents by title: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	var redAPIResponse models.RedAPIResponse
+	if err := json.Unmarshal(body, &redAPIResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	results := s.parseRedAPIResults(redAPIResponse)
+
+	return &models.TorrentSearchResponse{
+		Query:   title,
+		Results: results,
+		Total:   len(results),
+	}, nil
+}
+
 // parseRedAPIResults преобразует результаты RedAPI в наш формат
 func (s *TorrentService) parseRedAPIResults(data models.RedAPIResponse) []models.TorrentResult {
 	var results []models.TorrentResult
 
-	for _, torrent := range data.Results {
+	for i, torrent := range data.Results {
+		_ = i // для избежания неиспользуемой переменной
+
 		var sizeStr string
 		switch v := torrent.Size.(type) {
 		case string:
@@ -112,14 +171,27 @@ func (s *TorrentService) parseRedAPIResults(data models.RedAPIResponse) []models
 			Source:      "RedAPI",
 		}
 
+		// Обработка Info для обоих форматов (RedAPI и jacred)
 		if torrent.Info != nil {
-			switch v := torrent.Info.Quality.(type) {
-			case string:
-				result.Quality = v
-			case float64:
-				result.Quality = fmt.Sprintf("%.0fp", v)
-			case int:
-				result.Quality = fmt.Sprintf("%dp", v)
+			// Обработка качества
+			if torrent.Info.Quality != nil {
+				switch v := torrent.Info.Quality.(type) {
+				case string:
+					result.Quality = v
+				case float64:
+					// Для jacred качество приходит как число (1080, 720 и т.д.)
+					if v >= 2160 {
+						result.Quality = "4K"
+					} else {
+						result.Quality = fmt.Sprintf("%.0fp", v)
+					}
+				case int:
+					if v >= 2160 {
+						result.Quality = "4K"
+					} else {
+						result.Quality = fmt.Sprintf("%dp", v)
+					}
+				}
 			}
 
 			result.Voice = torrent.Info.Voices
@@ -127,10 +199,10 @@ func (s *TorrentService) parseRedAPIResults(data models.RedAPIResponse) []models
 			result.Seasons = torrent.Info.Seasons
 		}
 
+		// Если качество все еще не определено, извлекаем из названия
 		if result.Quality == "" {
 			result.Quality = s.ExtractQuality(result.Title)
 		}
-
 		results = append(results, result)
 	}
 

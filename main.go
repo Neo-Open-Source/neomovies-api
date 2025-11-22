@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -18,6 +20,18 @@ import (
 )
 
 func main() {
+	// Инициализация логирования в файл
+	logFile, err := os.OpenFile("neomovies-api.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		fmt.Printf("Failed to open log file: %v\n", err)
+	} else {
+		// Пишем логи одновременно в файл и в консоль
+		multiWriter := io.MultiWriter(os.Stdout, logFile)
+		log.SetOutput(multiWriter)
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		defer logFile.Close()
+	}
+
 	if err := godotenv.Load(); err != nil {
 		_ = err
 	}
@@ -84,13 +98,15 @@ func main() {
 	api.HandleFunc("/players/vidlink/movie/{imdb_id}", playersHandler.GetVidlinkMoviePlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/tv/{tmdb_id}", playersHandler.GetVidlinkTVPlayer).Methods("GET")
 	api.HandleFunc("/players/hdvb/{id_type}/{id}", playersHandler.GetHDVBPlayer).Methods("GET")
+	api.HandleFunc("/players/collaps/{id_type}/{id}", playersHandler.GetCollapsPlayer).Methods("GET")
 
+	api.HandleFunc("/torrents/search/by-title", torrentsHandler.SearchByTitle).Methods("GET")
+	api.HandleFunc("/torrents/search", torrentsHandler.SearchByQuery).Methods("GET")
 	api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
 	api.HandleFunc("/torrents/movies", torrentsHandler.SearchMovies).Methods("GET")
 	api.HandleFunc("/torrents/series", torrentsHandler.SearchSeries).Methods("GET")
 	api.HandleFunc("/torrents/anime", torrentsHandler.SearchAnime).Methods("GET")
 	api.HandleFunc("/torrents/seasons", torrentsHandler.GetAvailableSeasons).Methods("GET")
-	api.HandleFunc("/torrents/search", torrentsHandler.SearchByQuery).Methods("GET")
 
 	api.HandleFunc("/reactions/{mediaType}/{mediaId}/counts", reactionsHandler.GetReactionCounts).Methods("GET")
 

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 )
 
@@ -28,6 +27,10 @@ type Config struct {
 	KPAPIKey           string
 	HDVBToken          string
 	KPAPIBaseURL       string
+	CollapsAPIHost     string
+	CollapsToken       string
+	VeoVeoHost         string
+	VeoVeoToken        string
 }
 
 func New() *Config {
@@ -52,21 +55,22 @@ func New() *Config {
 		GoogleRedirectURL:  getEnv(EnvGoogleRedirectURL, ""),
 		FrontendURL:        getEnv(EnvFrontendURL, ""),
 		VibixHost:          getEnv(EnvVibixHost, DefaultVibixHost),
-		VibixToken:         getEnv(EnvVibixToken, ""),
 		KPAPIKey:           getEnv(EnvKPAPIKey, ""),
 		HDVBToken:          getEnv(EnvHDVBToken, ""),
 		KPAPIBaseURL:       getEnv("KPAPI_BASE_URL", DefaultKPAPIBase),
+		CollapsAPIHost:     getEnv("COLLAPS_API_HOST", ""),
+		CollapsToken:       getEnv("COLLAPS_TOKEN", ""),
+		VeoVeoHost:         getEnv("VEOVEO_HOST", ""),
+		VeoVeoToken:        getEnv("VEOVEO_TOKEN", ""),
 	}
 }
 
 func getMongoURI() string {
 	for _, envVar := range []string{"MONGO_URI", "MONGODB_URI", "DATABASE_URL", "MONGO_URL"} {
 		if value := os.Getenv(envVar); value != "" {
-			log.Printf("DEBUG: Using %s for MongoDB connection", envVar)
 			return value
 		}
 	}
-	log.Printf("DEBUG: No MongoDB URI environment variable found")
 	return ""
 }
 

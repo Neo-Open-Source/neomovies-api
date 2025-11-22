@@ -266,6 +266,7 @@ type TorrentSearchResponse struct {
 // RedAPI специфичные структуры
 type RedAPIResponse struct {
 	Results []RedAPITorrent `json:"Results"`
+	Jacred  bool            `json:"jacred,omitempty"` // Флаг для определения источника
 }
 
 type RedAPITorrent struct {
@@ -277,15 +278,22 @@ type RedAPITorrent struct {
 	MagnetUri    string             `json:"MagnetUri"`
 	PublishDate  string             `json:"PublishDate"`
 	CategoryDesc string             `json:"CategoryDesc"`
+	Category     []int              `json:"Category,omitempty"` // Для jacred
 	Details      string             `json:"Details"`
 	Info         *RedAPITorrentInfo `json:"Info,omitempty"`
+	Languages    []string           `json:"languages,omitempty"` // Для jacred
+	FFprobe      []interface{}      `json:"ffprobe,omitempty"`   // Для jacred
 }
 
 type RedAPITorrentInfo struct {
-	Quality interface{} `json:"quality,omitempty"` // Может быть string или number
-	Voices  []string    `json:"voices,omitempty"`
-	Types   []string    `json:"types,omitempty"`
-	Seasons []int       `json:"seasons,omitempty"`
+	Quality      interface{} `json:"quality,omitempty"` // Может быть string или number
+	VideoType    string      `json:"videotype,omitempty"`
+	Voices       []string    `json:"voices,omitempty"`
+	Types        []string    `json:"types,omitempty"`
+	Seasons      []int       `json:"seasons,omitempty"`
+	Name         string      `json:"name,omitempty"`
+	OriginalName string      `json:"originalname,omitempty"`
+	Released     int         `json:"relased,omitempty"` // Примечание: опечатка в API
 }
 
 // Alloha API структуры для получения информации о фильмах

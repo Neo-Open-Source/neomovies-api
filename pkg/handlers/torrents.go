@@ -365,3 +365,57 @@ func (h *TorrentsHandler) SearchByQuery(w http.ResponseWriter, r *http.Request) 
 		Data:    response,
 	})
 }
+
+// SearchByTitle - поиск торрентов по названию фильма/сериала (новый метод)
+func (h *TorrentsHandler) SearchByTitle(w http.ResponseWriter, r *http.Request) {
+	title := r.URL.Query().Get("title")
+	originalTitle := r.URL.Query().Get("originalTitle")
+	yearStr := r.URL.Query().Get("year")
+	contentType := r.URL.Query().Get("type")
+
+	if title == "" && originalTitle == "" {
+		http.Error(w, "Title or originalTitle is required", http.StatusBadRequest)
+		return
+	}
+
+	if contentType == "" {
+		contentType = "movie"
+	}
+
+	// Парсим год
+	year := 0
+	if yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil {
+			year = y
+		}
+	}
+
+	// Определяем является ли это сериалом
+	isSerial := contentType == "series" || contentType == "tv"
+
+	// Поиск торрентов
+	results, err := h.torrentService.SearchTorrentsByTitle(title, originalTitle, year, isSerial)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Применяем фильтрацию по типу контента
+	results.Results = h.torrentService.FilterByContentType(results.Results, contentType)
+	results.Total = len(results.Results)
+
+	response := map[string]interface{}{
+		"title":         title,
+		"originalTitle": originalTitle,
+		"year":          year,
+		"type":          contentType,
+		"total":         results.Total,
+		"results":       results.Results,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data:    response,
+	})
+}
