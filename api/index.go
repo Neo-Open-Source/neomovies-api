@@ -104,13 +104,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/players/iframevideo/{kinopoisk_id}/{imdb_id}", playersHandler.GetIframeVideoPlayer).Methods("GET")
 	api.HandleFunc("/stream/{provider}/{tmdb_id}", playersHandler.GetStreamAPI).Methods("GET")
 
-	api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
+	// Специфичные маршруты должны быть выше общих
+	api.HandleFunc("/torrents/search/by-title", torrentsHandler.SearchByTitle).Methods("GET")
 	api.HandleFunc("/torrents/movies", torrentsHandler.SearchMovies).Methods("GET")
 	api.HandleFunc("/torrents/series", torrentsHandler.SearchSeries).Methods("GET")
 	api.HandleFunc("/torrents/anime", torrentsHandler.SearchAnime).Methods("GET")
 	api.HandleFunc("/torrents/seasons", torrentsHandler.GetAvailableSeasons).Methods("GET")
-	api.HandleFunc("/torrents/by-title", torrentsHandler.SearchByTitle).Methods("GET")
 	api.HandleFunc("/torrents/search", torrentsHandler.SearchByQuery).Methods("GET")
+	// Общий маршрут с параметром - должен быть последним
+	api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
 
 	api.HandleFunc("/reactions/{mediaType}/{mediaId}/counts", reactionsHandler.GetReactionCounts).Methods("GET")
 
