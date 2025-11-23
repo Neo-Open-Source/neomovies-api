@@ -84,6 +84,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/auth/resend-code", authHandler.ResendVerificationCode).Methods("POST")
 	api.HandleFunc("/auth/google/login", authHandler.GoogleLogin).Methods("GET")
 	api.HandleFunc("/auth/google/callback", authHandler.GoogleCallback).Methods("GET")
+	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
 
 	api.HandleFunc("/search/multi", searchHandler.MultiSearch).Methods("GET")
 
@@ -92,17 +93,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/categories/{id}/media", categoriesHandler.GetMediaByCategory).Methods("GET")
 
 	api.HandleFunc("/players/alloha/{id_type}/{id}", playersHandler.GetAllohaPlayer).Methods("GET")
-	api.HandleFunc("/players/alloha/meta/kp/{kp_id}", playersHandler.GetAllohaMetaByKP).Methods("GET")
 	api.HandleFunc("/players/lumex/{id_type}/{id}", playersHandler.GetLumexPlayer).Methods("GET")
 	api.HandleFunc("/players/vibix/{id_type}/{id}", playersHandler.GetVibixPlayer).Methods("GET")
-	api.HandleFunc("/players/hdvb/{id_type}/{id}", playersHandler.GetHDVBPlayer).Methods("GET")
 	api.HandleFunc("/players/vidsrc/{media_type}/{imdb_id}", playersHandler.GetVidsrcPlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/movie/{imdb_id}", playersHandler.GetVidlinkMoviePlayer).Methods("GET")
 	api.HandleFunc("/players/vidlink/tv/{tmdb_id}", playersHandler.GetVidlinkTVPlayer).Methods("GET")
-	api.HandleFunc("/players/rgshows/{tmdb_id}", playersHandler.GetRgShowsPlayer).Methods("GET")
-	api.HandleFunc("/players/rgshows/{tmdb_id}/{season}/{episode}", playersHandler.GetRgShowsTVPlayer).Methods("GET")
-	api.HandleFunc("/players/iframevideo/{kinopoisk_id}/{imdb_id}", playersHandler.GetIframeVideoPlayer).Methods("GET")
-	api.HandleFunc("/stream/{provider}/{tmdb_id}", playersHandler.GetStreamAPI).Methods("GET")
+	api.HandleFunc("/players/hdvb/{id_type}/{id}", playersHandler.GetHDVBPlayer).Methods("GET")
+	api.HandleFunc("/players/collaps/{id_type}/{id}", playersHandler.GetCollapsPlayer).Methods("GET")
 
 	// Специфичные маршруты должны быть выше общих
 	api.HandleFunc("/torrents/search/by-title", torrentsHandler.SearchByTitle).Methods("GET")
@@ -155,6 +152,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	protected.HandleFunc("/auth/profile", authHandler.GetProfile).Methods("GET")
 	protected.HandleFunc("/auth/profile", authHandler.UpdateProfile).Methods("PUT")
 	protected.HandleFunc("/auth/profile", authHandler.DeleteAccount).Methods("DELETE")
+	protected.HandleFunc("/auth/revoke-token", authHandler.RevokeRefreshToken).Methods("POST")
+	protected.HandleFunc("/auth/revoke-all-tokens", authHandler.RevokeAllRefreshTokens).Methods("POST")
 
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}/my-reaction", reactionsHandler.GetMyReaction).Methods("GET")
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.SetReaction).Methods("POST")
