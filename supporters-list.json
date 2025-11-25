@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "name": "Sophron Ragozin",
+    "type": "service",
+    "description": "Покупка и продления основного домена neomovies.ru",
+    "contributions": [
+      "Домен neomovies.ru"
+    ],
+    "year": 2025,
+    "isActive": true
+  },
+  {
+    "id": 2,
+    "name": "Chernuha",
+    "type": "service",
+    "description": "Покупка домена neomovies.run",
+    "contributions": [
+      "Домен neomovies.run"
+    ],
+    "year": 2025,
+    "isActive": true
+  },
+  {
+    "id": 3,
+    "name": "Iwnuply",
+    "type": "code",
+    "description": "Создание докер контейнера для API и Frontend",
+    "contributions": [
+      "Docker"
+    ],
+    "year": 2025,
+    "isActive": true
+  }
+]

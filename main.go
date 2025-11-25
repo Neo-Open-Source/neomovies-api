@@ -68,6 +68,7 @@ func main() {
 	torrentsHandler := appHandlers.NewTorrentsHandler(torrentService, tmdbService)
 	reactionsHandler := appHandlers.NewReactionsHandler(reactionsService)
 	imagesHandler := appHandlers.NewImagesHandler()
+	supportHandler := appHandlers.NewSupportHandler()
 
 	r := mux.NewRouter()
 
@@ -111,6 +112,8 @@ func main() {
 	api.HandleFunc("/reactions/{mediaType}/{mediaId}/counts", reactionsHandler.GetReactionCounts).Methods("GET")
 
 	api.HandleFunc("/images/{type}/{id}", imagesHandler.GetImage).Methods("GET")
+
+	api.HandleFunc("/support/list", supportHandler.GetSupportersList).Methods("GET")
 
 	// Movies routes - specific paths first, then parameterized
 	api.HandleFunc("/movies/search", movieHandler.Search).Methods("GET")
