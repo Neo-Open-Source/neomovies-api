@@ -1,11 +1,14 @@
+//go:build netlify
+
 package main
 
 import (
 	"context"
 	"net/http"
 
-	bridge "github.com/vercel/go-bridge/go/bridge"
 	handler "neomovies-api/api"
+
+	bridge "github.com/vercel/go-bridge/go/bridge"
 )
 
 func main() {

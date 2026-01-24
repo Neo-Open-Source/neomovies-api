@@ -27,6 +27,9 @@ func (s *MovieService) Search(query string, page int, language, region string, y
 			return MapKPSearchToTMDBResponse(kpSearch), nil
 		}
 	}
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.SearchMovies(query, page, language, region, year)
 }
 
@@ -54,6 +57,9 @@ func (s *MovieService) GetByID(id int, language string, idType string) (*models.
 		return nil, fmt.Errorf("film not found in Kinopoisk with id %d", id)
 
 	case "tmdb":
+		if s.tmdb == nil {
+			return nil, fmt.Errorf("TMDB disabled")
+		}
 		return s.tmdb.GetMovie(id, language)
 	}
 
@@ -62,6 +68,9 @@ func (s *MovieService) GetByID(id int, language string, idType string) (*models.
 		if kpFilm, err := s.kpService.GetFilmByKinopoiskId(id); err == nil {
 			return MapKPFilmToTMDBMovie(kpFilm), nil
 		}
+	}
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
 	}
 	return s.tmdb.GetMovie(id, language)
 }
@@ -73,7 +82,10 @@ func (s *MovieService) GetPopular(page int, language, region string) (*models.TM
 			return MapKPSearchToTMDBResponse(kpResult), nil
 		}
 	}
-	
+
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetPopularMovies(page, language, region)
 }
 
@@ -85,18 +97,30 @@ func (s *MovieService) GetTopRated(page int, language, region string) (*models.T
 		}
 	}
 
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetTopRatedMovies(page, language, region)
 }
 
 func (s *MovieService) GetUpcoming(page int, language, region string) (*models.TMDBResponse, error) {
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetUpcomingMovies(page, language, region)
 }
 
 func (s *MovieService) GetRecommendations(id, page int, language string) (*models.TMDBResponse, error) {
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetMovieRecommendations(id, page, language)
 }
 
 func (s *MovieService) GetSimilar(id, page int, language string) (*models.TMDBResponse, error) {
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetSimilarMovies(id, page, language)
 }
 

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -11,6 +12,28 @@ import (
 type contextKey string
 
 const UserIDKey contextKey = "userID"
+
+// extractUserIDFromClaims supports multiple claim naming conventions.
+// Neo ID tokens contain unified_id (or UnifiedID depending on json tags),
+// while legacy NeoMovies tokens used user_id.
+func extractUserIDFromClaims(claims jwt.MapClaims) (string, error) {
+	if v, ok := claims["unified_id"]; ok {
+		if s, ok := v.(string); ok && s != "" {
+			return s, nil
+		}
+	}
+	if v, ok := claims["UnifiedID"]; ok {
+		if s, ok := v.(string); ok && s != "" {
+			return s, nil
+		}
+	}
+	if v, ok := claims["user_id"]; ok {
+		if s, ok := v.(string); ok && s != "" {
+			return s, nil
+		}
+	}
+	return "", errors.New("user id claim not found")
+}
 
 func JWTAuth(secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -45,8 +68,8 @@ func JWTAuth(secret string) func(http.Handler) http.Handler {
 				return
 			}
 
-			userID, ok := claims["user_id"].(string)
-			if !ok {
+			userID, err := extractUserIDFromClaims(claims)
+			if err != nil {
 				http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
 				return
 			}

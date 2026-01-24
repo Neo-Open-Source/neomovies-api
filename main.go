@@ -45,18 +45,17 @@ func main() {
 	}
 	defer database.Disconnect()
 
-	tmdbService := services.NewTMDBService(cfg.TMDBAccessToken)
+	var tmdbService *services.TMDBService
+	if cfg.TMDBAccessToken != "" {
+		tmdbService = services.NewTMDBService(cfg.TMDBAccessToken)
+	}
 	kpService := services.NewKinopoiskService(cfg.KPAPIKey, cfg.KPAPIBaseURL)
-	emailService := services.NewEmailService(cfg)
-	authService := services.NewAuthService(db, cfg.JWTSecret, emailService, cfg.BaseURL, cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL, cfg.FrontendURL)
-
 	movieService := services.NewMovieService(db, tmdbService, kpService)
 	tvService := services.NewTVService(db, tmdbService, kpService)
 	favoritesService := services.NewFavoritesServiceWithKP(db, tmdbService, kpService)
 	torrentService := services.NewTorrentServiceWithConfig(cfg.RedAPIBaseURL, cfg.RedAPIKey)
 	reactionsService := services.NewReactionsService(db)
 
-	authHandler := appHandlers.NewAuthHandler(authService)
 	movieHandler := appHandlers.NewMovieHandler(movieService)
 	tvHandler := appHandlers.NewTVHandler(tvService)
 	favoritesHandler := appHandlers.NewFavoritesHandlerWithServices(favoritesService, cfg, tmdbService, kpService)
@@ -78,13 +77,6 @@ func main() {
 	api := r.PathPrefix("/api/v1").Subrouter()
 
 	api.HandleFunc("/health", appHandlers.HealthCheck).Methods("GET")
-	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
-	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
-	api.HandleFunc("/auth/verify", authHandler.VerifyEmail).Methods("POST")
-	api.HandleFunc("/auth/resend-code", authHandler.ResendVerificationCode).Methods("POST")
-	api.HandleFunc("/auth/google/login", authHandler.GoogleLogin).Methods("GET")
-	api.HandleFunc("/auth/google/callback", authHandler.GoogleCallback).Methods("GET")
-	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
 
 	api.HandleFunc("/search/multi", searchHandler.MultiSearch).Methods("GET")
 
@@ -147,12 +139,6 @@ func main() {
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.AddToFavorites).Methods("POST")
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.RemoveFromFavorites).Methods("DELETE")
 	protected.HandleFunc("/favorites/{id}/check", favoritesHandler.CheckIsFavorite).Methods("GET")
-
-	protected.HandleFunc("/auth/profile", authHandler.GetProfile).Methods("GET")
-	protected.HandleFunc("/auth/profile", authHandler.UpdateProfile).Methods("PUT")
-	protected.HandleFunc("/auth/profile", authHandler.DeleteAccount).Methods("DELETE")
-	protected.HandleFunc("/auth/revoke-token", authHandler.RevokeRefreshToken).Methods("POST")
-	protected.HandleFunc("/auth/revoke-all-tokens", authHandler.RevokeAllRefreshTokens).Methods("POST")
 
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}/my-reaction", reactionsHandler.GetMyReaction).Methods("GET")
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.SetReaction).Methods("POST")

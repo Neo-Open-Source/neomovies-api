@@ -23,6 +23,9 @@ func NewTVService(db *mongo.Database, tmdb *TMDBService, kpService *KinopoiskSer
 }
 
 func (s *TVService) Search(query string, page int, language string, year int) (*models.TMDBTVResponse, error) {
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.SearchTVShows(query, page, language, year)
 }
 
@@ -64,6 +67,9 @@ func (s *TVService) GetByID(id int, language string, idType string) (*models.TVS
 		return nil, fmt.Errorf("TV show not found in Kinopoisk with id %d", id)
 
 	case "tmdb":
+		if s.tmdb == nil {
+			return nil, fmt.Errorf("TMDB disabled")
+		}
 		return s.tmdb.GetTVShow(id, language)
 	}
 
@@ -74,6 +80,9 @@ func (s *TVService) GetByID(id int, language string, idType string) (*models.TVS
 		}
 	}
 
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetTVShow(id, language)
 }
 
@@ -85,6 +94,9 @@ func (s *TVService) GetPopular(page int, language string) (*models.TMDBTVRespons
 		}
 	}
 
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetPopularTVShows(page, language)
 }
 
@@ -96,22 +108,37 @@ func (s *TVService) GetTopRated(page int, language string) (*models.TMDBTVRespon
 		}
 	}
 
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetTopRatedTVShows(page, language)
 }
 
 func (s *TVService) GetOnTheAir(page int, language string) (*models.TMDBTVResponse, error) {
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetOnTheAirTVShows(page, language)
 }
 
 func (s *TVService) GetAiringToday(page int, language string) (*models.TMDBTVResponse, error) {
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetAiringTodayTVShows(page, language)
 }
 
 func (s *TVService) GetRecommendations(id, page int, language string) (*models.TMDBTVResponse, error) {
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetTVRecommendations(id, page, language)
 }
 
 func (s *TVService) GetSimilar(id, page int, language string) (*models.TMDBTVResponse, error) {
+	if s.tmdb == nil {
+		return nil, fmt.Errorf("TMDB disabled")
+	}
 	return s.tmdb.GetSimilarTVShows(id, page, language)
 }
 
