@@ -72,8 +72,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	router := mux.NewRouter()
 
-	// Public docs
-	router.HandleFunc("/", docsHandler.ServeDocs).Methods("GET")
+	// OpenAPI spec (used by VitePress docs)
 	router.HandleFunc("/openapi.json", docsHandler.GetOpenAPISpec).Methods("GET")
 
 	api := router.PathPrefix("/api/v1").Subrouter()

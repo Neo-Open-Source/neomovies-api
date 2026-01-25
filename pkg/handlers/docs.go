@@ -5,22 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/MarceloPetrucio/go-scalar-api-reference"
 )
 
 type DocsHandler struct{}
 
 func NewDocsHandler() *DocsHandler {
 	return &DocsHandler{}
-}
-
-func (h *DocsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.ServeDocs(w, r)
-}
-
-func (h *DocsHandler) RedirectToDocs(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
 }
 
 func (h *DocsHandler) GetOpenAPISpec(w http.ResponseWriter, r *http.Request) {
@@ -34,37 +24,6 @@ func (h *DocsHandler) GetOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Origin, X-Requested-With")
 	json.NewEncoder(w).Encode(spec)
-}
-
-func (h *DocsHandler) ServeDocs(w http.ResponseWriter, r *http.Request) {
-	spec := getOpenAPISpecWithURL("/")
-	specJSON, err := json.Marshal(spec)
-	if err != nil {
-		fmt.Printf("Error marshaling OpenAPI spec: %v", err)
-		http.Error(w, fmt.Sprintf("Error marshaling spec: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	htmlContent, err := scalar.ApiReferenceHTML(&scalar.Options{
-		SpecContent: string(specJSON),
-		CustomOptions: scalar.CustomOptions{
-			PageTitle: "Neo Movies API Documentation",
-		},
-		DarkMode: true,
-	})
-
-	if err != nil {
-		fmt.Printf("Error generating documentation: %v", err)
-		http.Error(w, fmt.Sprintf("Error generating documentation: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	w.Header().Set("Pragma", "no-cache")
-	w.Header().Set("Expires", "0")
-	fmt.Fprintln(w, htmlContent)
 }
 
 func determineBaseURL(r *http.Request) string {

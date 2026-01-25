@@ -2,6 +2,13 @@
   "version": 2,
   "builds": [
     {
+      "src": "docs/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "docs/.vitepress/dist"
+      }
+    },
+    {
       "src": "api/index.go",
       "use": "@vercel/go",
       "config": {
@@ -11,11 +18,22 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/api/(.*)",
       "dest": "/api/index.go"
+    },
+    {
+      "src": "/openapi\\.json$",
+      "dest": "/api/index.go"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "env": {
-    "GO_VERSION": "1.21"
+    "GO_VERSION": "1.23"
   }
 }

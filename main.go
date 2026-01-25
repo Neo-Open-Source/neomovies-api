@@ -71,7 +71,6 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", docsHandler.ServeDocs).Methods("GET")
 	r.HandleFunc("/openapi.json", docsHandler.GetOpenAPISpec).Methods("GET")
 
 	api := r.PathPrefix("/api/v1").Subrouter()
