@@ -30,11 +30,11 @@
     },
     {
       "src": "/$",
-      "dest": "/index.html"
+      "dest": "/docs/index.html"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/docs/$1"
     }
   ],
   "env": {
