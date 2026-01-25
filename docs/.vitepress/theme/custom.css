@@ -1,12 +1,3 @@
-.VPNavBarTitle .title,
-.VPNavBarTitle .title .text,
-.VPNavBarTitle .title span {
-  background: linear-gradient(90deg, #8b5cf6 0%, #60a5fa 55%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 .VPHomeHero .name {
   background: linear-gradient(90deg, #8b5cf6 0%, #60a5fa 55%, #a78bfa 100%);
   -webkit-background-clip: text;
@@ -15,13 +6,18 @@
 }
 
 .VPHomeHero .image {
-  width: 220px;
-  height: 220px;
-  border-radius: 36px;
+  width: auto;
+  height: auto;
+}
+
+.VPHomeHero .image img {
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
   box-shadow:
-    0 0 60px rgba(180, 160, 255, 0.28),
-    0 0 110px rgba(120, 200, 255, 0.16);
+    0 0 40px rgba(180, 160, 255, 0.22),
+    0 0 80px rgba(120, 200, 255, 0.12);
   filter:
-    drop-shadow(0 0 22px rgba(180, 160, 255, 0.35))
-    drop-shadow(0 0 60px rgba(120, 200, 255, 0.18));
+    drop-shadow(0 0 16px rgba(180, 160, 255, 0.28))
+    drop-shadow(0 0 42px rgba(120, 200, 255, 0.14));
 }
