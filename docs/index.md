@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: NeoMovies API
+  name: NeoMovies
   text: Документация
   tagline: REST API для NeoMovies (поиск, детали, плееры, торренты, реакции)
   actions:

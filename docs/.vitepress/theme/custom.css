@@ -1,0 +1,9 @@
+.VPNavBarTitle .logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.VPHomeHero .image {
+  border-radius: 16px;
+}
