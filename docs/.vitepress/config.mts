@@ -4,6 +4,10 @@ export default defineConfig({
   lang: 'ru-RU',
   title: 'NeoMovies',
   description: 'Документация NeoMovies',
+  head: [
+    ['link', { rel: 'icon', type: 'image/png', href: '/docs/logo.png' }],
+    ['link', { rel: 'apple-touch-icon', href: '/docs/logo.png' }]
+  ],
   themeConfig: {
     nav: [
       { text: 'Гайд', link: '/guide/quickstart' },

@@ -11,9 +11,9 @@
 }
 
 .VPHomeHero .image img {
-  width: 96px;
-  height: 96px;
-  border-radius: 18px;
+  width: 120px;
+  height: 120px;
+  border-radius: 22px;
   box-shadow:
     0 0 40px rgba(180, 160, 255, 0.22),
     0 0 80px rgba(120, 200, 255, 0.12);
