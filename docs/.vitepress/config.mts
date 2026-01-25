@@ -9,6 +9,9 @@ export default defineConfig({
     ['link', { rel: 'apple-touch-icon', href: '/docs/logo.png' }]
   ],
   themeConfig: {
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/Neo-Open-Source/neomovies-api' }
+    ],
     nav: [
       { text: 'Гайд', link: '/guide/quickstart' },
       { text: 'API', link: '/reference/overview' }
