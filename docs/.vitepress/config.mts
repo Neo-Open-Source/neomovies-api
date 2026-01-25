@@ -5,7 +5,6 @@ export default defineConfig({
   title: 'NeoMovies',
   description: 'Документация NeoMovies',
   themeConfig: {
-    logo: '/logo.png',
     nav: [
       { text: 'Гайд', link: '/guide/quickstart' },
       { text: 'API', link: '/reference/overview' }

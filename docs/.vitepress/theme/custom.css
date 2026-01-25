@@ -1,9 +1,27 @@
-.VPNavBarTitle .logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+.VPNavBarTitle .title,
+.VPNavBarTitle .title .text,
+.VPNavBarTitle .title span {
+  background: linear-gradient(90deg, #8b5cf6 0%, #60a5fa 55%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.VPHomeHero .name {
+  background: linear-gradient(90deg, #8b5cf6 0%, #60a5fa 55%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .VPHomeHero .image {
-  border-radius: 16px;
+  width: 220px;
+  height: 220px;
+  border-radius: 36px;
+  box-shadow:
+    0 0 60px rgba(180, 160, 255, 0.28),
+    0 0 110px rgba(120, 200, 255, 0.16);
+  filter:
+    drop-shadow(0 0 22px rgba(180, 160, 255, 0.35))
+    drop-shadow(0 0 60px rgba(120, 200, 255, 0.18));
 }

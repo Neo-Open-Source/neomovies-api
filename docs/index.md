@@ -5,6 +5,9 @@ hero:
   name: NeoMovies
   text: Документация
   tagline: REST API для NeoMovies (поиск, детали, плееры, торренты, реакции)
+  image:
+    src: /logo.png
+    alt: NeoMovies
   actions:
     - theme: brand
       text: Быстрый старт
