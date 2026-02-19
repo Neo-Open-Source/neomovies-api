@@ -11,3 +11,7 @@ main
 *.so
 *.dylib
 neomovies-api
+
+# VitePress generated artifacts
+docs/.vitepress/cache/
+docs/.vitepress/dist/
