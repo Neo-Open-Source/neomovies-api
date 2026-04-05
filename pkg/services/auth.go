@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"encoding/json"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
@@ -651,4 +652,31 @@ func (s *AuthService) DeleteAccount(ctx context.Context, userID string) error {
 	}
 
 	return nil
+}
+
+// GenerateTokenPairPublic is the exported version for use by other handlers
+func (s *AuthService) GenerateTokenPairPublic(userID, userAgent, ipAddress string) (*models.TokenPair, error) {
+	return s.generateTokenPair(userID, userAgent, ipAddress)
+}
+
+// GetUserByNeoID finds a user by their Neo ID unified_id
+func (s *AuthService) GetUserByNeoID(neoID string) (*models.User, error) {
+	collection := s.db.Collection("users")
+	var user models.User
+	err := collection.FindOne(context.Background(), bson.M{"neoId": neoID}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// GetUserByEmailPublic finds a user by email (exported)
+func (s *AuthService) GetUserByEmailPublic(email string) (*models.User, error) {
+	collection := s.db.Collection("users")
+	var user models.User
+	err := collection.FindOne(context.Background(), bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

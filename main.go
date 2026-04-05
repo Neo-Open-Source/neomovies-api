@@ -56,6 +56,12 @@ func main() {
 	torrentService := services.NewTorrentServiceWithConfig(cfg.RedAPIBaseURL, cfg.RedAPIKey)
 	reactionsService := services.NewReactionsService(db)
 
+	emailService := services.NewEmailService(cfg)
+	authService := services.NewAuthService(db, cfg.JWTSecret, emailService, cfg.BaseURL,
+		cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL, cfg.FrontendURL)
+
+	neoIDService := services.NewNeoIDService(db, cfg.NeoIDURL, cfg.NeoIDAPIKey, cfg.NeoIDSiteID, cfg.JWTSecret)
+
 	movieHandler := appHandlers.NewMovieHandler(movieService)
 	tvHandler := appHandlers.NewTVHandler(tvService)
 	favoritesHandler := appHandlers.NewFavoritesHandlerWithServices(favoritesService, cfg, tmdbService, kpService)
@@ -68,6 +74,9 @@ func main() {
 	reactionsHandler := appHandlers.NewReactionsHandler(reactionsService)
 	imagesHandler := appHandlers.NewImagesHandler()
 	supportHandler := appHandlers.NewSupportHandler()
+	neoIDHandler := appHandlers.NewNeoIDHandler(neoIDService, authService)
+	authHandler := appHandlers.NewAuthHandler(authService).WithNeoID(neoIDService)
+	webhookHandler := appHandlers.NewWebhookHandler(authService)
 
 	r := mux.NewRouter()
 
@@ -76,6 +85,20 @@ func main() {
 	api := r.PathPrefix("/api/v1").Subrouter()
 
 	api.HandleFunc("/health", appHandlers.HealthCheck).Methods("GET")
+
+	// Auth routes
+	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
+	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	api.HandleFunc("/auth/verify-email", authHandler.VerifyEmail).Methods("POST")
+	api.HandleFunc("/auth/resend-code", authHandler.ResendVerificationCode).Methods("POST")
+	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
+	api.HandleFunc("/auth/google/login", authHandler.GoogleLogin).Methods("GET")
+	api.HandleFunc("/auth/google/callback", authHandler.GoogleCallback).Methods("GET")
+	// Neo ID auth
+	api.HandleFunc("/auth/neo-id/login", neoIDHandler.GetLoginURL).Methods("POST")
+	api.HandleFunc("/auth/neo-id/callback", neoIDHandler.Callback).Methods("POST")
+	// Webhooks
+	api.HandleFunc("/webhooks/neo-id", webhookHandler.NeoIDWebhook).Methods("POST")
 
 	api.HandleFunc("/search/multi", searchHandler.MultiSearch).Methods("GET")
 
@@ -138,6 +161,13 @@ func main() {
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.AddToFavorites).Methods("POST")
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.RemoveFromFavorites).Methods("DELETE")
 	protected.HandleFunc("/favorites/{id}/check", favoritesHandler.CheckIsFavorite).Methods("GET")
+
+	// Protected auth routes
+	protected.HandleFunc("/auth/profile", authHandler.GetProfile).Methods("GET")
+	protected.HandleFunc("/auth/profile", authHandler.UpdateProfile).Methods("PUT")
+	protected.HandleFunc("/auth/refresh-tokens/revoke", authHandler.RevokeRefreshToken).Methods("POST")
+	protected.HandleFunc("/auth/refresh-tokens/revoke-all", authHandler.RevokeAllRefreshTokens).Methods("POST")
+	protected.HandleFunc("/auth/delete-account", authHandler.DeleteAccount).Methods("DELETE")
 
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}/my-reaction", reactionsHandler.GetMyReaction).Methods("GET")
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.SetReaction).Methods("POST")

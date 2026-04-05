@@ -31,6 +31,10 @@ type Config struct {
 	CollapsToken       string
 	VeoVeoHost         string
 	VeoVeoToken        string
+	// Neo ID
+	NeoIDURL    string
+	NeoIDAPIKey string
+	NeoIDSiteID string
 }
 
 func New() *Config {
@@ -62,6 +66,9 @@ func New() *Config {
 		CollapsToken:       getEnv("COLLAPS_TOKEN", ""),
 		VeoVeoHost:         getEnv("VEOVEO_HOST", ""),
 		VeoVeoToken:        getEnv("VEOVEO_TOKEN", ""),
+		NeoIDURL:           getEnv("NEO_ID_URL", "https://id.neomovies.ru"),
+		NeoIDAPIKey:        getEnv("NEO_ID_API_KEY", ""),
+		NeoIDSiteID:        getEnv("NEO_ID_SITE_ID", ""),
 	}
 }
 

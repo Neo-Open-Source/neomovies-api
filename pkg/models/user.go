@@ -22,6 +22,7 @@ type User struct {
 	UpdatedAt           time.Time          `json:"updated_at" bson:"updatedAt"`
 	Provider            string             `json:"provider,omitempty" bson:"provider,omitempty"`
 	GoogleID            string             `json:"googleId,omitempty" bson:"googleId,omitempty"`
+	NeoID               string             `json:"neoId,omitempty" bson:"neoId,omitempty"`
 	RefreshTokens       []RefreshToken     `json:"-" bson:"refreshTokens,omitempty"`
 }
 

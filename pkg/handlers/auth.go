@@ -14,11 +14,17 @@ import (
 )
 
 type AuthHandler struct {
-	authService *services.AuthService
+	authService  *services.AuthService
+	neoIDService *services.NeoIDService
 }
 
 func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
+}
+
+func (h *AuthHandler) WithNeoID(s *services.NeoIDService) *AuthHandler {
+	h.neoIDService = s
+	return h
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -185,9 +191,17 @@ func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user info before deletion (for Neo ID notification)
+	user, _ := h.authService.GetUserByID(userID)
+
 	if err := h.authService.DeleteAccount(r.Context(), userID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Notify Neo ID that user deleted their account (async)
+	if h.neoIDService != nil && user != nil {
+		go h.neoIDService.NotifyUserDeleted(user.NeoID, user.Email)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
