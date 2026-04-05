@@ -70,6 +70,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	imagesHandler := handlersPkg.NewImagesHandler()
 	supportHandler := handlersPkg.NewSupportHandler()
 
+	// Auth + Neo ID
+	emailService := services.NewEmailService(globalCfg)
+	authService := services.NewAuthService(globalDB, globalCfg.JWTSecret, emailService, globalCfg.BaseURL,
+		globalCfg.GoogleClientID, globalCfg.GoogleClientSecret, globalCfg.GoogleRedirectURL, globalCfg.FrontendURL)
+	neoIDService := services.NewNeoIDService(globalDB, globalCfg.NeoIDURL, globalCfg.NeoIDAPIKey, globalCfg.NeoIDSiteID, globalCfg.JWTSecret)
+	authHandler := handlersPkg.NewAuthHandler(authService).WithNeoID(neoIDService)
+	neoIDHandler := handlersPkg.NewNeoIDHandler(neoIDService, authService)
+	webhookHandler := handlersPkg.NewWebhookHandler(authService)
+
 	router := mux.NewRouter()
 
 	// OpenAPI spec (used by VitePress docs)
@@ -79,6 +88,20 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	// Health
 	api.HandleFunc("/health", handlersPkg.HealthCheck).Methods("GET")
+
+	// Auth routes
+	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
+	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	api.HandleFunc("/auth/verify-email", authHandler.VerifyEmail).Methods("POST")
+	api.HandleFunc("/auth/resend-code", authHandler.ResendVerificationCode).Methods("POST")
+	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
+	api.HandleFunc("/auth/google/login", authHandler.GoogleLogin).Methods("GET")
+	api.HandleFunc("/auth/google/callback", authHandler.GoogleCallback).Methods("GET")
+	// Neo ID
+	api.HandleFunc("/auth/neo-id/login", neoIDHandler.GetLoginURL).Methods("POST")
+	api.HandleFunc("/auth/neo-id/callback", neoIDHandler.Callback).Methods("POST")
+	// Webhooks
+	api.HandleFunc("/webhooks/neo-id", webhookHandler.NeoIDWebhook).Methods("POST")
 
 	// Search (only Kinopoisk)
 	api.HandleFunc("/search/multi", searchHandler.MultiSearch).Methods("GET")
@@ -150,6 +173,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.AddToFavorites).Methods("POST")
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.RemoveFromFavorites).Methods("DELETE")
 	protected.HandleFunc("/favorites/{id}/check", favoritesHandler.CheckIsFavorite).Methods("GET")
+
+	// Protected auth
+	protected.HandleFunc("/auth/profile", authHandler.GetProfile).Methods("GET")
+	protected.HandleFunc("/auth/profile", authHandler.UpdateProfile).Methods("PUT")
+	protected.HandleFunc("/auth/delete-account", authHandler.DeleteAccount).Methods("DELETE")
+	protected.HandleFunc("/auth/refresh-tokens/revoke", authHandler.RevokeRefreshToken).Methods("POST")
+	protected.HandleFunc("/auth/refresh-tokens/revoke-all", authHandler.RevokeAllRefreshTokens).Methods("POST")
 
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}/my-reaction", reactionsHandler.GetMyReaction).Methods("GET")
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.SetReaction).Methods("POST")
