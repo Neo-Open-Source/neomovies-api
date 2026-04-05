@@ -46,16 +46,30 @@ type NeoIDUser struct {
 }
 
 // VerifyToken verifies a Neo ID access token and returns user info
+// Uses /api/site/verify which accepts standard Neo ID access tokens
 func (s *NeoIDService) VerifyToken(token string) (*NeoIDUser, error) {
+	// First try /api/site/verify (standard endpoint)
+	user, err := s.verifyViaAPI(token)
+	if err == nil {
+		return user, nil
+	}
+
+	// Fallback: decode JWT directly (works when JWT_SECRET is shared)
+	return s.verifyViaJWT(token)
+}
+
+func (s *NeoIDService) verifyViaAPI(token string) (*NeoIDUser, error) {
+	body := `{"token":"` + token + `"}`
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
 		s.neoIDURL+"/api/site/verify",
-		strings.NewReader(`{"token":"`+token+`"}`),
+		strings.NewReader(body),
 	)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("X-API-Key", s.apiKey)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -78,6 +92,51 @@ func (s *NeoIDService) VerifyToken(token string) (*NeoIDUser, error) {
 		return nil, fmt.Errorf("invalid token")
 	}
 	return result.User, nil
+}
+
+func (s *NeoIDService) verifyViaJWT(token string) (*NeoIDUser, error) {
+	// Try /oauth/userinfo with the token as Bearer
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
+		s.neoIDURL+"/oauth/userinfo",
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("userinfo request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("userinfo returned %d", resp.StatusCode)
+	}
+
+	var claims struct {
+		Sub        string `json:"sub"`
+		Email      string `json:"email"`
+		Name       string `json:"name"`
+		GivenName  string `json:"given_name"`
+		FamilyName string `json:"family_name"`
+		Picture    string `json:"picture"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&claims); err != nil {
+		return nil, err
+	}
+	if claims.Sub == "" {
+		return nil, fmt.Errorf("no sub in userinfo")
+	}
+	return &NeoIDUser{
+		UnifiedID:   claims.Sub,
+		Email:       claims.Email,
+		DisplayName: claims.Name,
+		Avatar:      claims.Picture,
+		FirstName:   claims.GivenName,
+		LastName:    claims.FamilyName,
+	}, nil
 }
 
 // GetOrCreateUser finds or creates a local user from Neo ID user info
