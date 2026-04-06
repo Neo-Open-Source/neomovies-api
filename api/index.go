@@ -70,49 +70,42 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	imagesHandler := handlersPkg.NewImagesHandler()
 	supportHandler := handlersPkg.NewSupportHandler()
 
-	// Auth + Neo ID
-	emailService := services.NewEmailService(globalCfg)
-	authService := services.NewAuthService(globalDB, globalCfg.JWTSecret, emailService, globalCfg.BaseURL,
-		globalCfg.GoogleClientID, globalCfg.GoogleClientSecret, globalCfg.GoogleRedirectURL, globalCfg.FrontendURL)
+	// Auth — Neo ID only
+	authService := services.NewAuthService(globalDB, globalCfg.JWTSecret)
 	neoIDService := services.NewNeoIDService(globalDB, globalCfg.NeoIDURL, globalCfg.NeoIDAPIKey, globalCfg.NeoIDSiteID, globalCfg.JWTSecret)
 	authHandler := handlersPkg.NewAuthHandler(authService).WithNeoID(neoIDService)
 	neoIDHandler := handlersPkg.NewNeoIDHandler(neoIDService, authService)
 	webhookHandler := handlersPkg.NewWebhookHandler(authService)
 
 	router := mux.NewRouter()
-
-	// OpenAPI spec (used by VitePress docs)
 	router.HandleFunc("/openapi.json", docsHandler.GetOpenAPISpec).Methods("GET")
 
 	api := router.PathPrefix("/api/v1").Subrouter()
-
-	// Health
 	api.HandleFunc("/health", handlersPkg.HealthCheck).Methods("GET")
 
-	// Auth routes
-	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
-	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
-	api.HandleFunc("/auth/verify-email", authHandler.VerifyEmail).Methods("POST")
-	api.HandleFunc("/auth/resend-code", authHandler.ResendVerificationCode).Methods("POST")
-	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
-	api.HandleFunc("/auth/google/login", authHandler.GoogleLogin).Methods("GET")
-	api.HandleFunc("/auth/google/callback", authHandler.GoogleCallback).Methods("GET")
-	// Neo ID
+	// Auth — only Neo ID
 	api.HandleFunc("/auth/neo-id/login", neoIDHandler.GetLoginURL).Methods("POST")
 	api.HandleFunc("/auth/neo-id/callback", neoIDHandler.Callback).Methods("POST")
-	// Webhooks
+	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
 	api.HandleFunc("/webhooks/neo-id", webhookHandler.NeoIDWebhook).Methods("POST")
+	// Disabled legacy endpoints
+	gone := func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":"disabled, use Neo ID auth"}`, http.StatusGone)
+	}
+	api.HandleFunc("/auth/register", gone).Methods("POST")
+	api.HandleFunc("/auth/login", gone).Methods("POST")
+	api.HandleFunc("/auth/verify-email", gone).Methods("POST")
+	api.HandleFunc("/auth/resend-code", gone).Methods("POST")
+	api.HandleFunc("/auth/google/login", gone).Methods("GET")
+	api.HandleFunc("/auth/google/callback", gone).Methods("GET")
 
-	// Search (only Kinopoisk)
 	api.HandleFunc("/search/multi", searchHandler.MultiSearch).Methods("GET")
 	api.HandleFunc("/search", unifiedHandler.Search).Methods("GET")
 
-	// Categories (Kinopoisk only)
 	api.HandleFunc("/categories", categoriesHandler.GetCategories).Methods("GET")
 	api.HandleFunc("/categories/{id}/movies", categoriesHandler.GetMoviesByCategory).Methods("GET")
 	api.HandleFunc("/categories/{id}/media", categoriesHandler.GetMediaByCategory).Methods("GET")
 
-	// Players
 	api.HandleFunc("/players/alloha/{id_type}/{id}", playersHandler.GetAllohaPlayer).Methods("GET")
 	api.HandleFunc("/players/lumex/{id_type}/{id}", playersHandler.GetLumexPlayer).Methods("GET")
 	api.HandleFunc("/players/vibix/{id_type}/{id}", playersHandler.GetVibixPlayer).Methods("GET")
@@ -122,7 +115,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/players/hdvb/{id_type}/{id}", playersHandler.GetHDVBPlayer).Methods("GET")
 	api.HandleFunc("/players/collaps/{id_type}/{id}", playersHandler.GetCollapsPlayer).Methods("GET")
 
-	// Torrents
 	api.HandleFunc("/torrents/search/by-title", torrentsHandler.SearchByTitle).Methods("GET")
 	api.HandleFunc("/torrents/movies", torrentsHandler.SearchMovies).Methods("GET")
 	api.HandleFunc("/torrents/series", torrentsHandler.SearchSeries).Methods("GET")
@@ -131,16 +123,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/torrents/search", torrentsHandler.SearchByQuery).Methods("GET")
 	api.HandleFunc("/torrents/search/{imdbId}", torrentsHandler.SearchTorrents).Methods("GET")
 
-	// Reactions (public counts)
 	api.HandleFunc("/reactions/{mediaType}/{mediaId}/counts", reactionsHandler.GetReactionCounts).Methods("GET")
-
-	// Images
 	api.HandleFunc("/images/{type}/{id}", imagesHandler.GetImage).Methods("GET")
-
-	// Support
 	api.HandleFunc("/support/list", supportHandler.GetSupportersList).Methods("GET")
 
-	// Movies (Kinopoisk only)
 	api.HandleFunc("/movies/search", movieHandler.Search).Methods("GET")
 	api.HandleFunc("/movies/popular", movieHandler.Popular).Methods("GET")
 	api.HandleFunc("/movies/top-rated", movieHandler.TopRated).Methods("GET")
@@ -150,7 +136,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/movies/{id}/external-ids", movieHandler.GetExternalIDs).Methods("GET")
 	api.HandleFunc("/movies/{id}", movieHandler.GetByID).Methods("GET")
 
-	// TV (Kinopoisk only)
 	api.HandleFunc("/tv/search", tvHandler.Search).Methods("GET")
 	api.HandleFunc("/tv/popular", tvHandler.Popular).Methods("GET")
 	api.HandleFunc("/tv/top-rated", tvHandler.TopRated).Methods("GET")
@@ -161,11 +146,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/tv/{id}/external-ids", tvHandler.GetExternalIDs).Methods("GET")
 	api.HandleFunc("/tv/{id}", tvHandler.GetByID).Methods("GET")
 
-	// Unified (Kinopoisk only)
 	api.HandleFunc("/movie/{id}", unifiedHandler.GetMovie).Methods("GET")
-	api.HandleFunc("/tv/{id}", unifiedHandler.GetTV).Methods("GET")
 
-	// Protected routes (JWT with Neo ID support)
 	protected := api.PathPrefix("").Subrouter()
 	protected.Use(middleware.JWTAuth(globalCfg.JWTSecret))
 
@@ -174,7 +156,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.RemoveFromFavorites).Methods("DELETE")
 	protected.HandleFunc("/favorites/{id}/check", favoritesHandler.CheckIsFavorite).Methods("GET")
 
-	// Protected auth
 	protected.HandleFunc("/auth/profile", authHandler.GetProfile).Methods("GET")
 	protected.HandleFunc("/auth/profile", authHandler.UpdateProfile).Methods("PUT")
 	protected.HandleFunc("/auth/delete-account", authHandler.DeleteAccount).Methods("DELETE")
@@ -186,29 +167,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	protected.HandleFunc("/reactions/{mediaType}/{mediaId}", reactionsHandler.RemoveReaction).Methods("DELETE")
 	protected.HandleFunc("/reactions/my", reactionsHandler.GetMyReactions).Methods("GET")
 
-	// CORS configuration - allow all origins
 	corsHandler := handlers.CORS(
-		handlers.AllowedOrigins([]string{
-			"*", // Allow all origins
-		}),
+		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"}),
-		handlers.AllowedHeaders([]string{
-			"Authorization",
-			"Content-Type",
-			"Accept",
-			"Origin",
-			"X-Requested-With",
-			"X-CSRF-Token",
-			"Access-Control-Allow-Origin",
-			"Access-Control-Allow-Headers",
-			"Access-Control-Allow-Methods",
-			"Access-Control-Allow-Credentials",
-		}),
-		handlers.ExposedHeaders([]string{
-			"Authorization",
-			"Content-Type",
-			"X-Total-Count",
-		}),
+		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"}),
+		handlers.ExposedHeaders([]string{"Authorization", "Content-Type", "X-Total-Count"}),
 		handlers.MaxAge(3600),
 	)
 
