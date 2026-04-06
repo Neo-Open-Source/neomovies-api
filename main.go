@@ -56,9 +56,7 @@ func main() {
 	torrentService := services.NewTorrentServiceWithConfig(cfg.RedAPIBaseURL, cfg.RedAPIKey)
 	reactionsService := services.NewReactionsService(db)
 
-	emailService := services.NewEmailService(cfg)
-	authService := services.NewAuthService(db, cfg.JWTSecret, emailService, cfg.BaseURL,
-		cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL, cfg.FrontendURL)
+	authService := services.NewAuthService(db, cfg.JWTSecret)
 
 	neoIDService := services.NewNeoIDService(db, cfg.NeoIDURL, cfg.NeoIDAPIKey, cfg.NeoIDSiteID, cfg.JWTSecret)
 
@@ -86,19 +84,22 @@ func main() {
 
 	api.HandleFunc("/health", appHandlers.HealthCheck).Methods("GET")
 
-	// Auth routes
-	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
-	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
-	api.HandleFunc("/auth/verify-email", authHandler.VerifyEmail).Methods("POST")
-	api.HandleFunc("/auth/resend-code", authHandler.ResendVerificationCode).Methods("POST")
-	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
-	api.HandleFunc("/auth/google/login", authHandler.GoogleLogin).Methods("GET")
-	api.HandleFunc("/auth/google/callback", authHandler.GoogleCallback).Methods("GET")
-	// Neo ID auth
+	// Auth — only Neo ID
 	api.HandleFunc("/auth/neo-id/login", neoIDHandler.GetLoginURL).Methods("POST")
 	api.HandleFunc("/auth/neo-id/callback", neoIDHandler.Callback).Methods("POST")
+	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
 	// Webhooks
 	api.HandleFunc("/webhooks/neo-id", webhookHandler.NeoIDWebhook).Methods("POST")
+	// Disabled legacy auth endpoints
+	gone := func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":"disabled, use Neo ID auth"}`, http.StatusGone)
+	}
+	api.HandleFunc("/auth/register", gone).Methods("POST")
+	api.HandleFunc("/auth/login", gone).Methods("POST")
+	api.HandleFunc("/auth/verify-email", gone).Methods("POST")
+	api.HandleFunc("/auth/resend-code", gone).Methods("POST")
+	api.HandleFunc("/auth/google/login", gone).Methods("GET")
+	api.HandleFunc("/auth/google/callback", gone).Methods("GET")
 
 	api.HandleFunc("/search/multi", searchHandler.MultiSearch).Methods("GET")
 

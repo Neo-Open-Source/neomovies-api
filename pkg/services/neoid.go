@@ -46,9 +46,9 @@ type NeoIDUser struct {
 }
 
 // VerifyToken verifies a Neo ID access token and returns user info
-// Uses /api/site/verify which accepts standard Neo ID access tokens
+// Uses /api/service/verify which accepts standard Neo ID access tokens
 func (s *NeoIDService) VerifyToken(token string) (*NeoIDUser, error) {
-	// First try /api/site/verify (standard endpoint)
+	// First try /api/service/verify (standard endpoint)
 	user, err := s.verifyViaAPI(token)
 	if err == nil {
 		return user, nil
@@ -61,7 +61,7 @@ func (s *NeoIDService) VerifyToken(token string) (*NeoIDUser, error) {
 func (s *NeoIDService) verifyViaAPI(token string) (*NeoIDUser, error) {
 	body := `{"token":"` + token + `"}`
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
-		s.neoIDURL+"/api/site/verify",
+		s.neoIDURL+"/api/service/verify",
 		strings.NewReader(body),
 	)
 	if err != nil {
@@ -171,8 +171,6 @@ func (s *NeoIDService) GetOrCreateUser(neoUser *NeoIDUser) (*models.User, error)
 			// Link neo id
 			_, _ = collection.UpdateOne(ctx, bson.M{"_id": user.ID}, bson.M{"$set": bson.M{
 				"neoId":     neoUser.UnifiedID,
-				"provider":  "neo_id",
-				"verified":  true,
 				"updatedAt": time.Now(),
 			}})
 			return &user, nil
@@ -193,9 +191,6 @@ func (s *NeoIDService) GetOrCreateUser(neoUser *NeoIDUser) (*models.User, error)
 		Email:     neoUser.Email,
 		Name:      name,
 		Avatar:    neoUser.Avatar,
-		Favorites: []string{},
-		Verified:  true,
-		Provider:  "neo_id",
 		NeoID:     neoUser.UnifiedID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -216,7 +211,7 @@ func (s *NeoIDService) GetLoginURL(redirectURL, state string, popup bool) (strin
 		redirectURL, state, map[bool]string{true: "popup", false: "redirect"}[popup])
 
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
-		s.neoIDURL+"/api/site/login",
+		s.neoIDURL+"/api/service/login",
 		strings.NewReader(body),
 	)
 	if err != nil {
@@ -260,7 +255,7 @@ func (s *NeoIDService) NotifyUserDeleted(neoUnifiedID, email string) {
 		"email":      email,
 	})
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
-		s.neoIDURL+"/api/site/user-deleted",
+		s.neoIDURL+"/api/service/user-deleted",
 		strings.NewReader(string(payload)),
 	)
 	if err != nil {

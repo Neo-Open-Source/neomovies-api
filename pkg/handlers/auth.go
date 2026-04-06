@@ -3,8 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -27,131 +25,17 @@ func (h *AuthHandler) WithNeoID(s *services.NeoIDService) *AuthHandler {
 	return h
 }
 
-func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req models.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	response, err := h.authService.Register(req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusConflict)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Data: response, Message: "User registered successfully"})
-}
-
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req models.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Получаем информацию о клиенте для refresh токена
-	userAgent := r.Header.Get("User-Agent")
-	ipAddress := r.RemoteAddr
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		ipAddress = forwarded
-	}
-
-	response, err := h.authService.LoginWithTokens(req, userAgent, ipAddress)
-	if err != nil {
-		statusCode := http.StatusBadRequest
-		if err.Error() == "Account not activated. Please verify your email." {
-			statusCode = http.StatusForbidden
-		}
-		http.Error(w, err.Error(), statusCode)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Data: response, Message: "Login successful"})
-}
-
-func (h *AuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
-	state := generateState()
-	http.SetCookie(w, &http.Cookie{Name: "oauth_state", Value: state, HttpOnly: true, Path: "/", Expires: time.Now().Add(10 * time.Minute)})
-	url, err := h.authService.GetGoogleLoginURL(state)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	http.Redirect(w, r, url, http.StatusFound)
-}
-
-func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	state := q.Get("state")
-	code := q.Get("code")
-	preferJSON := q.Get("response") == "json" || strings.Contains(r.Header.Get("Accept"), "application/json")
-	cookie, _ := r.Cookie("oauth_state")
-	if cookie == nil || cookie.Value != state || code == "" {
-		if preferJSON {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(models.APIResponse{Success: false, Message: "invalid oauth state"})
-			return
-		}
-		redirectURL, ok := h.authService.BuildFrontendRedirect("", "invalid_state")
-		if ok {
-			http.Redirect(w, r, redirectURL, http.StatusFound)
-			return
-		}
-		http.Error(w, "invalid oauth state", http.StatusBadRequest)
-		return
-	}
-
-	resp, err := h.authService.HandleGoogleCallback(r.Context(), code)
-	if err != nil {
-		if preferJSON {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(models.APIResponse{Success: false, Message: err.Error()})
-			return
-		}
-		redirectURL, ok := h.authService.BuildFrontendRedirect("", "auth_failed")
-		if ok {
-			http.Redirect(w, r, redirectURL, http.StatusFound)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if preferJSON {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(models.APIResponse{Success: true, Data: resp, Message: "Login successful"})
-		return
-	}
-
-	redirectURL, ok := h.authService.BuildFrontendRedirect(resp.Token, "")
-	if ok {
-		http.Redirect(w, r, redirectURL, http.StatusFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Data: resp, Message: "Login successful"})
-}
-
 func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
 	user, err := h.authService.GetUserByID(userID)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "user not found", http.StatusNotFound)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Data: user})
 }
@@ -159,165 +43,98 @@ func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-
-	delete(updates, "password")
-	delete(updates, "email")
-	delete(updates, "_id")
-	delete(updates, "created_at")
-
-	user, err := h.authService.UpdateUser(userID, bson.M(updates))
+	// Only allow safe fields
+	allowed := map[string]bool{"name": true, "avatar": true}
+	patch := bson.M{}
+	for k, v := range updates {
+		if allowed[k] {
+			patch[k] = v
+		}
+	}
+	user, err := h.authService.UpdateUser(userID, patch)
 	if err != nil {
-		http.Error(w, "Failed to update user", http.StatusInternalServerError)
+		http.Error(w, "failed to update profile", http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Data: user, Message: "Profile updated successfully"})
+	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Data: user, Message: "Profile updated"})
 }
 
 func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	// Get user info before deletion (for Neo ID notification)
 	user, _ := h.authService.GetUserByID(userID)
-
 	if err := h.authService.DeleteAccount(r.Context(), userID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Notify Neo ID that user deleted their account (async)
 	if h.neoIDService != nil && user != nil {
 		go h.neoIDService.NotifyUserDeleted(user.NeoID, user.Email)
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Message: "Account deleted successfully"})
+	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Message: "Account deleted"})
 }
 
-func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
-	var req models.VerifyEmailRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	response, err := h.authService.VerifyEmail(req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
-func (h *AuthHandler) ResendVerificationCode(w http.ResponseWriter, r *http.Request) {
-	var req models.ResendCodeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	response, err := h.authService.ResendVerificationCode(req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
-// RefreshToken refreshes an access token using a refresh token
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req models.RefreshTokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.RefreshToken == "" {
+		http.Error(w, "refreshToken is required", http.StatusBadRequest)
 		return
 	}
-
-	// Получаем информацию о клиенте
-	userAgent := r.Header.Get("User-Agent")
-	ipAddress := r.RemoteAddr
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		ipAddress = forwarded
+	ua := r.Header.Get("User-Agent")
+	ip := r.RemoteAddr
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+		ip = fwd
 	}
-
-	tokenPair, err := h.authService.RefreshAccessToken(req.RefreshToken, userAgent, ipAddress)
+	pair, err := h.authService.RefreshAccessToken(req.RefreshToken, ua, ip)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{
-		Success: true,
-		Data:    tokenPair,
-		Message: "Token refreshed successfully",
-	})
+	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Data: pair})
 }
 
-// RevokeRefreshToken revokes a specific refresh token
 func (h *AuthHandler) RevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
 	var req models.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-
-	err := h.authService.RevokeRefreshToken(userID, req.RefreshToken)
-	if err != nil {
+	if err := h.authService.RevokeRefreshToken(userID, req.RefreshToken); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{
-		Success: true,
-		Message: "Refresh token revoked successfully",
-	})
+	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Message: "Token revoked"})
 }
 
-// RevokeAllRefreshTokens revokes all refresh tokens for the current user
 func (h *AuthHandler) RevokeAllRefreshTokens(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	err := h.authService.RevokeAllRefreshTokens(userID)
-	if err != nil {
+	if err := h.authService.RevokeAllRefreshTokens(userID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.APIResponse{
-		Success: true,
-		Message: "All refresh tokens revoked successfully",
-	})
+	json.NewEncoder(w).Encode(models.APIResponse{Success: true, Message: "All tokens revoked"})
 }
-
-// helpers
-func generateState() string { return uuidNew() }
