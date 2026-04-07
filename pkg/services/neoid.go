@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -219,6 +220,7 @@ func (s *NeoIDService) GetLoginURL(redirectURL, state string, popup bool) (strin
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("X-API-Key", s.apiKey)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -226,14 +228,27 @@ func (s *NeoIDService) GetLoginURL(redirectURL, state string, popup bool) (strin
 	}
 	defer resp.Body.Close()
 
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		msg := strings.TrimSpace(string(respBody))
+		if len(msg) > 500 {
+			msg = msg[:500] + "..."
+		}
+		return "", fmt.Errorf("neo id login returned %d: %s", resp.StatusCode, msg)
+	}
+
 	var result struct {
 		LoginURL string `json:"login_url"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.Unmarshal(respBody, &result); err != nil {
 		return "", err
 	}
 	if result.LoginURL == "" {
-		return "", fmt.Errorf("no login_url returned")
+		msg := strings.TrimSpace(string(respBody))
+		if len(msg) > 500 {
+			msg = msg[:500] + "..."
+		}
+		return "", fmt.Errorf("no login_url returned, response: %s", msg)
 	}
 
 	// Make absolute if relative
