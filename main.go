@@ -156,7 +156,7 @@ func main() {
 	api.HandleFunc("/search", unifiedHandler.Search).Methods("GET")
 
 	protected := api.PathPrefix("").Subrouter()
-	protected.Use(middleware.JWTAuth(cfg.JWTSecret))
+	protected.Use(middleware.JWTAuthWithUserCheck(cfg.JWTSecret, authService))
 
 	protected.HandleFunc("/favorites", favoritesHandler.GetFavorites).Methods("GET")
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.AddToFavorites).Methods("POST")

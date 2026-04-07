@@ -149,7 +149,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	api.HandleFunc("/movie/{id}", unifiedHandler.GetMovie).Methods("GET")
 
 	protected := api.PathPrefix("").Subrouter()
-	protected.Use(middleware.JWTAuth(globalCfg.JWTSecret))
+	protected.Use(middleware.JWTAuthWithUserCheck(globalCfg.JWTSecret, authService))
 
 	protected.HandleFunc("/favorites", favoritesHandler.GetFavorites).Methods("GET")
 	protected.HandleFunc("/favorites/{id}", favoritesHandler.AddToFavorites).Methods("POST")
