@@ -47,16 +47,9 @@ type NeoIDUser struct {
 }
 
 // VerifyToken verifies a Neo ID access token and returns user info
-// Uses /api/service/verify which accepts standard Neo ID access tokens
+// Uses /api/service/verify which accepts service-scoped Neo ID access tokens.
 func (s *NeoIDService) VerifyToken(token string) (*NeoIDUser, error) {
-	// First try /api/service/verify (standard endpoint)
-	user, err := s.verifyViaAPI(token)
-	if err == nil {
-		return user, nil
-	}
-
-	// Fallback: decode JWT directly (works when JWT_SECRET is shared)
-	return s.verifyViaJWT(token)
+	return s.verifyViaAPI(token)
 }
 
 func (s *NeoIDService) verifyViaAPI(token string) (*NeoIDUser, error) {
@@ -95,49 +88,73 @@ func (s *NeoIDService) verifyViaAPI(token string) (*NeoIDUser, error) {
 	return result.User, nil
 }
 
-func (s *NeoIDService) verifyViaJWT(token string) (*NeoIDUser, error) {
-	// Try /oauth/userinfo with the token as Bearer
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
-		s.neoIDURL+"/oauth/userinfo",
-		nil,
+// VerifyTokenWithRefresh verifies a service access token and automatically refreshes it when needed.
+// Returns user plus potentially rotated service tokens.
+func (s *NeoIDService) VerifyTokenWithRefresh(accessToken, refreshToken string) (*NeoIDUser, string, string, error) {
+	user, err := s.verifyViaAPI(accessToken)
+	if err == nil {
+		return user, accessToken, refreshToken, nil
+	}
+
+	if strings.TrimSpace(refreshToken) == "" {
+		return nil, "", "", err
+	}
+
+	newAccess, newRefresh, refreshErr := s.refreshServiceToken(refreshToken)
+	if refreshErr != nil {
+		return nil, "", "", fmt.Errorf("verify failed: %v; refresh failed: %w", err, refreshErr)
+	}
+
+	user, verifyErr := s.verifyViaAPI(newAccess)
+	if verifyErr != nil {
+		return nil, "", "", fmt.Errorf("verify after refresh failed: %w", verifyErr)
+	}
+
+	return user, newAccess, newRefresh, nil
+}
+
+func (s *NeoIDService) refreshServiceToken(refreshToken string) (string, string, error) {
+	body := fmt.Sprintf(`{"refresh_token":%q}`, refreshToken)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
+		s.neoIDURL+"/api/service/refresh",
+		strings.NewReader(body),
 	)
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("X-API-Key", s.apiKey)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("userinfo request failed: %w", err)
+		return "", "", fmt.Errorf("neo id refresh request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
+	raw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("userinfo returned %d", resp.StatusCode)
+		msg := strings.TrimSpace(string(raw))
+		if len(msg) > 500 {
+			msg = msg[:500] + "..."
+		}
+		return "", "", fmt.Errorf("neo id refresh returned %d: %s", resp.StatusCode, msg)
 	}
 
-	var claims struct {
-		Sub        string `json:"sub"`
-		Email      string `json:"email"`
-		Name       string `json:"name"`
-		GivenName  string `json:"given_name"`
-		FamilyName string `json:"family_name"`
-		Picture    string `json:"picture"`
+	var out struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&claims); err != nil {
-		return nil, err
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return "", "", err
 	}
-	if claims.Sub == "" {
-		return nil, fmt.Errorf("no sub in userinfo")
+	if out.AccessToken == "" {
+		return "", "", fmt.Errorf("neo id refresh returned empty access_token")
 	}
-	return &NeoIDUser{
-		UnifiedID:   claims.Sub,
-		Email:       claims.Email,
-		DisplayName: claims.Name,
-		Avatar:      claims.Picture,
-		FirstName:   claims.GivenName,
-		LastName:    claims.FamilyName,
-	}, nil
+	if out.RefreshToken == "" {
+		out.RefreshToken = refreshToken
+	}
+	return out.AccessToken, out.RefreshToken, nil
 }
 
 // GetOrCreateUser finds or creates a local user from Neo ID user info

@@ -48,7 +48,8 @@ func (h *NeoIDHandler) GetLoginURL(w http.ResponseWriter, r *http.Request) {
 // POST /api/v1/auth/neo-id/callback
 func (h *NeoIDHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -59,8 +60,8 @@ func (h *NeoIDHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify token with Neo ID
-	neoUser, err := h.neoIDService.VerifyToken(req.Token)
+	// Verify service token with Neo ID and rotate if needed
+	neoUser, rotatedAccess, rotatedRefresh, err := h.neoIDService.VerifyTokenWithRefresh(req.Token, req.RefreshToken)
 	if err != nil {
 		http.Error(w, "invalid neo id token: "+err.Error(), http.StatusUnauthorized)
 		return
@@ -92,6 +93,8 @@ func (h *NeoIDHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		Data: map[string]interface{}{
 			"token":        tokenPair.AccessToken,
 			"refreshToken": tokenPair.RefreshToken,
+			"neoAccess":    rotatedAccess,
+			"neoRefresh":   rotatedRefresh,
 			"user":         user,
 		},
 		Message: "Login successful",
