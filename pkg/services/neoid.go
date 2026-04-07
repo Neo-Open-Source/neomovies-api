@@ -53,7 +53,7 @@ func (s *NeoIDService) VerifyToken(token string) (*NeoIDUser, error) {
 }
 
 func (s *NeoIDService) verifyViaAPI(token string) (*NeoIDUser, error) {
-	body := `{"token":"` + token + `"}`
+	body := fmt.Sprintf(`{"token":%q}`, token)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
 		s.neoIDURL+"/api/service/verify",
 		strings.NewReader(body),
@@ -72,7 +72,12 @@ func (s *NeoIDService) verifyViaAPI(token string) (*NeoIDUser, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("neo id verify returned %d", resp.StatusCode)
+		raw, _ := io.ReadAll(resp.Body)
+		msg := strings.TrimSpace(string(raw))
+		if len(msg) > 500 {
+			msg = msg[:500] + "..."
+		}
+		return nil, fmt.Errorf("neo id verify returned %d: %s", resp.StatusCode, msg)
 	}
 
 	var result struct {
