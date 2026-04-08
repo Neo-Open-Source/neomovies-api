@@ -56,7 +56,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/docs",
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/neomovies/neomovies-api-v2/edit/main/docs/",
+          editUrl: "https://gitlab.com/foxixus/neomovies-api/-/edit/main/docs/",
           editLocalizedFiles: true,
         },
         blog: false,
