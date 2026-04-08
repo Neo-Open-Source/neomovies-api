@@ -1,0 +1,1040 @@
+openapi: 3.1.0
+info:
+  title: NeoMovies API v2
+  version: 2.0.0
+  description: |
+    NeoMovies API v2 — Rust serverless API on Vercel.
+    Includes Neo ID authentication, Kinopoisk-based media/search, player HTML endpoints,
+    favorites, torrents, and image proxy.
+
+servers:
+  - url: https://api.neomovies.ru/api/v1
+    description: Production
+
+tags:
+  - name: System
+  - name: Auth
+  - name: Webhooks
+  - name: Search
+  - name: Media
+  - name: Images
+  - name: Players
+  - name: Torrents
+  - name: Favorites
+  - name: Support
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    KpIdPath:
+      name: kp_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Kinopoisk ID. Accepts `326` or `kp_326` depending on endpoint.
+    MediaTypeQuery:
+      name: type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [movie, tv]
+        default: movie
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    SuccessEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data: {}
+
+    TokenPair:
+      type: object
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    Genre:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    ExternalIds:
+      type: object
+      required: [kp, tmdb, imdb]
+      properties:
+        kp:
+          type: integer
+          nullable: true
+        tmdb:
+          type: integer
+          nullable: true
+        imdb:
+          type: string
+          nullable: true
+
+    SearchResultItem:
+      type: object
+      required:
+        - id
+        - title
+        - originalTitle
+        - rating
+        - posterUrl
+        - genres
+        - description
+        - type
+        - externalIds
+      properties:
+        id:
+          type: string
+          example: kp_326
+        title:
+          type: string
+        originalTitle:
+          type: string
+        year:
+          type: integer
+          nullable: true
+        rating:
+          type: number
+          format: float
+        posterUrl:
+          type: string
+          example: /api/v1/images/kp_small/326
+        genres:
+          type: array
+          items:
+            $ref: "#/components/schemas/Genre"
+        description:
+          type: string
+        type:
+          type: string
+          enum: [movie, tv]
+        externalIds:
+          $ref: "#/components/schemas/ExternalIds"
+
+    SearchResponse:
+      type: object
+      required: [results, total, pages]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResultItem"
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    MediaDetails:
+      type: object
+      required:
+        - id
+        - sourceId
+        - title
+        - originalTitle
+        - description
+        - releaseDate
+        - type
+        - genres
+        - rating
+        - posterUrl
+        - backdropUrl
+        - duration
+        - country
+        - language
+        - externalIds
+      properties:
+        id:
+          type: string
+          example: kp_326
+        sourceId:
+          type: string
+          example: kp_326
+        title:
+          type: string
+        originalTitle:
+          type: string
+        description:
+          type: string
+        releaseDate:
+          type: string
+          example: "1999-01-01"
+        type:
+          type: string
+          enum: [movie, tv]
+        genres:
+          type: array
+          items:
+            $ref: "#/components/schemas/Genre"
+        rating:
+          type: number
+          format: float
+        posterUrl:
+          type: string
+          example: /api/v1/images/kp_small/326
+        backdropUrl:
+          type: string
+          example: /api/v1/images/kp_big/326
+        duration:
+          type: integer
+        country:
+          type: string
+        language:
+          type: string
+        externalIds:
+          $ref: "#/components/schemas/ExternalIds"
+
+    Profile:
+      type: object
+      required: [id, neo_id, email, name, avatar, is_admin, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        neo_id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        avatar:
+          type: string
+        is_admin:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Favorite:
+      type: object
+      required: [id, mediaId, mediaType, title, posterUrl, createdAt]
+      properties:
+        id:
+          type: string
+        mediaId:
+          type: string
+        mediaType:
+          type: string
+          enum: [movie, tv]
+        title:
+          type: string
+        posterUrl:
+          type: string
+        rating:
+          type: number
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    TorrentResult:
+      type: object
+      properties:
+        tracker:
+          type: string
+        url:
+          type: string
+        title:
+          type: string
+        size:
+          type: integer
+        sizeName:
+          type: string
+        createTime:
+          type: string
+        sid:
+          type: integer
+        pir:
+          type: integer
+        magnet:
+          type: string
+        name:
+          type: string
+        originalName:
+          type: string
+        released:
+          type: integer
+        videoType:
+          type: string
+        quality:
+          type: integer
+
+    TorrentSearchResponse:
+      type: object
+      required: [results, total]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/TorrentResult"
+        total:
+          type: integer
+
+    Supporter:
+      type: object
+      required: [id, name, type, year, isActive]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [service, code, donation]
+        description:
+          type: string
+        contributions:
+          type: array
+          items:
+            type: string
+        year:
+          type: integer
+        isActive:
+          type: boolean
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /support/list:
+    get:
+      tags: [Support]
+      summary: List project supporters
+      operationId: getSupporters
+      responses:
+        "200":
+          description: Supporters list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Supporter"
+
+  /search:
+    get:
+      tags: [Search]
+      summary: Search media
+      operationId: searchMedia
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/PageQuery"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SearchResponse"
+        "400":
+          description: Missing query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream search error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /movies/popular:
+    get:
+      tags: [Media]
+      summary: Popular titles
+      operationId: getPopular
+      parameters:
+        - $ref: "#/components/parameters/PageQuery"
+      responses:
+        "200":
+          description: Popular list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SearchResponse"
+
+  /movies/top-rated:
+    get:
+      tags: [Media]
+      summary: Top-rated titles
+      operationId: getTopRated
+      parameters:
+        - $ref: "#/components/parameters/PageQuery"
+      responses:
+        "200":
+          description: Top-rated list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SearchResponse"
+
+  /movie/{kp_id}:
+    get:
+      tags: [Media]
+      summary: Get media details by Kinopoisk ID
+      operationId: getMovieByKpId
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+      responses:
+        "200":
+          description: Media details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MediaDetails"
+        "400":
+          description: Invalid kp_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Media not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/proxy:
+    get:
+      tags: [Images]
+      summary: Proxy external image by URL
+      operationId: proxyImage
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "400":
+          description: Invalid URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream image error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/{kind}/{id}:
+    get:
+      tags: [Images]
+      summary: Proxy Kinopoisk poster by kind/id
+      operationId: getKpImage
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [kp, kp_small, kp_big]
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+        "400":
+          description: Invalid image path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /players/{provider}/kp/{kp_id}:
+    get:
+      tags: [Players]
+      summary: Get embedded player HTML
+      operationId: getPlayerHtml
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [alloha, collaps, lumex, vibix, hdvb]
+        - name: kp_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: episode
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML document with iframe
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: Video not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Provider not configured or internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /torrents/search:
+    get:
+      tags: [Torrents]
+      summary: Search torrents by Kinopoisk ID
+      operationId: searchTorrents
+      parameters:
+        - name: kp_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Accepts `6750360` or `kp6750360`
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: episode
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Torrent results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TorrentSearchResponse"
+        "400":
+          description: Missing or invalid kp_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Torrent service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/neo-id/login:
+    post:
+      tags: [Auth]
+      summary: Request Neo ID login URL
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [redirect_url, state]
+              properties:
+                redirect_url:
+                  type: string
+                  format: uri
+                state:
+                  type: string
+                mode:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Login URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [login_url]
+                properties:
+                  login_url:
+                    type: string
+                    format: uri
+        "400":
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Neo ID unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/neo-id/callback:
+    post:
+      tags: [Auth]
+      summary: Exchange Neo ID token for API tokens
+      operationId: authCallback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [access_token]
+              properties:
+                access_token:
+                  type: string
+      responses:
+        "200":
+          description: Token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "401":
+          description: Invalid Neo ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh JWT pair
+      operationId: authRefresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "401":
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/profile:
+    get:
+      tags: [Auth]
+      summary: Get current profile
+      operationId: getProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Profile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags: [Auth]
+      summary: Update profile
+      operationId: updateProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                avatar:
+                  type: string
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Profile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh-tokens/revoke:
+    post:
+      tags: [Auth]
+      summary: Revoke one refresh token
+      operationId: revokeRefreshToken
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh-tokens/revoke-all:
+    post:
+      tags: [Auth]
+      summary: Revoke all refresh tokens
+      operationId: revokeAllRefreshTokens
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Revoked all
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/delete-account:
+    delete:
+      tags: [Auth]
+      summary: Delete account and related data
+      operationId: deleteAccount
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /webhooks/neo-id:
+    post:
+      tags: [Webhooks]
+      summary: Neo ID webhook
+      operationId: webhookNeoId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event, unified_id]
+              properties:
+                event:
+                  type: string
+                  example: user.deleted
+                unified_id:
+                  type: string
+      responses:
+        "200":
+          description: Processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /favorites:
+    get:
+      tags: [Favorites]
+      summary: List favorites
+      operationId: getFavorites
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Favorites list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Favorite"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /favorites/{kp_id}:
+    post:
+      tags: [Favorites]
+      summary: Add favorite (idempotent)
+      operationId: addFavorite
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - $ref: "#/components/parameters/MediaTypeQuery"
+      responses:
+        "200":
+          description: Added (or already exists)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags: [Favorites]
+      summary: Remove favorite
+      operationId: removeFavorite
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - $ref: "#/components/parameters/MediaTypeQuery"
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /favorites/{kp_id}/check:
+    get:
+      tags: [Favorites]
+      summary: Check favorite status
+      operationId: checkFavorite
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - $ref: "#/components/parameters/MediaTypeQuery"
+      responses:
+        "200":
+          description: Favorite status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [isFavorite]
+                        properties:
+                          isFavorite:
+                            type: boolean
+        "400":
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
