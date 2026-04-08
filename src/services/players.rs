@@ -86,15 +86,7 @@ pub async fn get_alloha_player(
     season: Option<u32>,
     episode: Option<u32>,
 ) -> Result<String, String> {
-    eprintln!(
-        "[players][service][alloha] kp_id={} token_present={} season={:?} episode={:?}",
-        kp_id,
-        !token.is_empty(),
-        season,
-        episode
-    );
     if token.is_empty() {
-        eprintln!("[players][service][alloha] token missing");
         return Err("not_configured".to_string());
     }
 
@@ -104,14 +96,7 @@ pub async fn get_alloha_player(
         format!("https://api.alloha.tv/?token={}&kp={}", token, kp_id),
         format!("http://api.alloha.tv/?token={}&kp={}", token, kp_id),
     ];
-    for (idx, url) in urls.iter().enumerate() {
-        let scheme = if idx == 0 { "https" } else { "http" };
-        eprintln!(
-            "[players][service][alloha] attempt={} GET {}://api.alloha.tv/?kp={}",
-            idx + 1,
-            scheme,
-            kp_id
-        );
+    for url in &urls {
         match alloha_http_client()
             .get(url)
             .header("Accept", "application/json")
@@ -123,15 +108,7 @@ pub async fn get_alloha_player(
                 resp_opt = Some(resp);
                 break;
             }
-            Err(err) => {
-                eprintln!(
-                    "[players][service][alloha] attempt={} request error: {} | debug={:?}",
-                    idx + 1,
-                    err,
-                    err
-                );
-                last_err = Some(err.to_string());
-            }
+            Err(err) => last_err = Some(err.to_string()),
         }
     }
 
@@ -139,13 +116,8 @@ pub async fn get_alloha_player(
         Some(r) => r,
         None => return Err(format!("alloha request failed: {}", last_err.unwrap_or_else(|| "unknown error".to_string()))),
     };
-    eprintln!(
-        "[players][service][alloha] status={}",
-        resp.status().as_u16()
-    );
 
     if !resp.status().is_success() {
-        eprintln!("[players][service][alloha] non-success status");
         return Err("not_found".to_string());
     }
 
@@ -155,21 +127,11 @@ pub async fn get_alloha_player(
         .map_err(|_| "not_found".to_string())?;
 
     if payload.get("status").and_then(Value::as_str) != Some("success") {
-        eprintln!(
-            "[players][service][alloha] response status field='{}'",
-            payload
-                .get("status")
-                .and_then(Value::as_str)
-                .unwrap_or("<missing>")
-        );
         return Err("not_found".to_string());
     }
 
     let data = payload.get("data").unwrap_or(&Value::Null);
-    let iframe_code = pick_alloha_iframe(data, season, episode).ok_or_else(|| {
-        eprintln!("[players][service][alloha] iframe not found in payload");
-        "not_found".to_string()
-    })?;
+    let iframe_code = pick_alloha_iframe(data, season, episode).ok_or_else(|| "not_found".to_string())?;
 
     // If it's a plain URL (no HTML tags), wrap it in an iframe
     let html = if !iframe_code.contains('<') {
@@ -191,19 +153,12 @@ pub async fn get_alloha_player(
 /// Returns HTML iframe page for Lumex player by KP ID.
 /// Returns Err("not_configured") if LUMEX_URL is missing.
 pub async fn get_lumex_player(kp_id: u64, lumex_url: &str) -> Result<String, String> {
-    eprintln!(
-        "[players][service][lumex] kp_id={} lumex_url_present={}",
-        kp_id,
-        !lumex_url.is_empty()
-    );
     if lumex_url.is_empty() {
-        eprintln!("[players][service][lumex] lumex_url missing");
         return Err("not_configured".to_string());
     }
 
     let separator = if lumex_url.contains('?') { "&" } else { "?" };
     let player_url = format!("{}{}kp_id={}", lumex_url, separator, kp_id);
-    eprintln!("[players][service][lumex] player_url={}", player_url);
     Ok(iframe_html(&player_url, "Lumex Player"))
 }
 
@@ -217,20 +172,12 @@ struct VibixResponse {
 
 /// Returns HTML iframe page for Vibix player by KP ID.
 pub async fn get_vibix_player(kp_id: u64, host: &str, token: &str) -> Result<String, String> {
-    eprintln!(
-        "[players][service][vibix] kp_id={} host='{}' token_present={}",
-        kp_id,
-        if host.is_empty() { "<default>" } else { host },
-        !token.is_empty()
-    );
     if token.is_empty() {
-        eprintln!("[players][service][vibix] token missing");
         return Err("not_configured".to_string());
     }
 
     let vibix_host = if host.is_empty() { "https://vibix.org" } else { host };
     let url = format!("{}/api/v1/publisher/videos/kinopoisk/{}", vibix_host, kp_id);
-    eprintln!("[players][service][vibix] GET {}", url);
 
     let resp = http_client()
         .get(&url)
@@ -239,13 +186,8 @@ pub async fn get_vibix_player(kp_id: u64, host: &str, token: &str) -> Result<Str
         .send()
         .await
         .map_err(|e| format!("vibix request failed: {}", e))?;
-    eprintln!(
-        "[players][service][vibix] status={}",
-        resp.status().as_u16()
-    );
 
     if !resp.status().is_success() {
-        eprintln!("[players][service][vibix] non-success status");
         return Err("not_found".to_string());
     }
 
@@ -255,7 +197,6 @@ pub async fn get_vibix_player(kp_id: u64, host: &str, token: &str) -> Result<Str
         .map_err(|_| "not_found".to_string())?;
 
     if data.id.is_none() {
-        eprintln!("[players][service][vibix] empty id in response");
         return Err("not_found".to_string());
     }
 
@@ -271,31 +212,19 @@ pub async fn get_vibix_player(kp_id: u64, host: &str, token: &str) -> Result<Str
 
 /// Returns HTML iframe page for HDVB player by KP ID.
 pub async fn get_hdvb_player(kp_id: u64, token: &str) -> Result<String, String> {
-    eprintln!(
-        "[players][service][hdvb] kp_id={} token_present={}",
-        kp_id,
-        !token.is_empty()
-    );
     if token.is_empty() {
-        eprintln!("[players][service][hdvb] token missing");
         return Err("not_configured".to_string());
     }
 
     let url = format!("https://apivb.com/api/videos.json?id_kp={}&token={}", kp_id, token);
-    eprintln!("[players][service][hdvb] GET /api/videos.json?id_kp={}", kp_id);
 
     let resp = http_client()
         .get(&url)
         .send()
         .await
         .map_err(|e| format!("hdvb request failed: {}", e))?;
-    eprintln!(
-        "[players][service][hdvb] status={}",
-        resp.status().as_u16()
-    );
 
     if !resp.status().is_success() {
-        eprintln!("[players][service][hdvb] non-success status");
         return Err("not_found".to_string());
     }
 
@@ -361,16 +290,7 @@ pub async fn get_collaps_player(
     season: Option<u32>,
     episode: Option<u32>,
 ) -> Result<String, String> {
-    eprintln!(
-        "[players][service][collaps] kp_id={} host='{}' token_present={} season={:?} episode={:?}",
-        kp_id,
-        host,
-        !token.is_empty(),
-        season,
-        episode
-    );
     if host.is_empty() || token.is_empty() {
-        eprintln!("[players][service][collaps] host or token missing");
         return Err("not_configured".to_string());
     }
 
@@ -380,24 +300,14 @@ pub async fn get_collaps_player(
         token,
         kp_id
     );
-    eprintln!(
-        "[players][service][collaps] GET {}/list?kinopoisk_id={}",
-        host.trim_end_matches('/'),
-        kp_id
-    );
 
     let resp = http_client()
         .get(&url)
         .send()
         .await
         .map_err(|e| format!("collaps request failed: {}", e))?;
-    eprintln!(
-        "[players][service][collaps] status={}",
-        resp.status().as_u16()
-    );
 
     if !resp.status().is_success() {
-        eprintln!("[players][service][collaps] non-success status");
         return Err("not_found".to_string());
     }
 
@@ -407,7 +317,6 @@ pub async fn get_collaps_player(
         .map_err(|_| "not_found".to_string())?;
 
     let results = data.results.unwrap_or_default();
-    eprintln!("[players][service][collaps] results_count={}", results.len());
     let result = results.into_iter().next().ok_or_else(|| "not_found".to_string())?;
 
     let iframe_url = if result.result_type.as_deref() == Some("series") {

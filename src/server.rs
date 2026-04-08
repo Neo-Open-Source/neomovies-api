@@ -62,6 +62,11 @@ async fn route_top_rated(Query(params): Query<HashMap<String, String>>) -> AxumR
     from_vercel(media::handle_top_rated(page).await).await
 }
 
+async fn route_tv_top_rated(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
+    let page: u32 = params.get("page").and_then(|p| p.parse().ok()).unwrap_or(1);
+    from_vercel(media::handle_top_rated_tv(page).await).await
+}
+
 async fn route_film(Path(kp_id): Path<String>) -> AxumResponse {
     from_vercel(media::handle_film(&kp_id).await).await
 }
@@ -234,6 +239,7 @@ async fn main() {
         .route("/api/v1/images/{kind}/{id}", get(route_image_kp))
         .route("/api/v1/movies/popular", get(route_popular))
         .route("/api/v1/movies/top-rated", get(route_top_rated))
+        .route("/api/v1/tv/top-rated", get(route_tv_top_rated))
         .route("/api/v1/movie/{kp_id}", get(route_film))
         .route("/api/v1/players/{provider}/kp/{kp_id}", get(route_player))
         .route("/api/v1/torrents/search", get(route_torrents))

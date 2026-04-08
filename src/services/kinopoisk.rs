@@ -302,6 +302,11 @@ impl KinopoiskClient {
         self.get_collection("TOP_250_MOVIES", page).await
     }
 
+    /// Get top-rated TV series collection.
+    pub async fn get_top_rated_tv(&self, page: u32) -> Result<SearchResponse, String> {
+        self.get_collection("TOP_250_TV_SHOWS", page).await
+    }
+
     async fn get_collection(&self, collection_type: &str, page: u32) -> Result<SearchResponse, String> {
         let url = format!(
             "{}/v2.2/films/collections?type={}&page={}",

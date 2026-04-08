@@ -22,27 +22,10 @@ pub async fn handle(
     season: Option<u32>,
     episode: Option<u32>,
 ) -> Response<ResponseBody> {
-    eprintln!(
-        "[players][handler] request provider='{}' kp_id={} season={:?} episode={:?}",
-        provider, kp_id, season, episode
-    );
     let config = match Config::from_env() {
         Ok(c) => c,
-        Err(_) => {
-            eprintln!("[players][handler] Config::from_env failed");
-            return with_cors(internal_error());
-        }
+        Err(_) => return with_cors(internal_error()),
     };
-    eprintln!(
-        "[players][handler] config loaded: alloha={} lumex={} vibix_host={} vibix_token={} hdvb={} collaps_host={} collaps_token={}",
-        config.alloha_token.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
-        config.lumex_url.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
-        config.vibix_host.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
-        config.vibix_token.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
-        config.hdvb_token.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
-        config.collaps_api_host.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
-        config.collaps_token.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
-    );
 
     let result = match provider {
         "alloha"  => get_alloha_player(
@@ -55,23 +38,11 @@ pub async fn handle(
         "vibix"   => get_vibix_player(kp_id, config.vibix_host.as_deref().unwrap_or(""), config.vibix_token.as_deref().unwrap_or("")).await,
         "hdvb"    => get_hdvb_player(kp_id, config.hdvb_token.as_deref().unwrap_or("")).await,
         "collaps" => get_collaps_player(kp_id, config.collaps_api_host.as_deref().unwrap_or(""), config.collaps_token.as_deref().unwrap_or(""), season, episode).await,
-        _ => {
-            eprintln!("[players][handler] unsupported provider '{}'", provider);
-            return with_cors(not_found("video not found"));
-        }
+        _ => return with_cors(not_found("video not found")),
     };
 
     with_cors(match result {
-        Ok(html) => {
-            eprintln!("[players][handler] success provider='{}' kp_id={}", provider, kp_id);
-            html_response(html)
-        }
-        Err(e) => {
-            eprintln!(
-                "[players][handler] failed provider='{}' kp_id={} err='{}'",
-                provider, kp_id, e
-            );
-            player_error(&e)
-        }
+        Ok(html) => html_response(html),
+        Err(e) => player_error(&e),
     })
 }

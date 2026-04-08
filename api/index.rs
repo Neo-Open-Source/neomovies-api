@@ -99,6 +99,12 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
                 .unwrap_or(1);
             media::handle_top_rated(page).await
         }
+        "media_tv_top_rated" => {
+            let page = q(&params, "page")
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(1);
+            media::handle_top_rated_tv(page).await
+        }
         "media_film" => {
             let id = q(&params, "id").unwrap_or("");
             media::handle_film(id).await

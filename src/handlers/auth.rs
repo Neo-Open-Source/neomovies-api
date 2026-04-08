@@ -67,7 +67,8 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
 
 #[derive(Deserialize)]
 pub struct CallbackBody {
-    pub access_token: String,
+    pub access_token: Option<String>,
+    pub token: Option<String>,
 }
 
 pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
@@ -76,8 +77,17 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
         Ok(b) => b,
         Err(_) => return with_cors(unauthorized("invalid neo id token")),
     };
+    let incoming_token = body
+        .access_token
+        .or(body.token)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    if incoming_token.is_empty() {
+        return with_cors(unauthorized("invalid neo id token"));
+    }
     let neo_id_client = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
-    let neo_user = match neo_id_client.verify_token(&body.access_token).await {
+    let neo_user = match neo_id_client.verify_token(&incoming_token).await {
         Ok(u) => u,
         Err(_) => return with_cors(unauthorized("invalid neo id token")),
     };
@@ -136,7 +146,18 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
     let resp = Response::builder()
         .status(200)
         .header("Content-Type", "application/json")
-        .body(ResponseBody::from(json!({ "accessToken": access_token, "refreshToken": refresh_token_str }).to_string()))
+        .body(ResponseBody::from(json!({
+            "accessToken": access_token,
+            "refreshToken": refresh_token_str,
+            "user": {
+                "id": user.id.map(|id| id.to_hex()).unwrap_or_default(),
+                "neo_id": user.neo_id,
+                "email": user.email,
+                "name": user.name,
+                "avatar": user.avatar,
+                "is_admin": user.is_admin
+            }
+        }).to_string()))
         .unwrap();
     with_cors(resp)
 }

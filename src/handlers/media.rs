@@ -34,6 +34,18 @@ pub async fn handle_top_rated(page: u32) -> Response<ResponseBody> {
     }
 }
 
+pub async fn handle_top_rated_tv(page: u32) -> Response<ResponseBody> {
+    let config = match Config::from_env() {
+        Ok(c) => c,
+        Err(_) => return with_cors(internal_error()),
+    };
+    let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
+    match kp.get_top_rated_tv(page).await {
+        Ok(r) => with_cors(success(r)),
+        Err(_) => with_cors(bad_gateway("upstream error")),
+    }
+}
+
 pub async fn handle_film(kp_id_str: &str) -> Response<ResponseBody> {
     let id = match parse_kp_id(kp_id_str) {
         Some(n) => n,
