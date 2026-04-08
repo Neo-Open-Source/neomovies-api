@@ -446,6 +446,26 @@ paths:
                       data:
                         $ref: "#/components/schemas/SearchResponse"
 
+  /tv/top-rated:
+    get:
+      tags: [Media]
+      summary: Top-rated TV series
+      operationId: getTopRatedTv
+      parameters:
+        - $ref: "#/components/parameters/PageQuery"
+      responses:
+        "200":
+          description: Top-rated TV list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SearchResponse"
+
   /movie/{kp_id}:
     get:
       tags: [Media]

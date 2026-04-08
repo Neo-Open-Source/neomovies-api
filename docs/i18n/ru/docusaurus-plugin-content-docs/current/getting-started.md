@@ -5,6 +5,11 @@ sidebar_position: 2
 
 # Быстрый старт
 
+## Базовые URL
+
+- Production API: `https://api.neomovies.ru/api/v1`
+- Локальный API (Axum): `http://localhost:3000/api/v1`
+
 ## 1. Получить токен
 
 Аутентификация происходит через Neo ID. Подробнее — в разделе [Аутентификация](./authentication).
@@ -21,10 +26,10 @@ curl -X POST https://api.neomovies.ru/api/v1/auth/neo-id/login \
 # { "login_url": "https://id.neomovies.ru/..." }
 ```
 
-Пользователь переходит по `login_url`, авторизуется, и Neo ID редиректит обратно с `access_token`.
+Пользователь открывает `login_url`, авторизуется, и Neo ID редиректит обратно с `access_token`.
 
 ```bash
-# 2. Обменять токен Neo ID на JWT
+# 2. Обменять токен Neo ID на API-токены
 curl -X POST https://api.neomovies.ru/api/v1/auth/neo-id/callback \
   -H "Content-Type: application/json" \
   -d '{"access_token":"<neo_id_token>"}'
@@ -44,7 +49,7 @@ curl https://api.neomovies.ru/api/v1/auth/profile \
 
 ## 3. Обновить токен
 
-Access token живёт **15 минут**. Обновляйте через refresh token:
+Время жизни access token — **15 минут**:
 
 ```bash
 curl -X POST https://api.neomovies.ru/api/v1/auth/refresh \
@@ -52,13 +57,13 @@ curl -X POST https://api.neomovies.ru/api/v1/auth/refresh \
   -d '{"refreshToken":"a3f..."}'
 ```
 
-## Поиск фильмов
+## Поиск
 
 ```bash
 curl "https://api.neomovies.ru/api/v1/search?query=матрица"
 ```
 
-## Детали фильма
+## Детали медиа
 
 ```bash
 # По числовому ID Кинопоиска
@@ -67,3 +72,8 @@ curl https://api.neomovies.ru/api/v1/movie/326
 # Или с префиксом
 curl https://api.neomovies.ru/api/v1/movie/kp_326
 ```
+
+## Важно про URL документации
+
+- На Vercel документация доступна на `/` через rewrite.
+- Локально документация запускается отдельно через Docusaurus (обычно `/docs`) и не отдается Axum API-сервером.

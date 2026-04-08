@@ -5,6 +5,11 @@ sidebar_position: 2
 
 # Getting Started
 
+## Base URLs
+
+- Production API: `https://api.neomovies.ru/api/v1`
+- Local API (Axum): `http://localhost:3000/api/v1`
+
 ## 1. Get a Token
 
 Authentication is done via Neo ID. See [Authentication](./authentication) for details.
@@ -21,10 +26,10 @@ curl -X POST https://api.neomovies.ru/api/v1/auth/neo-id/login \
 # { "login_url": "https://id.neomovies.ru/..." }
 ```
 
-The user visits `login_url`, authenticates, and Neo ID redirects back with an `access_token`.
+The user opens `login_url`, authenticates, and Neo ID redirects back with an `access_token`.
 
 ```bash
-# 2. Exchange the Neo ID token for a JWT
+# 2. Exchange the Neo ID token for API tokens
 curl -X POST https://api.neomovies.ru/api/v1/auth/neo-id/callback \
   -H "Content-Type: application/json" \
   -d '{"access_token":"<neo_id_token>"}'
@@ -35,7 +40,7 @@ curl -X POST https://api.neomovies.ru/api/v1/auth/neo-id/callback \
 
 ## 2. Make a Request
 
-Pass the `accessToken` in the `Authorization` header:
+Pass `accessToken` in the `Authorization` header:
 
 ```bash
 curl https://api.neomovies.ru/api/v1/auth/profile \
@@ -44,7 +49,7 @@ curl https://api.neomovies.ru/api/v1/auth/profile \
 
 ## 3. Refresh the Token
 
-The access token lives for **15 minutes**. Refresh it using the refresh token:
+Access token lifetime is **15 minutes**:
 
 ```bash
 curl -X POST https://api.neomovies.ru/api/v1/auth/refresh \
@@ -52,18 +57,23 @@ curl -X POST https://api.neomovies.ru/api/v1/auth/refresh \
   -d '{"refreshToken":"a3f..."}'
 ```
 
-## Search for Films
+## Search
 
 ```bash
 curl "https://api.neomovies.ru/api/v1/search?query=matrix"
 ```
 
-## Film Details
+## Media Details
 
 ```bash
-# By numeric Kinopoisk ID
+# Numeric Kinopoisk ID
 curl https://api.neomovies.ru/api/v1/movie/326
 
-# Or with prefix
+# With prefix
 curl https://api.neomovies.ru/api/v1/movie/kp_326
 ```
+
+## Notes About Docs URLs
+
+- On Vercel, docs are served at `/` by rewrite.
+- In local development, docs are served by Docusaurus (typically `/docs`), not by the Axum API server.

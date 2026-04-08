@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Deployment
 
-NeoMovies API v2 деплоится на Vercel как набор Rust serverless-функций (`api/*.rs`) и одновременно собирает документацию Docusaurus (`docs/`).
+NeoMovies API v2 деплоится на Vercel как набор Rust serverless-функций (`api/*.rs`) и одновременно собирает документацию Docusaurus из `docs/`.
 
 ## Требования
 
@@ -29,7 +29,7 @@ cargo test --lib
 cargo run --bin server
 ```
 
-API будет доступен по `http://localhost:3000`.
+Локальный API по умолчанию: `http://localhost:3000/api/v1`.
 
 Порт можно задать через:
 
@@ -41,6 +41,15 @@ API будет доступен по `http://localhost:3000`.
 ```bash
 LOCAL_SERVER_PORT=3001 cargo run --bin server
 ```
+
+Для локального просмотра документации запустите Docusaurus отдельно:
+
+```bash
+npm --prefix docs ci
+npm --prefix docs run start
+```
+
+Локальный адрес docs по умолчанию: `http://localhost:3000/docs`.
 
 ## 3. Деплой на Vercel
 
@@ -74,7 +83,7 @@ vercel deploy --prod
 | `COLLAPS_TOKEN` | — | Collaps token |
 | `REDAPI_BASE_URL` | — | Torrent API base URL |
 
-## Маршруты после деплоя
+## Маршруты после деплоя на Vercel
 
-- `/` — документация
+- `/` — сайт документации (только на Vercel)
 - `/api/v1/*` — REST API
