@@ -36,6 +36,16 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
     let method = req.method().as_str().to_string();
     let headers = req.headers().clone();
 
+    // Handle CORS preflight explicitly for all rewritten API routes.
+    if method == "OPTIONS" {
+        let resp = Response::builder()
+            .status(204)
+            .header("Content-Type", "text/plain; charset=utf-8")
+            .body(ResponseBody::from(""))
+            .unwrap();
+        return Ok(with_cors(resp));
+    }
+
     let resp = match route {
         "health" => health::handle().await,
         "support" => support::handle().await,

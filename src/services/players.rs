@@ -137,10 +137,10 @@ pub async fn get_alloha_player(
     let html = if !iframe_code.contains('<') {
         iframe_html(&iframe_code, "Alloha Player")
     } else {
-        // Already HTML — wrap in a full document
+        // Already HTML — keep provider layout untouched.
         let cleaned = iframe_code.replace("\\\"", "\"").replace("\\'", "'");
         format!(
-            "<!DOCTYPE html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'/><title>Alloha Player</title><style>html,body{{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;}}iframe,video{{display:block !important;position:fixed !important;inset:0 !important;width:100vw !important;height:100vh !important;border:0 !important;background:#000 !important;max-width:none !important;max-height:none !important;}}*{{box-sizing:border-box;}}</style></head><body>{}</body></html>",
+            "<!DOCTYPE html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'/><title>Alloha Player</title><style>html,body{{margin:0;padding:0;width:100%;height:100%;background:#000;}}</style></head><body>{}</body></html>",
             cleaned
         )
     };
