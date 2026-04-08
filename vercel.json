@@ -1,43 +1,40 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "bash ./scripts/vercel-build.sh",
+  "outputDirectory": "docs/build",
+  "rewrites": [
+    { "source": "/api/v1/health", "destination": "/api/index?route=health" },
+    { "source": "/api/v1/support/list", "destination": "/api/index?route=support" },
+
+    { "source": "/api/v1/auth/neo-id/login", "destination": "/api/index?route=auth_login" },
+    { "source": "/api/v1/auth/neo-id/callback", "destination": "/api/index?route=auth_callback" },
+    { "source": "/api/v1/auth/refresh", "destination": "/api/index?route=auth_refresh" },
+    { "source": "/api/v1/auth/profile", "destination": "/api/index?route=auth_profile" },
+    { "source": "/api/v1/auth/delete-account", "destination": "/api/index?route=auth_delete" },
+    { "source": "/api/v1/auth/refresh-tokens/revoke", "destination": "/api/index?route=auth_revoke" },
+    { "source": "/api/v1/auth/refresh-tokens/revoke-all", "destination": "/api/index?route=auth_revoke_all" },
+    { "source": "/api/v1/webhooks/neo-id", "destination": "/api/index?route=webhook_neoid" },
+
+    { "source": "/api/v1/search", "destination": "/api/index?route=search" },
+
+    { "source": "/api/v1/movies/popular", "destination": "/api/index?route=media_popular" },
+    { "source": "/api/v1/movies/top-rated", "destination": "/api/index?route=media_top_rated" },
+    { "source": "/api/v1/tv/top-rated", "destination": "/api/index?route=media_tv_top_rated" },
+    { "source": "/api/v1/movie/:id", "destination": "/api/index?route=media_film&id=:id" },
+
+    { "source": "/api/v1/images/proxy", "destination": "/api/index?route=image_proxy" },
+    { "source": "/api/v1/images/:kind/:id", "destination": "/api/index?route=image_kp&kind=:kind&id=:id" },
+
     {
-      "src": "docs/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": ".vitepress/dist"
-      }
+      "source": "/api/v1/players/:provider/kp/:kp_id",
+      "destination": "/api/index?route=player&provider=:provider&kp_id=:kp_id"
     },
-    {
-      "src": "api/index.go",
-      "use": "@vercel/go",
-      "config": {
-        "maxDuration": 10
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.go"
-    },
-    {
-      "src": "/openapi\\.json$",
-      "dest": "/api/index.go"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/$",
-      "dest": "/docs/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/docs/$1"
-    }
-  ],
-  "env": {
-    "GO_VERSION": "1.23"
-  }
+
+    { "source": "/api/v1/torrents/search", "destination": "/api/index?route=torrents" },
+
+    { "source": "/api/v1/favorites", "destination": "/api/index?route=favorites" },
+    { "source": "/api/v1/favorites/:kp_id/check", "destination": "/api/index?route=favorites&kp_id=:kp_id&sub=check" },
+    { "source": "/api/v1/favorites/:kp_id", "destination": "/api/index?route=favorites&kp_id=:kp_id" },
+
+    { "source": "/api", "destination": "/api/index.html" }
+  ]
 }

@@ -1,0 +1,109 @@
+.heroBanner {
+  padding: 5rem 0 4rem;
+  text-align: center;
+  overflow: hidden;
+  background: linear-gradient(160deg, #1b1b1d 0%, #242526 100%);
+  color: #fff;
+}
+
+/* Light mode — используем тёмный hero в обеих темах для консистентности */
+[data-theme='light'] .heroBanner {
+  background: linear-gradient(160deg, #1e2a2a 0%, #1a3030 100%);
+}
+
+.heroTitle {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.highlight {
+  color: #25c2a0;
+}
+
+.heroSubtitle {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 0;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+/* Кнопка "API Reference" — явно белая рамка и текст */
+.btnOutline {
+  border: 2px solid rgba(255, 255, 255, 0.7) !important;
+  color: #fff !important;
+  background: transparent !important;
+}
+
+.btnOutline:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: #fff !important;
+  color: #fff !important;
+}
+
+.baseUrl {
+  margin-top: 1.5rem;
+}
+
+.baseUrl code {
+  font-size: 0.9rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* ── Features ─────────────────────────────────────────── */
+.features {
+  padding: 4rem 0;
+}
+
+.featureCard {
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.featureIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  margin: 0 auto 1rem;
+  background: rgba(37, 194, 160, 0.12);
+  color: #25c2a0;
+}
+
+[data-theme='light'] .featureIconWrap {
+  background: rgba(31, 165, 136, 0.1);
+  color: #1fa588;
+}
+
+.featureIcon {
+  width: 26px;
+  height: 26px;
+}
+
+.featureTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.featureDesc {
+  font-size: 0.92rem;
+  opacity: 0.75;
+  line-height: 1.65;
+}
