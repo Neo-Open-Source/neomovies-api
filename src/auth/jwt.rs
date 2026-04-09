@@ -45,5 +45,5 @@ pub fn decode_token(token: &str, secret: &str) -> Result<Claims, JwtError> {
 
 pub fn build_claims(sub: String, neo_id: String, email: String, is_admin: bool) -> Claims {
     let iat = Utc::now().timestamp() as usize;
-    Claims { sub, neo_id, email, is_admin, iat, exp: iat + 900 }
+    Claims { sub, neo_id, email, is_admin, iat, exp: iat + 3600 }
 }
