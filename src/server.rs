@@ -20,7 +20,7 @@ use tower_http::cors::{Any, CorsLayer};
 use vercel_runtime::{Response, ResponseBody};
 
 use neomovies_api::handlers::{
-    auth, favorites, health, images, media, players, search, support, torrents, webhook,
+    auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, torrents, webhook,
 };
 
 async fn from_vercel(resp: Response<ResponseBody>) -> AxumResponse {
@@ -94,6 +94,29 @@ async fn route_player(
     let season = params.get("season").and_then(|s| s.parse().ok());
     let episode = params.get("episode").and_then(|s| s.parse().ok());
     from_vercel(players::handle(&provider, kp_id, season, episode).await).await
+}
+
+async fn route_cdn_player(
+    Path(cdn_id): Path<u64>,
+    Query(params): Query<HashMap<String, String>>,
+) -> AxumResponse {
+    let season = params.get("season").and_then(|s| s.parse().ok());
+    let episode = params.get("episode").and_then(|s| s.parse().ok());
+    from_vercel(cdn_player::handle(cdn_id, season, episode).await).await
+}
+
+async fn route_cdn_player_by_kp(
+    Path(kp_id): Path<u64>,
+    Query(params): Query<HashMap<String, String>>,
+) -> AxumResponse {
+    let season = params.get("season").and_then(|s| s.parse().ok());
+    let episode = params.get("episode").and_then(|s| s.parse().ok());
+    from_vercel(cdn_player::handle_by_kp(kp_id, season, episode).await).await
+}
+
+async fn route_hls_proxy(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
+    let url = params.get("url").map(|s| s.as_str()).unwrap_or("");
+    from_vercel(hls_proxy::handle_proxy(url).await).await
 }
 
 async fn route_webhook_neoid(req: AxumRequest) -> AxumResponse {
@@ -242,6 +265,9 @@ async fn main() {
         .route("/api/v1/tv/top-rated", get(route_tv_top_rated))
         .route("/api/v1/movie/{kp_id}", get(route_film))
         .route("/api/v1/players/{provider}/kp/{kp_id}", get(route_player))
+        .route("/api/v1/players/cdn/{cdn_id}", get(route_cdn_player))
+        .route("/api/v1/players/cdn/kp/{kp_id}", get(route_cdn_player_by_kp))
+        .route("/api/v1/hls/proxy", get(route_hls_proxy))
         .route("/api/v1/torrents/search", get(route_torrents))
         .route("/api/v1/favorites", get(route_favorites_list))
         .route("/api/v1/favorites/{kp_id}", post(route_favorites_add))

@@ -1,4 +1,5 @@
 pub mod neoid;
+pub mod cdn;
 pub mod kinopoisk;
 pub mod players;
 pub mod torrents;

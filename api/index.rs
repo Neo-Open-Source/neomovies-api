@@ -1,5 +1,5 @@
 use neomovies_api::handlers::{
-    auth, favorites, health, images, media, players, search, support, torrents, webhook,
+    auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, torrents, webhook,
 };
 use neomovies_api::{not_found, with_cors};
 use http_body_util::BodyExt;
@@ -130,6 +130,31 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
             let season = q(&params, "season").and_then(|s| s.parse::<u32>().ok());
             let episode = q(&params, "episode").and_then(|s| s.parse::<u32>().ok());
             players::handle(provider, kp_id, season, episode).await
+        }
+
+        "cdn_player" => {
+            let cdn_id = match q(&params, "cdn_id").and_then(|s| s.parse::<u64>().ok()) {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("video not found"))),
+            };
+            let season = q(&params, "season").and_then(|s| s.parse::<u32>().ok());
+            let episode = q(&params, "episode").and_then(|s| s.parse::<u32>().ok());
+            cdn_player::handle(cdn_id, season, episode).await
+        }
+
+        "cdn_player_kp" => {
+            let kp_id = match q(&params, "kp_id").and_then(|s| s.parse::<u64>().ok()) {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("video not found"))),
+            };
+            let season = q(&params, "season").and_then(|s| s.parse::<u32>().ok());
+            let episode = q(&params, "episode").and_then(|s| s.parse::<u32>().ok());
+            cdn_player::handle_by_kp(kp_id, season, episode).await
+        }
+
+        "hls_proxy" => {
+            let url = q(&params, "url").unwrap_or("");
+            hls_proxy::handle_proxy(url).await
         }
 
         "torrents" => {

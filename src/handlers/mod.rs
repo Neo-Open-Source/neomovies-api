@@ -1,4 +1,6 @@
 pub mod auth;
+pub mod cdn_player;
+pub mod hls_proxy;
 pub mod media;
 pub mod images;
 pub mod search;
