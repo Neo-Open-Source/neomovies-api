@@ -127,7 +127,7 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
 .di:hover{{background:#2c2c2e;color:#fff}}
 .di.active{{color:#1a6fc4;font-weight:600}}
 /* ── custom settings menu ── */
-#cmenu{{position:absolute;bottom:52px;right:8px;z-index:200;
+#cmenu{{position:fixed;z-index:2147483647;
   background:#1c1c1e;border:1px solid #2c2c2e;border-radius:12px;
   box-shadow:0 8px 32px rgba(0,0,0,.85);min-width:260px;
   display:none;overflow:hidden}}
@@ -281,7 +281,19 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
   function toggleCMenu(){
     cmenuOpen=!cmenuOpen;
     cmenu.classList.toggle('open',cmenuOpen);
-    if(cmenuOpen){showPanel('cm-home');buildHomePanel();}
+    if(cmenuOpen){
+      showPanel('cm-home');buildHomePanel();
+      // Position relative to settings button (works in fullscreen too)
+      const btn=document.querySelector('[data-plyr="settings"]');
+      if(btn){
+        const r=btn.getBoundingClientRect();
+        const mh=cmenu.offsetHeight||300;
+        const top=r.top-mh-8;
+        cmenu.style.right=(window.innerWidth-r.right)+'px';
+        cmenu.style.bottom=(window.innerHeight-r.top+8)+'px';
+        cmenu.style.top='auto';
+      }
+    }
   }
   function closeCMenu(){cmenuOpen=false;cmenu.classList.remove('open');}
   document.addEventListener('click',e=>{
