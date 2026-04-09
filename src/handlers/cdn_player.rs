@@ -112,9 +112,6 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
 #pw:fullscreen #bar,#pw:-webkit-full-screen #bar{{
   position:absolute;top:0;left:0;right:0;z-index:50;
 }}
-#pw:fullscreen #cmenu,#pw:-webkit-full-screen #cmenu{{
-  position:fixed;z-index:2147483647;
-}}
 /* ── top bar ── */
 #bar{{position:absolute;top:0;left:0;right:0;display:flex;gap:6px;padding:10px 12px;
   background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:50;
@@ -137,14 +134,16 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
 .di:hover{{background:#2c2c2e;color:#fff}}
 .di.active{{color:#1a6fc4;font-weight:600}}
 /* ── custom settings menu ── */
-#cmenu{{position:fixed;z-index:2147483647;
+#cmenu{{position:absolute;z-index:2147483647;
   background:#1c1c1e;border:1px solid #2c2c2e;border-radius:12px;
   box-shadow:0 8px 32px rgba(0,0,0,.85);min-width:260px;max-width:320px;
-  display:none;overflow:hidden;max-height:80vh}}
+  display:none;overflow:hidden}}
 #cmenu.open{{display:flex;flex-direction:column}}
 .cm-panel{{display:none;flex-direction:column;overflow:hidden}}
-.cm-panel.active{{display:flex;flex-direction:column;max-height:80vh}}
-.cm-panel.active>[id$="-list"],.cm-panel.active>[role=menu]{{overflow-y:auto;flex:1}}
+.cm-panel.active{{display:flex;flex-direction:column}}
+.cm-panel.active>[id$="-list"],.cm-panel.active>[role=menu]{{overflow-y:auto;flex:1;max-height:400px}}
+.cm-panel.active>[id$="-list"]::-webkit-scrollbar,.cm-panel.active>[role=menu]::-webkit-scrollbar{{width:4px}}
+.cm-panel.active>[id$="-list"]::-webkit-scrollbar-thumb,.cm-panel.active>[role=menu]::-webkit-scrollbar-thumb{{background:#3a3a3c;border-radius:2px}}
 /* home panel rows */
 .cm-row{{display:flex;align-items:center;justify-content:space-between;
   padding:12px 16px;cursor:pointer;transition:background .1s;border:none;
@@ -298,26 +297,61 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
       // Position above the settings button
       const btn=document.querySelector('[data-plyr="settings"]');
       if(btn){
+        const pw=document.getElementById('pw');
+        const pwRect=pw.getBoundingClientRect();
         const r=btn.getBoundingClientRect();
-        // Reset first to measure natural height
+        // Reset positioning
         cmenu.style.top='';cmenu.style.bottom='';cmenu.style.right='';cmenu.style.left='';
-        const mw=cmenu.offsetWidth||260;
-        const mh=cmenu.scrollHeight||300;
-        // Align right edge with button right edge
-        let right=window.innerWidth-r.right;
-        // Position above button
-        let top=r.top-mh-8;
-        // If not enough space above, show below
-        if(top<8)top=r.bottom+8;
-        // Clamp to viewport
-        if(right+mw>window.innerWidth-8)right=8;
-        // Clamp top so menu doesn't go below viewport
-        const maxH=window.innerHeight*0.8;
-        if(top+maxH>window.innerHeight-8)top=Math.max(8,window.innerHeight-maxH-8);
-        cmenu.style.top=top+'px';
-        cmenu.style.right=right+'px';
-        cmenu.style.bottom='auto';
-        cmenu.style.left='auto';
+        cmenu.style.maxHeight='';
+        // Force layout to get actual dimensions
+        requestAnimationFrame(()=>{
+          const mw=cmenu.offsetWidth||260;
+          let mh=cmenu.scrollHeight||300;
+          // Calculate available space above and below button
+          const spaceAbove=r.top-pwRect.top;
+          const spaceBelow=pwRect.bottom-r.bottom;
+          const padding=16; // padding from edges
+          // Determine max height based on available space
+          let maxHeight=Math.min(400,pwRect.height-padding*2);
+          let showAbove=true;
+          // Prefer showing above if there's enough space
+          if(spaceAbove>=mh+padding){
+            showAbove=true;
+            maxHeight=Math.min(maxHeight,spaceAbove-padding);
+          }else if(spaceBelow>=mh+padding){
+            showAbove=false;
+            maxHeight=Math.min(maxHeight,spaceBelow-padding);
+          }else{
+            // Not enough space either way, use the larger space
+            if(spaceAbove>spaceBelow){
+              showAbove=true;
+              maxHeight=Math.min(maxHeight,spaceAbove-padding);
+            }else{
+              showAbove=false;
+              maxHeight=Math.min(maxHeight,spaceBelow-padding);
+            }
+          }
+          // Apply max height to menu
+          cmenu.style.maxHeight=maxHeight+'px';
+          // Recalculate height after applying maxHeight
+          mh=Math.min(mh,maxHeight);
+          // Calculate horizontal position (align right edge with button)
+          let right=pwRect.right-r.right;
+          if(right+mw>pwRect.width-padding)right=padding;
+          // Calculate vertical position
+          let top;
+          if(showAbove){
+            top=r.top-pwRect.top-mh-8;
+            if(top<padding)top=padding;
+          }else{
+            top=r.bottom-pwRect.top+8;
+            if(top+mh>pwRect.height-padding)top=pwRect.height-mh-padding;
+          }
+          cmenu.style.top=top+'px';
+          cmenu.style.right=right+'px';
+          cmenu.style.bottom='auto';
+          cmenu.style.left='auto';
+        });
       }
     }
   }
