@@ -1,4 +1,4 @@
-use crate::{bad_gateway, bad_request, internal_error, not_found, with_cors};
+use crate::{bad_gateway, bad_request, not_found, with_cors};
 use std::sync::OnceLock;
 use vercel_runtime::{Response, ResponseBody};
 
