@@ -139,9 +139,9 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
   box-shadow:0 8px 32px rgba(0,0,0,.85);min-width:260px;max-width:320px;
   display:none;overflow:hidden}}
 #cmenu.open{{display:flex;flex-direction:column}}
-.cm-panel{{display:none;flex-direction:column;overflow:hidden}}
-.cm-panel.active{{display:flex;flex-direction:column}}
-.cm-panel.active>[id$="-list"],.cm-panel.active>[role=menu]{{overflow-y:auto;flex:1;max-height:400px}}
+.cm-panel{{display:none;flex-direction:column;overflow:hidden;max-height:100%}}
+.cm-panel.active{{display:flex;flex-direction:column;max-height:100%}}
+.cm-panel.active>[id$="-list"],.cm-panel.active>[role=menu]{{overflow-y:auto;flex:1;min-height:0}}
 .cm-panel.active>[id$="-list"]::-webkit-scrollbar,.cm-panel.active>[role=menu]::-webkit-scrollbar{{width:4px}}
 .cm-panel.active>[id$="-list"]::-webkit-scrollbar-thumb,.cm-panel.active>[role=menu]::-webkit-scrollbar-thumb{{background:#3a3a3c;border-radius:2px}}
 /* home panel rows */
@@ -294,63 +294,53 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
     cmenu.classList.toggle('open',cmenuOpen);
     if(cmenuOpen){
       showPanel('cm-home');buildHomePanel();
-      // Position above the settings button
+      // Position menu near settings button
       const btn=document.querySelector('[data-plyr="settings"]');
       if(btn){
         const pw=document.getElementById('pw');
         const pwRect=pw.getBoundingClientRect();
         const r=btn.getBoundingClientRect();
-        // Reset positioning
-        cmenu.style.top='';cmenu.style.bottom='';cmenu.style.right='';cmenu.style.left='';
-        cmenu.style.maxHeight='';
-        // Force layout to get actual dimensions
+        const padding=12;
+        // Reset and measure
+        cmenu.style.cssText='';
+        cmenu.classList.add('open');
         requestAnimationFrame(()=>{
           const mw=cmenu.offsetWidth||260;
-          let mh=cmenu.scrollHeight||300;
-          // Calculate available space above and below button
-          const spaceAbove=r.top-pwRect.top;
-          const spaceBelow=pwRect.bottom-r.bottom;
-          const padding=16; // padding from edges
-          // Determine max height based on available space
-          let maxHeight=Math.min(400,pwRect.height-padding*2);
-          let showAbove=true;
-          // Prefer showing above if there's enough space
-          if(spaceAbove>=mh+padding){
-            showAbove=true;
-            maxHeight=Math.min(maxHeight,spaceAbove-padding);
-          }else if(spaceBelow>=mh+padding){
-            showAbove=false;
-            maxHeight=Math.min(maxHeight,spaceBelow-padding);
+          const naturalHeight=cmenu.scrollHeight||200;
+          // Calculate position relative to container
+          const btnTopInContainer=r.top-pwRect.top;
+          const btnBottomInContainer=r.bottom-pwRect.top;
+          const btnRightInContainer=r.right-pwRect.left;
+          // Available space
+          const spaceAbove=btnTopInContainer;
+          const spaceBelow=pwRect.height-btnBottomInContainer;
+          // Determine placement and max height
+          let maxHeight,top;
+          if(spaceAbove>spaceBelow&&spaceAbove>=150){
+            // Show above
+            maxHeight=Math.min(naturalHeight,spaceAbove-padding*2);
+            top=Math.max(padding,btnTopInContainer-maxHeight-8);
           }else{
-            // Not enough space either way, use the larger space
-            if(spaceAbove>spaceBelow){
-              showAbove=true;
-              maxHeight=Math.min(maxHeight,spaceAbove-padding);
-            }else{
-              showAbove=false;
-              maxHeight=Math.min(maxHeight,spaceBelow-padding);
+            // Show below
+            maxHeight=Math.min(naturalHeight,spaceBelow-padding*2);
+            top=btnBottomInContainer+8;
+            // Ensure it doesn't overflow bottom
+            if(top+maxHeight>pwRect.height-padding){
+              maxHeight=pwRect.height-top-padding;
             }
           }
-          // Apply max height to menu
-          cmenu.style.maxHeight=maxHeight+'px';
-          // Recalculate height after applying maxHeight
-          mh=Math.min(mh,maxHeight);
-          // Calculate horizontal position (align right edge with button)
-          let right=pwRect.right-r.right;
-          if(right+mw>pwRect.width-padding)right=padding;
-          // Calculate vertical position
-          let top;
-          if(showAbove){
-            top=r.top-pwRect.top-mh-8;
-            if(top<padding)top=padding;
-          }else{
-            top=r.bottom-pwRect.top+8;
-            if(top+mh>pwRect.height-padding)top=pwRect.height-mh-padding;
+          // Horizontal position - align right edges
+          let right=pwRect.width-btnRightInContainer;
+          if(right<padding)right=padding;
+          if(right+mw>pwRect.width-padding){
+            right=pwRect.width-mw-padding;
           }
+          cmenu.style.position='absolute';
           cmenu.style.top=top+'px';
           cmenu.style.right=right+'px';
-          cmenu.style.bottom='auto';
+          cmenu.style.maxHeight=maxHeight+'px';
           cmenu.style.left='auto';
+          cmenu.style.bottom='auto';
         });
       }
     }
