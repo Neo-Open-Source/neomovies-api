@@ -254,6 +254,7 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
     captions:{active:false,language:'ru',update:true},
     speed:{selected:1,options:[0.5,0.75,1,1.25,1.5,2]},
     i18n:{quality:'Качество',speed:'Скорость',normal:'Обычная'},
+    fullscreen:{enabled:true,fallback:true,iosNative:false,container:'#pw'},
   });
 
   // Intercept Plyr settings button → open our custom menu
@@ -595,15 +596,9 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
     });
   });
 
-  // ── Fullscreen: ensure #pw is the fullscreen element so overlays stay visible ─
-  // Override Plyr's fullscreen to use #pw instead of .plyr
-  plyr.on('enterfullscreen',()=>{
-    const pw=document.getElementById('pw');
-    if(pw&&document.fullscreenElement!==pw){
-      // Exit Plyr's fullscreen and enter our own on #pw
-      document.exitFullscreen().then(()=>pw.requestFullscreen()).catch(()=>{});
-    }
-  });
+  // ── Fullscreen: #pw is the container, all overlays stay inside ───────────────
+  // Plyr uses #pw as fullscreen container via fullscreen.container option above.
+  // No DOM manipulation needed — #bar, #cmenu, #resume are already inside #pw.
 })();
 </script></body></html>"###.to_string();
 
