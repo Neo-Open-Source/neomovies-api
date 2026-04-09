@@ -1,6 +1,17 @@
 {
   "buildCommand": "bash ./scripts/vercel-build.sh",
   "outputDirectory": "docs/build",
+  "headers": [
+    {
+      "source": "/api/v1/images/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000, stale-while-revalidate=86400, immutable"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/api/v1/health", "destination": "/api/index?route=health" },
     { "source": "/api/v1/support/list", "destination": "/api/index?route=support" },
