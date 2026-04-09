@@ -283,15 +283,26 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
     cmenu.classList.toggle('open',cmenuOpen);
     if(cmenuOpen){
       showPanel('cm-home');buildHomePanel();
-      // Position relative to settings button (works in fullscreen too)
+      // Position above the settings button
       const btn=document.querySelector('[data-plyr="settings"]');
       if(btn){
         const r=btn.getBoundingClientRect();
-        const mh=cmenu.offsetHeight||300;
-        const top=r.top-mh-8;
-        cmenu.style.right=(window.innerWidth-r.right)+'px';
-        cmenu.style.bottom=(window.innerHeight-r.top+8)+'px';
-        cmenu.style.top='auto';
+        // Reset first to measure natural height
+        cmenu.style.top='';cmenu.style.bottom='';cmenu.style.right='';cmenu.style.left='';
+        const mw=cmenu.offsetWidth||260;
+        const mh=cmenu.scrollHeight||300;
+        // Align right edge with button right edge
+        let right=window.innerWidth-r.right;
+        // Position above button
+        let top=r.top-mh-8;
+        // If not enough space above, show below
+        if(top<8)top=r.bottom+8;
+        // Clamp to viewport
+        if(right+mw>window.innerWidth-8)right=8;
+        cmenu.style.top=top+'px';
+        cmenu.style.right=right+'px';
+        cmenu.style.bottom='auto';
+        cmenu.style.left='auto';
       }
     }
   }
@@ -572,6 +583,28 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
       bar.style.opacity='1';
       bar.style.pointerEvents='auto';
     });
+  });
+
+  // ── Fullscreen: move overlay elements into fullscreen root ────────────────────
+  // In fullscreen, browser creates new stacking context — elements outside
+  // fullscreenElement are not visible. We move #bar, #cmenu, #resume into it.
+  document.addEventListener('fullscreenchange',()=>{
+    const fs=document.fullscreenElement;
+    const bar=document.getElementById('bar');
+    const cm=document.getElementById('cmenu');
+    const res=document.getElementById('resume');
+    const pw=document.getElementById('pw');
+    if(fs&&fs!==pw){
+      // Entered fullscreen on a different element (e.g. the plyr wrapper)
+      if(bar)fs.appendChild(bar);
+      if(cm)fs.appendChild(cm);
+      if(res)fs.appendChild(res);
+    } else if(!fs){
+      // Exited fullscreen — move back into #pw
+      if(bar&&bar.parentElement!==pw)pw.appendChild(bar);
+      if(cm&&cm.parentElement!==pw)pw.appendChild(cm);
+      if(res&&res.parentElement!==pw)pw.appendChild(res);
+    }
   });
 })();
 </script></body></html>"###.to_string();
