@@ -11,18 +11,9 @@ async fn main() -> Result<(), Error> {
 }
 
 fn parse_query(query_str: &str) -> Vec<(String, String)> {
-    query_str
-        .split('&')
-        .filter_map(|pair| {
-            let mut parts = pair.splitn(2, '=');
-            let key = parts.next()?.to_string();
-            let val = parts.next().unwrap_or("").to_string();
-            if key.is_empty() {
-                None
-            } else {
-                Some((key, val))
-            }
-        })
+    url::form_urlencoded::parse(query_str.as_bytes())
+        .into_owned()
+        .filter(|(k, _)| !k.is_empty())
         .collect()
 }
 

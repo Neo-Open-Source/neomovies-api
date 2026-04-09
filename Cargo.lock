@@ -1655,6 +1655,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tower-http",
+ "url",
  "vercel_runtime",
 ]
 
