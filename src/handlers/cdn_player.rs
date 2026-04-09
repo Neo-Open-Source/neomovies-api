@@ -105,6 +105,16 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
 #pw video{{width:100%;height:100%;object-fit:contain}}
 .plyr--video{{width:100%;height:100%}}
 .plyr__video-wrapper{{height:100%!important}}
+/* Fullscreen on #pw */
+#pw:fullscreen,#pw:-webkit-full-screen,#pw:-moz-full-screen{{
+  width:100vw;height:100vh;background:#000;
+}}
+#pw:fullscreen #bar,#pw:-webkit-full-screen #bar{{
+  position:absolute;top:0;left:0;right:0;z-index:50;
+}}
+#pw:fullscreen #cmenu,#pw:-webkit-full-screen #cmenu{{
+  position:fixed;z-index:2147483647;
+}}
 /* ── top bar ── */
 #bar{{position:absolute;top:0;left:0;right:0;display:flex;gap:6px;padding:10px 12px;
   background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:50;
@@ -585,25 +595,13 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
     });
   });
 
-  // ── Fullscreen: move overlay elements into fullscreen root ────────────────────
-  // In fullscreen, browser creates new stacking context — elements outside
-  // fullscreenElement are not visible. We move #bar, #cmenu, #resume into it.
-  document.addEventListener('fullscreenchange',()=>{
-    const fs=document.fullscreenElement;
-    const bar=document.getElementById('bar');
-    const cm=document.getElementById('cmenu');
-    const res=document.getElementById('resume');
+  // ── Fullscreen: ensure #pw is the fullscreen element so overlays stay visible ─
+  // Override Plyr's fullscreen to use #pw instead of .plyr
+  plyr.on('enterfullscreen',()=>{
     const pw=document.getElementById('pw');
-    if(fs&&fs!==pw){
-      // Entered fullscreen on a different element (e.g. the plyr wrapper)
-      if(bar)fs.appendChild(bar);
-      if(cm)fs.appendChild(cm);
-      if(res)fs.appendChild(res);
-    } else if(!fs){
-      // Exited fullscreen — move back into #pw
-      if(bar&&bar.parentElement!==pw)pw.appendChild(bar);
-      if(cm&&cm.parentElement!==pw)pw.appendChild(cm);
-      if(res&&res.parentElement!==pw)pw.appendChild(res);
+    if(pw&&document.fullscreenElement!==pw){
+      // Exit Plyr's fullscreen and enter our own on #pw
+      document.exitFullscreen().then(()=>pw.requestFullscreen()).catch(()=>{});
     }
   });
 })();
