@@ -36,16 +36,16 @@
     { "source": "/api/v1/images/:kind/:id", "destination": "/api/index?route=image_kp&kind=:kind&id=:id" },
 
     {
-      "source": "/api/v1/players/:provider/kp/:kp_id",
-      "destination": "/api/index?route=player&provider=:provider&kp_id=:kp_id"
-    },
-    {
       "source": "/api/v1/players/cdn/kp/:kp_id",
       "destination": "/api/index?route=cdn_player_kp&kp_id=:kp_id"
     },
     {
       "source": "/api/v1/players/cdn/:cdn_id",
       "destination": "/api/index?route=cdn_player&cdn_id=:cdn_id"
+    },
+    {
+      "source": "/api/v1/players/:provider/kp/:kp_id",
+      "destination": "/api/index?route=player&provider=:provider&kp_id=:kp_id"
     },
     {
       "source": "/api/v1/hls/proxy",
