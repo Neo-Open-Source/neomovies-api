@@ -139,11 +139,12 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
 /* ── custom settings menu ── */
 #cmenu{{position:fixed;z-index:2147483647;
   background:#1c1c1e;border:1px solid #2c2c2e;border-radius:12px;
-  box-shadow:0 8px 32px rgba(0,0,0,.85);min-width:260px;
-  display:none;overflow:hidden}}
-#cmenu.open{{display:block}}
-.cm-panel{{display:none}}
-.cm-panel.active{{display:block}}
+  box-shadow:0 8px 32px rgba(0,0,0,.85);min-width:260px;max-width:320px;
+  display:none;overflow:hidden;max-height:80vh}}
+#cmenu.open{{display:flex;flex-direction:column}}
+.cm-panel{{display:none;flex-direction:column;overflow:hidden}}
+.cm-panel.active{{display:flex;flex-direction:column;max-height:80vh}}
+.cm-panel.active>[id$="-list"],.cm-panel.active>[role=menu]{{overflow-y:auto;flex:1}}
 /* home panel rows */
 .cm-row{{display:flex;align-items:center;justify-content:space-between;
   padding:12px 16px;cursor:pointer;transition:background .1s;border:none;
@@ -310,6 +311,9 @@ html,body{{width:100%;height:100%;background:#000;overflow:hidden;font-family:-a
         if(top<8)top=r.bottom+8;
         // Clamp to viewport
         if(right+mw>window.innerWidth-8)right=8;
+        // Clamp top so menu doesn't go below viewport
+        const maxH=window.innerHeight*0.8;
+        if(top+maxH>window.innerHeight-8)top=Math.max(8,window.innerHeight-maxH-8);
         cmenu.style.top=top+'px';
         cmenu.style.right=right+'px';
         cmenu.style.bottom='auto';
