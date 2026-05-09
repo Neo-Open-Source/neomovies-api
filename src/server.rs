@@ -17,6 +17,9 @@ use axum::{
 use http_body_util::BodyExt;
 use std::collections::HashMap;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tracing::{error, info};
+use tracing::Level;
 use vercel_runtime::{Response, ResponseBody};
 
 use neomovies_api::handlers::{
@@ -78,6 +81,22 @@ async fn route_image_proxy(Query(params): Query<HashMap<String, String>>) -> Axu
 
 async fn route_image_kp(Path((kind, id)): Path<(String, String)>) -> AxumResponse {
     from_vercel(images::handle_kp(&kind, &id).await).await
+}
+
+async fn route_image_screens(Path(kp_id): Path<String>, Query(params): Query<HashMap<String, String>>) -> AxumResponse {
+    let season = params.get("season").and_then(|s| s.parse::<u32>().ok());
+    let episode = params.get("episode").and_then(|s| s.parse::<u32>().ok());
+    let size = params.get("size").map(|s| s.as_str());
+    from_vercel(images::handle_screens_by_kp(&kp_id, season, episode, size).await).await
+}
+
+async fn route_image_screens_tv(Path((kp_id, season, episode)): Path<(String, u32, u32)>, Query(params): Query<HashMap<String, String>>) -> AxumResponse {
+    let size = params.get("size").map(|s| s.as_str());
+    from_vercel(images::handle_screens_by_kp(&kp_id, Some(season), Some(episode), size).await).await
+}
+
+async fn route_image_screens_tv_size(Path((kp_id, season, episode, size)): Path<(String, u32, u32, String)>) -> AxumResponse {
+    from_vercel(images::handle_screens_by_kp(&kp_id, Some(season), Some(episode), Some(&size)).await).await
 }
 
 async fn route_torrents(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
@@ -222,12 +241,21 @@ async fn route_favorites_check(
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info,tower_http=info".into()),
+        )
+        .with_target(false)
+        .compact()
+        .init();
+
     let _ = dotenvy::dotenv();
 
     match neomovies_api::Config::from_env() {
         Ok(_) => {}
         Err(e) => {
-            eprintln!("Config error: {}", e);
+            error!("Config error: {}", e);
             std::process::exit(1);
         }
     }
@@ -235,7 +263,7 @@ async fn main() {
     match neomovies_api::db::get_db().await {
         Ok(_) => println!("MongoDB connected"),
         Err(e) => {
-            eprintln!("MongoDB: {}", e);
+            error!("MongoDB: {}", e);
             std::process::exit(1);
         }
     }
@@ -260,6 +288,9 @@ async fn main() {
         .route("/api/v1/search", get(route_search))
         .route("/api/v1/images/proxy", get(route_image_proxy))
         .route("/api/v1/images/{kind}/{id}", get(route_image_kp))
+        .route("/api/v1/images/screens/{kp_id}", get(route_image_screens))
+        .route("/api/v1/images/screens/{kp_id}/{season}/{episode}", get(route_image_screens_tv))
+        .route("/api/v1/images/screens/{kp_id}/{season}/{episode}/{size}", get(route_image_screens_tv_size))
         .route("/api/v1/movies/popular", get(route_popular))
         .route("/api/v1/movies/top-rated", get(route_top_rated))
         .route("/api/v1/tv/top-rated", get(route_tv_top_rated))
@@ -273,6 +304,12 @@ async fn main() {
         .route("/api/v1/favorites/{kp_id}", post(route_favorites_add))
         .route("/api/v1/favorites/{kp_id}", delete(route_favorites_remove))
         .route("/api/v1/favorites/{kp_id}/check", get(route_favorites_check))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(DefaultOnResponse::new().level(Level::INFO)),
+        )
         .layer(cors);
 
     let port = std::env::var("LOCAL_SERVER_PORT")
@@ -280,7 +317,8 @@ async fn main() {
         .unwrap_or_else(|_| "3000".to_string());
     let addr = format!("0.0.0.0:{}", port);
 
-    println!("   NeoMovies API at http://localhost:{}", port);
+    info!("NeoMovies API at http://localhost:{}", port);
+    println!("NeoMovies API at http://localhost:{}", port);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

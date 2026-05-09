@@ -1,4 +1,8 @@
 use crate::{bad_gateway, bad_request, not_found, with_cors};
+use crate::services::tmdb::{MediaType, TmdbClient, TmdbError};
+use crate::services::KinopoiskClient;
+use crate::Config;
+use serde_json::json;
 use std::sync::OnceLock;
 use vercel_runtime::{Response, ResponseBody};
 
@@ -122,4 +126,144 @@ pub async fn handle_kp(kind: &str, id: &str) -> Response<ResponseBody> {
         None => return with_cors(bad_request("invalid image path")),
     };
     handle_proxy(&url).await
+}
+
+fn parse_media_type(media_type: &str) -> Option<MediaType> {
+    match media_type {
+        "movie" => Some(MediaType::Movie),
+        "tv" | "series" | "serial" => Some(MediaType::Tv),
+        _ => None,
+    }
+}
+
+fn map_tmdb_err(err: TmdbError) -> Response<ResponseBody> {
+    match err {
+        TmdbError::MissingApiKey => with_cors(bad_request("TMDB_API_KEY is not configured")),
+        TmdbError::NotFound => with_cors(not_found("title not found")),
+        TmdbError::Upstream(msg) => with_cors(bad_gateway(&format!("tmdb upstream error: {}", msg))),
+    }
+}
+
+pub async fn handle_screens_resolve(title: &str, year: u32, media_type: &str) -> Response<ResponseBody> {
+    if title.trim().is_empty() || year < 1900 {
+        return with_cors(bad_request("invalid title or year"));
+    }
+    let media_type = match parse_media_type(media_type) {
+        Some(mt) => mt,
+        None => return with_cors(bad_request("invalid media type")),
+    };
+    let tmdb = match TmdbClient::from_env() {
+        Ok(c) => c,
+        Err(e) => return map_tmdb_err(e),
+    };
+    let lookup = match tmdb.find_by_title_year(title, year, media_type).await {
+        Ok(v) => v,
+        Err(e) => return map_tmdb_err(e),
+    };
+    let payload = json!({
+        "tmdb_id": lookup.tmdb_id,
+        "imdb_id": lookup.imdb_id,
+        "proxy_url": format!("/api/v1/images/screens/{}", lookup.imdb_id),
+    });
+    with_cors(Response::builder()
+        .status(200)
+        .header("Content-Type", "application/json; charset=utf-8")
+        .body(ResponseBody::from(payload.to_string()))
+        .unwrap())
+}
+
+pub async fn handle_screens_proxy(imdb_id: &str, media_type: &str, season: Option<u32>, episode: Option<u32>) -> Response<ResponseBody> {
+    let media_type = match parse_media_type(media_type) {
+        Some(mt) => mt,
+        None => return with_cors(bad_request("invalid media type")),
+    };
+    if !imdb_id.starts_with("tt") || imdb_id.len() < 4 {
+        return with_cors(bad_request("invalid imdb id"));
+    }
+    let (season, episode) = if matches!(media_type, MediaType::Tv) {
+        (season.unwrap_or(1), episode.unwrap_or(1))
+    } else {
+        (0, 0)
+    };
+
+    let target = match media_type {
+        MediaType::Movie => format!("https://images.metahub.space/poster/small/{imdb_id}/img"),
+        MediaType::Tv => format!(
+            "https://episodes.metahub.space/{}/{}/{}/w780.jpg",
+            imdb_id,
+            season,
+            episode
+        ),
+    };
+    handle_proxy(&target).await
+}
+
+fn normalize_size(size: Option<&str>) -> Option<&'static str> {
+    match size.unwrap_or("w780") {
+        "small" => Some("w300"),
+        "medium" => Some("w500"),
+        "large" => Some("w780"),
+        "xlarge" => Some("w1280"),
+        "w300" => Some("w300"),
+        "w500" => Some("w500"),
+        "w780" => Some("w780"),
+        "w1280" => Some("w1280"),
+        "original" => Some("original"),
+        _ => None,
+    }
+}
+
+pub async fn handle_screens_by_kp(kp_id_str: &str, season: Option<u32>, episode: Option<u32>, size: Option<&str>) -> Response<ResponseBody> {
+    let kp_id: u64 = match kp_id_str.parse() {
+        Ok(v) => v,
+        Err(_) => return with_cors(bad_request("invalid kp_id")),
+    };
+
+    let config = match Config::from_env() {
+        Ok(c) => c,
+        Err(_) => return with_cors(bad_gateway("config error")),
+    };
+
+    let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
+    let film = match kp.get_film(kp_id).await {
+        Ok(v) => v,
+        Err(e) if e.contains("not_found") => return with_cors(not_found("not found")),
+        Err(_) => return with_cors(bad_gateway("kp upstream error")),
+    };
+
+    let media_kind = film.media_type.to_lowercase();
+    let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
+    let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
+    let title = if !film.original_title.trim().is_empty() { film.original_title } else { film.title };
+    let year = film
+        .release_date
+        .get(0..4)
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(0);
+    if title.trim().is_empty() || year < 1900 {
+        return with_cors(bad_request("could not resolve title/year from kp"));
+    }
+
+    let tmdb = match TmdbClient::from_env() {
+        Ok(c) => c,
+        Err(e) => return map_tmdb_err(e),
+    };
+    let lookup = match tmdb.find_by_title_year(&title, year, media_type).await {
+        Ok(v) => v,
+        Err(e) => return map_tmdb_err(e),
+    };
+    let size = match normalize_size(size) {
+        Some(s) => s,
+        None => return with_cors(bad_request("invalid size")),
+    };
+
+    let target = if is_tv {
+        let s = season.unwrap_or(1);
+        let e = episode.unwrap_or(1);
+        format!("https://episodes.metahub.space/{}/{}/{}/{}.jpg", lookup.imdb_id, s, e, size)
+    } else {
+        format!("https://images.metahub.space/poster/small/{}/img", lookup.imdb_id)
+    };
+
+    handle_proxy(&target).await
 }

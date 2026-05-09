@@ -3,6 +3,7 @@ pub mod cdn;
 pub mod kinopoisk;
 pub mod players;
 pub mod torrents;
+pub mod tmdb;
 
 pub use neoid::NeoIdClient;
 pub use kinopoisk::KinopoiskClient;

@@ -39,6 +39,8 @@ pub struct LoginBody {
     pub redirect_url: String,
     pub state: String,
     pub mode: Option<String>,
+    pub code_challenge: Option<String>,
+    pub code_challenge_method: Option<String>,
 }
 
 pub async fn handle_login(body_bytes: &[u8]) -> VResp {
@@ -50,7 +52,13 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
     if body.redirect_url.is_empty() { return with_cors(bad_request("redirect_url is required")); }
     if body.state.is_empty() { return with_cors(bad_request("state is required")); }
     let neo_id = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
-    match neo_id.request_login_url(&body.redirect_url, &body.state, body.mode.as_deref()).await {
+    match neo_id.request_login_url(
+        &body.redirect_url,
+        &body.state,
+        body.mode.as_deref(),
+        body.code_challenge.as_deref(),
+        body.code_challenge_method.as_deref(),
+    ).await {
         Ok(login_url) => {
             let resp = Response::builder()
                 .status(200)

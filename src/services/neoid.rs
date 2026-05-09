@@ -39,6 +39,10 @@ struct LoginRequest<'a> {
     redirect_url: &'a str,
     state: &'a str,
     mode: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    code_challenge: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    code_challenge_method: Option<&'a str>,
 }
 
 #[derive(Deserialize)]
@@ -77,12 +81,16 @@ impl NeoIdClient {
         redirect_url: &str,
         state: &str,
         mode: Option<&str>,
+        code_challenge: Option<&str>,
+        code_challenge_method: Option<&str>,
     ) -> Result<String, String> {
         let url = format!("{}/api/service/login", self.base_url);
         let body = LoginRequest {
             redirect_url,
             state,
             mode: mode.unwrap_or("redirect"),
+            code_challenge,
+            code_challenge_method,
         };
 
         let resp = self

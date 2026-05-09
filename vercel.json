@@ -34,6 +34,9 @@
 
     { "source": "/api/v1/images/proxy", "destination": "/api/index?route=image_proxy" },
     { "source": "/api/v1/images/:kind/:id", "destination": "/api/index?route=image_kp&kind=:kind&id=:id" },
+    { "source": "/api/v1/images/screens/:kp_id/:season/:episode/:size", "destination": "/api/index?route=image_screens&kp_id=:kp_id&season=:season&episode=:episode&size=:size" },
+    { "source": "/api/v1/images/screens/:kp_id/:season/:episode", "destination": "/api/index?route=image_screens&kp_id=:kp_id&season=:season&episode=:episode" },
+    { "source": "/api/v1/images/screens/:kp_id", "destination": "/api/index?route=image_screens&kp_id=:kp_id" },
 
     {
       "source": "/api/v1/players/cdn/kp/:kp_id",

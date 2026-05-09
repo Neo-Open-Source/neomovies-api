@@ -85,7 +85,7 @@ Each file in `api/` becomes a serverless function. See [docs/docs/deployment.md]
 
 Full spec: [`openapi.yaml`](openapi.yaml)  
 Docs (local build in repo): [`docs/build`](docs/build)  
-Docs (production): [docs.neomovies.ru](https://api.neomovies.ru)
+Docs (production): [api.neomovies.ru](https://api.neomovies.ru)
 
 ## License
 

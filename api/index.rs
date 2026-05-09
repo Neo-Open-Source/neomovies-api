@@ -120,6 +120,13 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
             let id = q(&params, "id").unwrap_or("");
             images::handle_kp(kind, id).await
         }
+        "image_screens" => {
+            let kp_id = q(&params, "kp_id").unwrap_or("");
+            let season = q(&params, "season").and_then(|s| s.parse::<u32>().ok());
+            let episode = q(&params, "episode").and_then(|s| s.parse::<u32>().ok());
+            let size = q(&params, "size");
+            images::handle_screens_by_kp(kp_id, season, episode, size).await
+        }
 
         "player" => {
             let provider = q(&params, "provider").unwrap_or("");
