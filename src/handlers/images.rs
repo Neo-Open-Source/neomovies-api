@@ -215,7 +215,7 @@ pub async fn handle_backdrop_proxy(imdb_id: &str, media_type: &str, size: Option
         Ok(v) => v,
         Err(e) => return map_tmdb_err(e),
     };
-    let file_path = match tmdb.first_backdrop_path(tmdb_id, media_type).await {
+    let file_path = match tmdb.media_backdrop_path(tmdb_id, media_type).await {
         Ok(v) => v,
         Err(e) => return map_tmdb_err(e),
     };
@@ -292,7 +292,7 @@ pub async fn handle_screens_by_kp(kp_id_str: &str, season: Option<u32>, episode:
         let e = episode.unwrap_or(1);
         format!("https://episodes.metahub.space/{}/{}/{}/{}.jpg", lookup.imdb_id, s, e, size)
     } else {
-        let file_path = match tmdb.first_backdrop_path(lookup.tmdb_id, media_type).await {
+        let file_path = match tmdb.media_backdrop_path(lookup.tmdb_id, media_type).await {
             Ok(v) => v,
             Err(e) => return map_tmdb_err(e),
         };
@@ -346,7 +346,7 @@ pub async fn handle_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> Respo
         }
     };
 
-    let file_path = match tmdb.first_backdrop_path(tmdb_id, media_type).await {
+    let file_path = match tmdb.media_backdrop_path(tmdb_id, media_type).await {
         Ok(v) => v,
         Err(e) => return map_tmdb_err(e),
     };
@@ -355,5 +355,71 @@ pub async fn handle_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> Respo
         None => return with_cors(bad_request("invalid size")),
     };
     let target = format!("https://image.tmdb.org/t/p/{size}{file_path}");
+    handle_proxy(&target).await
+}
+
+
+pub async fn handle_page_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> Response<ResponseBody> {
+    let kp_id: u64 = match kp_id_str.parse() {
+        Ok(v) => v,
+        Err(_) => return with_cors(bad_request("invalid kp_id")),
+    };
+    let config = match Config::from_env() { Ok(c) => c, Err(_) => return with_cors(bad_gateway("config error")) };
+    let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
+    let film = match kp.get_film(kp_id).await {
+        Ok(v) => v,
+        Err(e) if e.contains("not_found") => return with_cors(not_found("not found")),
+        Err(_) => return with_cors(bad_gateway("kp upstream error")),
+    };
+    let media_kind = film.media_type.to_lowercase();
+    let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
+    let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
+    let tmdb = match TmdbClient::from_env() { Ok(c) => c, Err(e) => return map_tmdb_err(e) };
+    let tmdb_id = if let Some(imdb_id) = film.external_ids.imdb.as_ref() {
+        match tmdb.find_tmdb_by_imdb(imdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) }
+    } else {
+        let title = if !film.original_title.trim().is_empty() { film.original_title } else { film.title };
+        let year = film.release_date.get(0..4).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
+        if title.trim().is_empty() || year < 1900 { return with_cors(bad_request("could not resolve title/year from kp")); }
+        match tmdb.find_by_title_year(&title, year, media_type).await { Ok(v) => v.tmdb_id, Err(e) => return map_tmdb_err(e) }
+    };
+    let file_path = match tmdb.page_backdrop_path(tmdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) };
+    let size = match normalize_size(size) { Some(s) => s, None => return with_cors(bad_request("invalid size")) };
+    let target = format!("https://image.tmdb.org/t/p/{size}{file_path}");
+    handle_proxy(&target).await
+}
+
+pub async fn handle_logo_by_kp(kp_id_str: &str, size: Option<&str>) -> Response<ResponseBody> {
+    let kp_id: u64 = match kp_id_str.parse() {
+        Ok(v) => v,
+        Err(_) => return with_cors(bad_request("invalid kp_id")),
+    };
+    let config = match Config::from_env() { Ok(c) => c, Err(_) => return with_cors(bad_gateway("config error")) };
+    let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
+    let film = match kp.get_film(kp_id).await {
+        Ok(v) => v,
+        Err(e) if e.contains("not_found") => return with_cors(not_found("not found")),
+        Err(_) => return with_cors(bad_gateway("kp upstream error")),
+    };
+    let media_kind = film.media_type.to_lowercase();
+    let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
+    let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
+    let tmdb = match TmdbClient::from_env() { Ok(c) => c, Err(e) => return map_tmdb_err(e) };
+    let tmdb_id = if let Some(imdb_id) = film.external_ids.imdb.as_ref() {
+        match tmdb.find_tmdb_by_imdb(imdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) }
+    } else {
+        let title = if !film.original_title.trim().is_empty() { film.original_title } else { film.title };
+        let year = film.release_date.get(0..4).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
+        if title.trim().is_empty() || year < 1900 { return with_cors(bad_request("could not resolve title/year from kp")); }
+        match tmdb.find_by_title_year(&title, year, media_type).await { Ok(v) => v.tmdb_id, Err(e) => return map_tmdb_err(e) }
+    };
+    let file_path = match tmdb.logo_path(tmdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) };
+    let logo_size = match size.unwrap_or("w500") {
+        "small" | "w300" => "w300",
+        "medium" | "large" | "w500" => "w500",
+        "original" => "original",
+        _ => return with_cors(bad_request("invalid size")),
+    };
+    let target = format!("https://image.tmdb.org/t/p/{logo_size}{file_path}");
     handle_proxy(&target).await
 }

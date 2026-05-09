@@ -46,12 +46,16 @@ struct ExternalIdsResponse {
 
 #[derive(Debug, Deserialize)]
 struct ImagesResponse {
-    backdrops: Option<Vec<BackdropItem>>,
+    backdrops: Option<Vec<ImageItem>>,
+    logos: Option<Vec<ImageItem>>,
 }
 
-#[derive(Debug, Deserialize)]
-struct BackdropItem {
+#[derive(Debug, Deserialize, Clone)]
+struct ImageItem {
     file_path: Option<String>,
+    iso_639_1: Option<String>,
+    vote_average: Option<f64>,
+    vote_count: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -190,15 +194,27 @@ impl TmdbClient {
         Ok(tmdb_id)
     }
 
-    pub async fn first_backdrop_path(
+
+    async fn images(&self, tmdb_id: u64, media_type: MediaType) -> Result<ImagesResponse, TmdbError> {
+        self.images_with_filter(tmdb_id, media_type, None).await
+    }
+
+    async fn images_with_filter(
         &self,
         tmdb_id: u64,
         media_type: MediaType,
-    ) -> Result<String, TmdbError> {
-        let resp = self
+        include_image_language: Option<&str>,
+    ) -> Result<ImagesResponse, TmdbError> {
+        let mut req = self
             .client
             .get(format!("{}/{}", self.base_url, media_type.images_path(tmdb_id)))
-            .query(&[("api_key", self.api_key.as_str())])
+            .query(&[("api_key", self.api_key.as_str())]);
+
+        if let Some(v) = include_image_language {
+            req = req.query(&[("include_image_language", v)]);
+        }
+
+        let resp = req
             .send()
             .await
             .map_err(|e| TmdbError::Upstream(format!("images send: {}", e)))?;
@@ -209,14 +225,52 @@ impl TmdbClient {
             return Err(TmdbError::Upstream(format!("images status {} body {}", status, body)));
         }
 
-        let body: ImagesResponse = resp
-            .json()
-            .await
-            .map_err(|e| TmdbError::Upstream(format!("images decode: {}", e)))?;
+        resp.json().await.map_err(|e| TmdbError::Upstream(format!("images decode: {}", e)))
+    }
 
-        body.backdrops
-            .and_then(|arr| arr.into_iter().find_map(|b| b.file_path))
-            .filter(|s| !s.trim().is_empty())
-            .ok_or(TmdbError::NotFound)
+    fn pick_with_lang_priority(items: Vec<ImageItem>) -> Option<String> {
+        let mut ru = Vec::new();
+        let mut en = Vec::new();
+        let mut any = Vec::new();
+        for it in items {
+            let path = it.file_path.clone().filter(|s| !s.trim().is_empty())?;
+            let score = (it.vote_count.unwrap_or(0) as f64) * 10.0 + it.vote_average.unwrap_or(0.0);
+            let lang = it.iso_639_1.unwrap_or_default().to_lowercase();
+            if lang == "ru" { ru.push((score, path)); }
+            else if lang == "en" { en.push((score, path)); }
+            else { any.push((score, path)); }
+        }
+        let pick_best = |mut v: Vec<(f64,String)>| { v.sort_by(|a,b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal)); v.into_iter().next().map(|x| x.1) };
+        pick_best(ru).or_else(|| pick_best(en)).or_else(|| pick_best(any))
+    }
+
+    fn pick_best_any(items: Vec<ImageItem>) -> Option<String> {
+        let mut v: Vec<(f64, String)> = items.into_iter().filter_map(|it| {
+            let path = it.file_path.filter(|s| !s.trim().is_empty())?;
+            let score = (it.vote_count.unwrap_or(0) as f64) * 10.0 + it.vote_average.unwrap_or(0.0);
+            Some((score, path))
+        }).collect();
+        v.sort_by(|a,b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+        v.into_iter().next().map(|x| x.1)
+    }
+
+    pub async fn page_backdrop_path(&self, tmdb_id: u64, media_type: MediaType) -> Result<String, TmdbError> {
+        let body = self.images(tmdb_id, media_type).await?;
+        body.backdrops.and_then(Self::pick_with_lang_priority).ok_or(TmdbError::NotFound)
+    }
+
+    pub async fn media_backdrop_path(&self, tmdb_id: u64, media_type: MediaType) -> Result<String, TmdbError> {
+        let null_only = self.images_with_filter(tmdb_id, media_type, Some("null")).await?;
+        if let Some(path) = null_only.backdrops.and_then(Self::pick_best_any) {
+            return Ok(path);
+        }
+
+        let body = self.images(tmdb_id, media_type).await?;
+        body.backdrops.and_then(Self::pick_best_any).ok_or(TmdbError::NotFound)
+    }
+
+    pub async fn logo_path(&self, tmdb_id: u64, media_type: MediaType) -> Result<String, TmdbError> {
+        let body = self.images(tmdb_id, media_type).await?;
+        body.logos.and_then(Self::pick_with_lang_priority).ok_or(TmdbError::NotFound)
     }
 }

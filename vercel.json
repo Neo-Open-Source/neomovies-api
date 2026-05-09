@@ -102,6 +102,22 @@
       "destination": "/api/index?route=image_backdrops&kp_id=:kp_id"
     },
     {
+      "source": "/api/v1/images/backdrops/page/:kp_id/:size",
+      "destination": "/api/index?route=image_backdrops_page&kp_id=:kp_id&size=:size"
+    },
+    {
+      "source": "/api/v1/images/backdrops/page/:kp_id",
+      "destination": "/api/index?route=image_backdrops_page&kp_id=:kp_id"
+    },
+    {
+      "source": "/api/v1/images/logos/:kp_id/:size",
+      "destination": "/api/index?route=image_logos&kp_id=:kp_id&size=:size"
+    },
+    {
+      "source": "/api/v1/images/logos/:kp_id",
+      "destination": "/api/index?route=image_logos&kp_id=:kp_id"
+    },
+    {
       "source": "/api/v1/players/cdn/kp/:kp_id",
       "destination": "/api/index?route=cdn_player_kp&kp_id=:kp_id"
     },

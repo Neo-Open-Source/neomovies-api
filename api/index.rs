@@ -132,6 +132,16 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
             let size = q(&params, "size");
             images::handle_backdrop_by_kp(kp_id, size).await
         }
+        "image_backdrops_page" => {
+            let kp_id = q(&params, "kp_id").unwrap_or("");
+            let size = q(&params, "size");
+            images::handle_page_backdrop_by_kp(kp_id, size).await
+        }
+        "image_logos" => {
+            let kp_id = q(&params, "kp_id").unwrap_or("");
+            let size = q(&params, "size");
+            images::handle_logo_by_kp(kp_id, size).await
+        }
 
         "player" => {
             let provider = q(&params, "provider").unwrap_or("");
