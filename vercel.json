@@ -13,31 +13,94 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/v1/health", "destination": "/api/index?route=health" },
-    { "source": "/api/v1/support/list", "destination": "/api/index?route=support" },
-
-    { "source": "/api/v1/auth/neo-id/login", "destination": "/api/index?route=auth_login" },
-    { "source": "/api/v1/auth/neo-id/callback", "destination": "/api/index?route=auth_callback" },
-    { "source": "/api/v1/auth/refresh", "destination": "/api/index?route=auth_refresh" },
-    { "source": "/api/v1/auth/profile", "destination": "/api/index?route=auth_profile" },
-    { "source": "/api/v1/auth/delete-account", "destination": "/api/index?route=auth_delete" },
-    { "source": "/api/v1/auth/refresh-tokens/revoke", "destination": "/api/index?route=auth_revoke" },
-    { "source": "/api/v1/auth/refresh-tokens/revoke-all", "destination": "/api/index?route=auth_revoke_all" },
-    { "source": "/api/v1/webhooks/neo-id", "destination": "/api/index?route=webhook_neoid" },
-
-    { "source": "/api/v1/search", "destination": "/api/index?route=search" },
-
-    { "source": "/api/v1/movies/popular", "destination": "/api/index?route=media_popular" },
-    { "source": "/api/v1/movies/top-rated", "destination": "/api/index?route=media_top_rated" },
-    { "source": "/api/v1/tv/top-rated", "destination": "/api/index?route=media_tv_top_rated" },
-    { "source": "/api/v1/movie/:id", "destination": "/api/index?route=media_film&id=:id" },
-
-    { "source": "/api/v1/images/proxy", "destination": "/api/index?route=image_proxy" },
-    { "source": "/api/v1/images/:kind/:id", "destination": "/api/index?route=image_kp&kind=:kind&id=:id" },
-    { "source": "/api/v1/images/screens/:kp_id/:season/:episode/:size", "destination": "/api/index?route=image_screens&kp_id=:kp_id&season=:season&episode=:episode&size=:size" },
-    { "source": "/api/v1/images/screens/:kp_id/:season/:episode", "destination": "/api/index?route=image_screens&kp_id=:kp_id&season=:season&episode=:episode" },
-    { "source": "/api/v1/images/screens/:kp_id", "destination": "/api/index?route=image_screens&kp_id=:kp_id" },
-
+    {
+      "source": "/api/v1/health",
+      "destination": "/api/index?route=health"
+    },
+    {
+      "source": "/api/v1/support/list",
+      "destination": "/api/index?route=support"
+    },
+    {
+      "source": "/api/v1/auth/neo-id/login",
+      "destination": "/api/index?route=auth_login"
+    },
+    {
+      "source": "/api/v1/auth/neo-id/callback",
+      "destination": "/api/index?route=auth_callback"
+    },
+    {
+      "source": "/api/v1/auth/refresh",
+      "destination": "/api/index?route=auth_refresh"
+    },
+    {
+      "source": "/api/v1/auth/profile",
+      "destination": "/api/index?route=auth_profile"
+    },
+    {
+      "source": "/api/v1/auth/delete-account",
+      "destination": "/api/index?route=auth_delete"
+    },
+    {
+      "source": "/api/v1/auth/refresh-tokens/revoke",
+      "destination": "/api/index?route=auth_revoke"
+    },
+    {
+      "source": "/api/v1/auth/refresh-tokens/revoke-all",
+      "destination": "/api/index?route=auth_revoke_all"
+    },
+    {
+      "source": "/api/v1/webhooks/neo-id",
+      "destination": "/api/index?route=webhook_neoid"
+    },
+    {
+      "source": "/api/v1/search",
+      "destination": "/api/index?route=search"
+    },
+    {
+      "source": "/api/v1/movies/popular",
+      "destination": "/api/index?route=media_popular"
+    },
+    {
+      "source": "/api/v1/movies/top-rated",
+      "destination": "/api/index?route=media_top_rated"
+    },
+    {
+      "source": "/api/v1/tv/top-rated",
+      "destination": "/api/index?route=media_tv_top_rated"
+    },
+    {
+      "source": "/api/v1/movie/:id",
+      "destination": "/api/index?route=media_film&id=:id"
+    },
+    {
+      "source": "/api/v1/images/proxy",
+      "destination": "/api/index?route=image_proxy"
+    },
+    {
+      "source": "/api/v1/images/:kind/:id",
+      "destination": "/api/index?route=image_kp&kind=:kind&id=:id"
+    },
+    {
+      "source": "/api/v1/images/screens/:kp_id/:season/:episode/:size",
+      "destination": "/api/index?route=image_screens&kp_id=:kp_id&season=:season&episode=:episode&size=:size"
+    },
+    {
+      "source": "/api/v1/images/screens/:kp_id/:season/:episode",
+      "destination": "/api/index?route=image_screens&kp_id=:kp_id&season=:season&episode=:episode"
+    },
+    {
+      "source": "/api/v1/images/screens/:kp_id",
+      "destination": "/api/index?route=image_screens&kp_id=:kp_id"
+    },
+    {
+      "source": "/api/v1/images/backdrops/:kp_id/:size",
+      "destination": "/api/index?route=image_backdrops&kp_id=:kp_id&size=:size"
+    },
+    {
+      "source": "/api/v1/images/backdrops/:kp_id",
+      "destination": "/api/index?route=image_backdrops&kp_id=:kp_id"
+    },
     {
       "source": "/api/v1/players/cdn/kp/:kp_id",
       "destination": "/api/index?route=cdn_player_kp&kp_id=:kp_id"
@@ -54,13 +117,25 @@
       "source": "/api/v1/hls/proxy",
       "destination": "/api/index?route=hls_proxy"
     },
-
-    { "source": "/api/v1/torrents/search", "destination": "/api/index?route=torrents" },
-
-    { "source": "/api/v1/favorites", "destination": "/api/index?route=favorites" },
-    { "source": "/api/v1/favorites/:kp_id/check", "destination": "/api/index?route=favorites&kp_id=:kp_id&sub=check" },
-    { "source": "/api/v1/favorites/:kp_id", "destination": "/api/index?route=favorites&kp_id=:kp_id" },
-
-    { "source": "/api", "destination": "/api/index.html" }
+    {
+      "source": "/api/v1/torrents/search",
+      "destination": "/api/index?route=torrents"
+    },
+    {
+      "source": "/api/v1/favorites",
+      "destination": "/api/index?route=favorites"
+    },
+    {
+      "source": "/api/v1/favorites/:kp_id/check",
+      "destination": "/api/index?route=favorites&kp_id=:kp_id&sub=check"
+    },
+    {
+      "source": "/api/v1/favorites/:kp_id",
+      "destination": "/api/index?route=favorites&kp_id=:kp_id"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.html"
+    }
   ]
 }

@@ -99,6 +99,15 @@ async fn route_image_screens_tv_size(Path((kp_id, season, episode, size)): Path<
     from_vercel(images::handle_screens_by_kp(&kp_id, Some(season), Some(episode), Some(&size)).await).await
 }
 
+async fn route_image_backdrops(Path(kp_id): Path<String>, Query(params): Query<HashMap<String, String>>) -> AxumResponse {
+    let size = params.get("size").map(|s| s.as_str());
+    from_vercel(images::handle_backdrop_by_kp(&kp_id, size).await).await
+}
+
+async fn route_image_backdrops_size(Path((kp_id, size)): Path<(String, String)>) -> AxumResponse {
+    from_vercel(images::handle_backdrop_by_kp(&kp_id, Some(&size)).await).await
+}
+
 async fn route_torrents(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
     let kp_id = params.get("kp_id").map(|s| s.as_str()).unwrap_or("");
     let season = params.get("season").and_then(|s| s.parse().ok());
@@ -291,6 +300,8 @@ async fn main() {
         .route("/api/v1/images/screens/{kp_id}", get(route_image_screens))
         .route("/api/v1/images/screens/{kp_id}/{season}/{episode}", get(route_image_screens_tv))
         .route("/api/v1/images/screens/{kp_id}/{season}/{episode}/{size}", get(route_image_screens_tv_size))
+        .route("/api/v1/images/backdrops/{kp_id}", get(route_image_backdrops))
+        .route("/api/v1/images/backdrops/{kp_id}/{size}", get(route_image_backdrops_size))
         .route("/api/v1/movies/popular", get(route_popular))
         .route("/api/v1/movies/top-rated", get(route_top_rated))
         .route("/api/v1/tv/top-rated", get(route_tv_top_rated))

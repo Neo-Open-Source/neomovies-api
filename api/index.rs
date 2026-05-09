@@ -127,6 +127,11 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
             let size = q(&params, "size");
             images::handle_screens_by_kp(kp_id, season, episode, size).await
         }
+        "image_backdrops" => {
+            let kp_id = q(&params, "kp_id").unwrap_or("");
+            let size = q(&params, "size");
+            images::handle_backdrop_by_kp(kp_id, size).await
+        }
 
         "player" => {
             let provider = q(&params, "provider").unwrap_or("");

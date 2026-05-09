@@ -20,6 +20,13 @@ impl MediaType {
             MediaType::Tv => format!("tv/{}/external_ids", tmdb_id),
         }
     }
+
+    fn images_path(self, tmdb_id: u64) -> String {
+        match self {
+            MediaType::Movie => format!("movie/{}/images", tmdb_id),
+            MediaType::Tv => format!("tv/{}/images", tmdb_id),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,6 +42,16 @@ struct SearchResult {
 #[derive(Debug, Deserialize)]
 struct ExternalIdsResponse {
     imdb_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ImagesResponse {
+    backdrops: Option<Vec<BackdropItem>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BackdropItem {
+    file_path: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -171,5 +188,35 @@ impl TmdbClient {
             .ok_or(TmdbError::NotFound)?;
 
         Ok(tmdb_id)
+    }
+
+    pub async fn first_backdrop_path(
+        &self,
+        tmdb_id: u64,
+        media_type: MediaType,
+    ) -> Result<String, TmdbError> {
+        let resp = self
+            .client
+            .get(format!("{}/{}", self.base_url, media_type.images_path(tmdb_id)))
+            .query(&[("api_key", self.api_key.as_str())])
+            .send()
+            .await
+            .map_err(|e| TmdbError::Upstream(format!("images send: {}", e)))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(TmdbError::Upstream(format!("images status {} body {}", status, body)));
+        }
+
+        let body: ImagesResponse = resp
+            .json()
+            .await
+            .map_err(|e| TmdbError::Upstream(format!("images decode: {}", e)))?;
+
+        body.backdrops
+            .and_then(|arr| arr.into_iter().find_map(|b| b.file_path))
+            .filter(|s| !s.trim().is_empty())
+            .ok_or(TmdbError::NotFound)
     }
 }
