@@ -228,6 +228,43 @@ pub async fn handle_backdrop_proxy(imdb_id: &str, media_type: &str, size: Option
     handle_proxy(&target).await
 }
 
+
+fn parse_year_from_release(release_date: &str) -> Option<u32> {
+    release_date.get(0..4).and_then(|v| v.parse::<u32>().ok()).filter(|y| *y >= 1900)
+}
+
+async fn resolve_tmdb_id_with_fallback(
+    tmdb: &TmdbClient,
+    media_type: MediaType,
+    imdb_id: Option<&str>,
+    original_title: &str,
+    title: &str,
+    release_date: &str,
+) -> Result<u64, TmdbError> {
+    if let Some(imdb) = imdb_id.filter(|v| v.starts_with("tt") && v.len() > 3) {
+        if let Ok(id) = tmdb.find_tmdb_by_imdb(imdb, media_type).await {
+            return Ok(id);
+        }
+    }
+
+    let year = parse_year_from_release(release_date).ok_or(TmdbError::NotFound)?;
+    let mut candidates: Vec<(String, u32)> = Vec::new();
+    for base in [original_title.trim(), title.trim()] {
+        if base.is_empty() { continue; }
+        candidates.push((base.to_string(), year));
+        if year > 1900 { candidates.push((base.to_string(), year - 1)); }
+        candidates.push((base.to_string(), year + 1));
+    }
+
+    for (q, y) in candidates {
+        if let Ok(found) = tmdb.find_by_title_year(&q, y, media_type).await {
+            return Ok(found.tmdb_id);
+        }
+    }
+
+    Err(TmdbError::NotFound)
+}
+
 fn normalize_size(size: Option<&str>) -> Option<&'static str> {
     match size.unwrap_or("w780") {
         "small" => Some("w300"),
@@ -329,21 +366,16 @@ pub async fn handle_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> Respo
         Err(e) => return map_tmdb_err(e),
     };
 
-    let tmdb_id = if let Some(imdb_id) = film.external_ids.imdb.as_ref() {
-        match tmdb.find_tmdb_by_imdb(imdb_id, media_type).await {
-            Ok(v) => v,
-            Err(e) => return map_tmdb_err(e),
-        }
-    } else {
-        let title = if !film.original_title.trim().is_empty() { film.original_title } else { film.title };
-        let year = film.release_date.get(0..4).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
-        if title.trim().is_empty() || year < 1900 {
-            return with_cors(bad_request("could not resolve title/year from kp"));
-        }
-        match tmdb.find_by_title_year(&title, year, media_type).await {
-            Ok(v) => v.tmdb_id,
-            Err(e) => return map_tmdb_err(e),
-        }
+    let tmdb_id = match resolve_tmdb_id_with_fallback(
+        &tmdb,
+        media_type,
+        film.external_ids.imdb.as_deref(),
+        &film.original_title,
+        &film.title,
+        &film.release_date,
+    ).await {
+        Ok(v) => v,
+        Err(e) => return map_tmdb_err(e),
     };
 
     let file_path = match tmdb.media_backdrop_path(tmdb_id, media_type).await {
@@ -375,13 +407,16 @@ pub async fn handle_page_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> 
     let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
     let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
     let tmdb = match TmdbClient::from_env() { Ok(c) => c, Err(e) => return map_tmdb_err(e) };
-    let tmdb_id = if let Some(imdb_id) = film.external_ids.imdb.as_ref() {
-        match tmdb.find_tmdb_by_imdb(imdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) }
-    } else {
-        let title = if !film.original_title.trim().is_empty() { film.original_title } else { film.title };
-        let year = film.release_date.get(0..4).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
-        if title.trim().is_empty() || year < 1900 { return with_cors(bad_request("could not resolve title/year from kp")); }
-        match tmdb.find_by_title_year(&title, year, media_type).await { Ok(v) => v.tmdb_id, Err(e) => return map_tmdb_err(e) }
+    let tmdb_id = match resolve_tmdb_id_with_fallback(
+        &tmdb,
+        media_type,
+        film.external_ids.imdb.as_deref(),
+        &film.original_title,
+        &film.title,
+        &film.release_date,
+    ).await {
+        Ok(v) => v,
+        Err(e) => return map_tmdb_err(e),
     };
     let file_path = match tmdb.page_backdrop_path(tmdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) };
     let size = match normalize_size(size) { Some(s) => s, None => return with_cors(bad_request("invalid size")) };
@@ -405,13 +440,16 @@ pub async fn handle_logo_by_kp(kp_id_str: &str, size: Option<&str>) -> Response<
     let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
     let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
     let tmdb = match TmdbClient::from_env() { Ok(c) => c, Err(e) => return map_tmdb_err(e) };
-    let tmdb_id = if let Some(imdb_id) = film.external_ids.imdb.as_ref() {
-        match tmdb.find_tmdb_by_imdb(imdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) }
-    } else {
-        let title = if !film.original_title.trim().is_empty() { film.original_title } else { film.title };
-        let year = film.release_date.get(0..4).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
-        if title.trim().is_empty() || year < 1900 { return with_cors(bad_request("could not resolve title/year from kp")); }
-        match tmdb.find_by_title_year(&title, year, media_type).await { Ok(v) => v.tmdb_id, Err(e) => return map_tmdb_err(e) }
+    let tmdb_id = match resolve_tmdb_id_with_fallback(
+        &tmdb,
+        media_type,
+        film.external_ids.imdb.as_deref(),
+        &film.original_title,
+        &film.title,
+        &film.release_date,
+    ).await {
+        Ok(v) => v,
+        Err(e) => return map_tmdb_err(e),
     };
     let file_path = match tmdb.logo_path(tmdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) };
     let logo_size = match size.unwrap_or("w500") {
