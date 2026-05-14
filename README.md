@@ -78,6 +78,7 @@ netlify deploy --build --prod
 ```
 
 Each file in `api/` becomes a serverless function on Vercel. On Netlify, the repository builds and publishes `docs/build`, while `/api/v1/*` is proxied to `https://api.neomovies.ru/api/v1/*` via `netlify.toml`. See [docs/docs/deployment.md](docs/docs/deployment.md) for details.
+The Netlify deploy button is docs-only plus API proxying, so it does not require the backend secrets used by Vercel.
 
 ### Hosting routes
 
