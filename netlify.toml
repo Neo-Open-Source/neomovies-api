@@ -1,0 +1,26 @@
+[build]
+  command = "bash ./scripts/build-docs.sh"
+  publish = "docs/build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/api/v1/*"
+  to = "https://api.neomovies.ru/api/v1/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api"
+  to = "https://api.neomovies.ru/api"
+  status = 200
+  force = true
+
+[template.environment]
+  MONGODB_URI = "MongoDB connection string"
+  JWT_SECRET = "JWT signing secret"
+  NEO_ID_URL = "Neo ID base URL"
+  NEO_ID_API_KEY = "Neo ID API key"
+  NEO_ID_API_SECRET = "Neo ID API secret"
+  KINOPOISK_API_KEY = "Kinopoisk API key"

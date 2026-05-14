@@ -570,6 +570,391 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /images/screens/{kp_id}:
+    get:
+      tags: [Images]
+      summary: Resolve and proxy a screen or fallback backdrop by Kinopoisk ID
+      operationId: getScreensByKpId
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: TV season number. Ignored for movies.
+        - name: episode
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: TV episode number. Ignored for movies.
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [small, medium, large, xlarge, w300, w500, w780, w1280, original]
+            default: w780
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "400":
+          description: Invalid kp_id, season, episode, or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/screens/{kp_id}/{season}/{episode}:
+    get:
+      tags: [Images]
+      summary: Proxy a TV episode still by Kinopoisk ID, season, and episode
+      operationId: getScreensByKpSeasonEpisode
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: season
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: episode
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [small, medium, large, xlarge, w300, w500, w780, w1280, original]
+            default: w780
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "400":
+          description: Invalid kp_id, season, episode, or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/screens/{kp_id}/{season}/{episode}/{size}:
+    get:
+      tags: [Images]
+      summary: Proxy a TV episode still by Kinopoisk ID with path-based size
+      operationId: getScreensByKpSeasonEpisodeSize
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: season
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: episode
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: size
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [small, medium, large, xlarge, w300, w500, w780, w1280, original]
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "400":
+          description: Invalid kp_id, season, episode, or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/backdrops/{kp_id}:
+    get:
+      tags: [Images]
+      summary: Proxy a backdrop by Kinopoisk ID
+      operationId: getBackdropByKpId
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [small, medium, large, xlarge, w300, w500, w780, w1280, original]
+            default: w780
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "400":
+          description: Invalid kp_id or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/backdrops/{kp_id}/{size}:
+    get:
+      tags: [Images]
+      summary: Proxy a backdrop by Kinopoisk ID with path-based size
+      operationId: getBackdropByKpIdSize
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: size
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [small, medium, large, xlarge, w300, w500, w780, w1280, original]
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "400":
+          description: Invalid kp_id or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/backdrops/page/{kp_id}:
+    get:
+      tags: [Images]
+      summary: Proxy a page/backdrop hero image by Kinopoisk ID
+      operationId: getPageBackdropByKpId
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [small, medium, large, xlarge, w300, w500, w780, w1280, original]
+            default: w780
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "400":
+          description: Invalid kp_id or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/backdrops/page/{kp_id}/{size}:
+    get:
+      tags: [Images]
+      summary: Proxy a page/backdrop hero image by Kinopoisk ID with path-based size
+      operationId: getPageBackdropByKpIdSize
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: size
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [small, medium, large, xlarge, w300, w500, w780, w1280, original]
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "400":
+          description: Invalid kp_id or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/logos/{kp_id}:
+    get:
+      tags: [Images]
+      summary: Proxy a localized logo by Kinopoisk ID
+      operationId: getLogoByKpId
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [small, medium, large, w300, w500, original]
+            default: w500
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/png: {}
+            image/jpeg: {}
+        "400":
+          description: Invalid kp_id or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /images/logos/{kp_id}/{size}:
+    get:
+      tags: [Images]
+      summary: Proxy a localized logo by Kinopoisk ID with path-based size
+      operationId: getLogoByKpIdSize
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: size
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [small, medium, large, w300, w500, original]
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/png: {}
+            image/jpeg: {}
+        "400":
+          description: Invalid kp_id or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Title or image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream configuration or image provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /players/{provider}/kp/{kp_id}:
     get:
       tags: [Players]
