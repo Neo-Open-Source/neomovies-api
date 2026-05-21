@@ -201,7 +201,7 @@ impl NeoIdClient {
         }
 
         let data: OAuthTokenResponse = resp
-            .json()
+            .json::<OAuthTokenResponse>()
             .await
             .map_err(|e| format!("failed to parse neo id oauth token response: {}", e))?;
 
