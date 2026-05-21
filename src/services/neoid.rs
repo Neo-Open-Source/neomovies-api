@@ -186,6 +186,11 @@ impl NeoIdClient {
             urlencoding::encode(&self.api_key)
         );
 
+        eprintln!("[OAuth] Exchanging code for token");
+        eprintln!("[OAuth] URL: {}", url);
+        eprintln!("[OAuth] redirect_uri: {}", redirect_uri);
+        eprintln!("[OAuth] client_id: {}", self.site_id);
+
         let resp = self
             .client
             .post(&url)
@@ -195,9 +200,12 @@ impl NeoIdClient {
             .await
             .map_err(|e| format!("neo id oauth token request failed: {}", e))?;
 
-        if !resp.status().is_success() {
-            let status = resp.status();
+        let status = resp.status();
+        eprintln!("[OAuth] Response status: {}", status);
+
+        if !status.is_success() {
             let body_text = resp.text().await.unwrap_or_default();
+            eprintln!("[OAuth] Error response: {}", body_text);
             return Err(format!("neo id oauth token error {}: {}", status, body_text));
         }
 
@@ -211,6 +219,7 @@ impl NeoIdClient {
             return Err("neo id oauth token response missing access_token".to_string());
         }
 
+        eprintln!("[OAuth] Successfully exchanged code for token");
         Ok(access_token)
     }
 
