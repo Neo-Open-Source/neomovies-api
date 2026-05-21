@@ -177,19 +177,20 @@ impl NeoIdClient {
         redirect_uri: &str,
     ) -> Result<String, String> {
         let url = format!("{}/oauth/token", self.base_url);
-        let body = OAuthTokenRequest {
-            grant_type: "authorization_code",
-            code,
-            redirect_uri,
-            client_id: &self.site_id,
-            client_secret: &self.api_key,
-        };
+        
+        let body = format!(
+            "grant_type=authorization_code&code={}&redirect_uri={}&client_id={}&client_secret={}",
+            urlencoding::encode(code),
+            urlencoding::encode(redirect_uri),
+            urlencoding::encode(&self.site_id),
+            urlencoding::encode(&self.api_key)
+        );
 
         let resp = self
             .client
             .post(&url)
             .header("Content-Type", "application/x-www-form-urlencoded")
-            .form(&body)
+            .body(body)
             .send()
             .await
             .map_err(|e| format!("neo id oauth token request failed: {}", e))?;
