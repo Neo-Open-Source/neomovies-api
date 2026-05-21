@@ -237,7 +237,10 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
         }
         match neo_id_client.exchange_auth_code(&incoming_code, &redirect_uri).await {
             Ok(token) => token,
-            Err(_) => return with_cors(unauthorized("invalid neo id code")),
+            Err(err) => {
+                let msg = format!("invalid neo id code: {}", err);
+                return with_cors(unauthorized(&msg));
+            }
         }
     } else {
         return with_cors(unauthorized("invalid neo id token"));

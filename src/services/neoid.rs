@@ -188,7 +188,8 @@ impl NeoIdClient {
         let resp = self
             .client
             .post(&url)
-            .json(&body)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .form(&body)
             .send()
             .await
             .map_err(|e| format!("neo id oauth token request failed: {}", e))?;
