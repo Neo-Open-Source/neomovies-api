@@ -114,29 +114,76 @@ pub fn handle_mobile_callback_get(
         .filter(|v| !v.trim().is_empty())
         .or_else(|| token.filter(|v| !v.trim().is_empty()))
         .unwrap_or("");
-    if token_value.is_empty() {
-        return with_cors(bad_request("access_token is required"));
-    }
 
     let mut url = match Url::parse(mobile_redirect) {
         Ok(v) => v,
         Err(_) => return with_cors(bad_request("invalid mobile_redirect_url")),
     };
-    {
-        let mut qp = url.query_pairs_mut();
-        qp.append_pair("access_token", token_value);
-        if let Some(rt) = refresh_token.filter(|v| !v.trim().is_empty()) {
-            qp.append_pair("refresh_token", rt);
+
+    if !token_value.is_empty() {
+        {
+            let mut qp = url.query_pairs_mut();
+            qp.append_pair("access_token", token_value);
+            if let Some(rt) = refresh_token.filter(|v| !v.trim().is_empty()) {
+                qp.append_pair("refresh_token", rt);
+            }
+            if let Some(s) = state.filter(|v| !v.trim().is_empty()) {
+                qp.append_pair("state", s);
+            }
         }
-        if let Some(s) = state.filter(|v| !v.trim().is_empty()) {
-            qp.append_pair("state", s);
-        }
+        let resp = Response::builder()
+            .status(302)
+            .header("Location", url.as_str())
+            .body(ResponseBody::from(""))
+            .unwrap();
+        return with_cors(resp);
     }
 
+    let redirect_json = match serde_json::to_string(mobile_redirect) {
+        Ok(v) => v,
+        Err(_) => return with_cors(bad_request("invalid mobile_redirect_url")),
+    };
+    let html = format!(
+        r#"<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NeoMovies Auth Redirect</title>
+    <style>
+      body {{ margin:0; background:#0b0c0f; color:#f3f4f6; font:14px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; display:grid; place-items:center; min-height:100vh; }}
+      .box {{ opacity:0.8; }}
+    </style>
+  </head>
+  <body>
+    <div class="box">Redirecting to app...</div>
+    <script>
+      (function() {{
+        const mobile = {redirect_json};
+        const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+        const queryParams = new URLSearchParams(window.location.search || '');
+        const token = hashParams.get('access_token') || hashParams.get('token') || queryParams.get('access_token') || queryParams.get('token');
+        const refresh = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+        const state = hashParams.get('state') || queryParams.get('state');
+        if (!token) {{
+          document.body.innerHTML = '<div class="box">Auth token missing</div>';
+          return;
+        }}
+        const target = new URL(mobile);
+        target.searchParams.set('access_token', token);
+        if (refresh) target.searchParams.set('refresh_token', refresh);
+        if (state) target.searchParams.set('state', state);
+        window.location.replace(target.toString());
+      }})();
+    </script>
+  </body>
+</html>"#
+    );
+
     let resp = Response::builder()
-        .status(302)
-        .header("Location", url.as_str())
-        .body(ResponseBody::from(""))
+        .status(200)
+        .header("Content-Type", "text/html; charset=utf-8")
+        .body(ResponseBody::from(html))
         .unwrap();
     with_cors(resp)
 }
