@@ -78,18 +78,15 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
     if body.redirect_url.is_empty() { return with_cors(bad_request("redirect_url is required")); }
     if body.state.is_empty() { return with_cors(bad_request("state is required")); }
 
-    let effective_redirect_url = if let Some(mobile_redirect) = body.mobile_redirect_url.as_deref() {
+    if let Some(mobile_redirect) = body.mobile_redirect_url.as_deref() {
         if !is_allowed_mobile_redirect(mobile_redirect) {
             return with_cors(bad_request("mobile_redirect_url is not allowed"));
         }
-        mobile_redirect.trim().to_string()
-    } else {
-        body.redirect_url.clone()
-    };
+    }
 
     let neo_id = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
     match neo_id.request_login_url(
-        &effective_redirect_url,
+        &body.redirect_url,
         &body.state,
         body.mode.as_deref(),
         body.code_challenge.as_deref(),
