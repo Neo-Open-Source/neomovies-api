@@ -206,6 +206,8 @@ pub fn handle_mobile_callback_get(
 pub struct CallbackBody {
     pub access_token: Option<String>,
     pub token: Option<String>,
+    pub code: Option<String>,
+    pub redirect_uri: Option<String>,
 }
 
 pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
@@ -214,17 +216,34 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
         Ok(b) => b,
         Err(_) => return with_cors(unauthorized("invalid neo id token")),
     };
+    let neo_id_client = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
     let incoming_token = body
         .access_token
         .or(body.token)
         .unwrap_or_default()
         .trim()
         .to_string();
-    if incoming_token.is_empty() {
+    let incoming_code = body.code.unwrap_or_default().trim().to_string();
+
+    let effective_neo_access_token = if !incoming_token.is_empty() {
+        incoming_token
+    } else if !incoming_code.is_empty() {
+        let redirect_uri = body.redirect_uri.unwrap_or_default().trim().to_string();
+        if redirect_uri.is_empty() {
+            return with_cors(bad_request("redirect_uri is required when using code"));
+        }
+        if !is_allowed_mobile_redirect(&redirect_uri) {
+            return with_cors(bad_request("redirect_uri is not allowed"));
+        }
+        match neo_id_client.exchange_auth_code(&incoming_code, &redirect_uri).await {
+            Ok(token) => token,
+            Err(_) => return with_cors(unauthorized("invalid neo id code")),
+        }
+    } else {
         return with_cors(unauthorized("invalid neo id token"));
-    }
-    let neo_id_client = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
-    let neo_user = match neo_id_client.verify_token(&incoming_token).await {
+    };
+
+    let neo_user = match neo_id_client.verify_token(&effective_neo_access_token).await {
         Ok(u) => u,
         Err(_) => return with_cors(unauthorized("invalid neo id token")),
     };

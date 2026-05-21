@@ -61,6 +61,20 @@ struct VerifyResponse {
     user: Option<NeoIdUser>,
 }
 
+#[derive(Serialize)]
+struct OAuthTokenRequest<'a> {
+    grant_type: &'a str,
+    code: &'a str,
+    redirect_uri: &'a str,
+    client_id: &'a str,
+    client_secret: &'a str,
+}
+
+#[derive(Deserialize)]
+struct OAuthTokenResponse {
+    access_token: Option<String>,
+}
+
 impl NeoIdClient {
     pub fn new(base_url: &str, api_key: &str, site_id: &str) -> Self {
         Self {
@@ -155,6 +169,47 @@ impl NeoIdClient {
         }
 
         data.user.ok_or_else(|| "neo id returned no user".to_string())
+    }
+
+    pub async fn exchange_auth_code(
+        &self,
+        code: &str,
+        redirect_uri: &str,
+    ) -> Result<String, String> {
+        let url = format!("{}/oauth/token", self.base_url);
+        let body = OAuthTokenRequest {
+            grant_type: "authorization_code",
+            code,
+            redirect_uri,
+            client_id: &self.site_id,
+            client_secret: &self.api_key,
+        };
+
+        let resp = self
+            .client
+            .post(&url)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("neo id oauth token request failed: {}", e))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body_text = resp.text().await.unwrap_or_default();
+            return Err(format!("neo id oauth token error {}: {}", status, body_text));
+        }
+
+        let data: OAuthTokenResponse = resp
+            .json()
+            .await
+            .map_err(|e| format!("failed to parse neo id oauth token response: {}", e))?;
+
+        let access_token = data.access_token.unwrap_or_default();
+        if access_token.trim().is_empty() {
+            return Err("neo id oauth token response missing access_token".to_string());
+        }
+
+        Ok(access_token)
     }
 
     /// Fire-and-forget notification to Neo ID that a user deleted their account.
