@@ -3,6 +3,7 @@ use chrono::Utc;
 use http::HeaderMap;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use url::Url;
 use vercel_runtime::{Response, ResponseBody};
 
 use crate::{
@@ -38,9 +39,14 @@ fn bson_dt_to_iso(dt: DateTime) -> String {
 pub struct LoginBody {
     pub redirect_url: String,
     pub state: String,
+    pub mobile_redirect_url: Option<String>,
     pub mode: Option<String>,
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
+}
+
+fn is_allowed_mobile_redirect(url: &str) -> bool {
+    url.starts_with("neomovies://")
 }
 
 pub async fn handle_login(body_bytes: &[u8]) -> VResp {
@@ -51,9 +57,27 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
     };
     if body.redirect_url.is_empty() { return with_cors(bad_request("redirect_url is required")); }
     if body.state.is_empty() { return with_cors(bad_request("state is required")); }
+
+    let effective_redirect_url = if let Some(mobile_redirect) = body.mobile_redirect_url.as_deref() {
+        if !is_allowed_mobile_redirect(mobile_redirect) {
+            return with_cors(bad_request("mobile_redirect_url is not allowed"));
+        }
+        let public_api_url = match config.public_api_url.as_deref() {
+            Some(v) if !v.trim().is_empty() => v.trim().trim_end_matches('/'),
+            _ => return with_cors(bad_request("PUBLIC_API_URL is required for mobile redirect flow")),
+        };
+        let encoded_mobile: String = url::form_urlencoded::byte_serialize(mobile_redirect.as_bytes()).collect();
+        format!(
+            "{}/api/v1/auth/neo-id/mobile-callback?mobile_redirect_url={}",
+            public_api_url, encoded_mobile
+        )
+    } else {
+        body.redirect_url.clone()
+    };
+
     let neo_id = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
     match neo_id.request_login_url(
-        &body.redirect_url,
+        &effective_redirect_url,
         &body.state,
         body.mode.as_deref(),
         body.code_challenge.as_deref(),
@@ -69,6 +93,52 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
         }
         Err(_) => with_cors(bad_gateway("neo id service unavailable")),
     }
+}
+
+pub fn handle_mobile_callback_get(
+    access_token: Option<&str>,
+    token: Option<&str>,
+    refresh_token: Option<&str>,
+    state: Option<&str>,
+    mobile_redirect_url: Option<&str>,
+) -> VResp {
+    let mobile_redirect = mobile_redirect_url.unwrap_or("").trim();
+    if mobile_redirect.is_empty() {
+        return with_cors(bad_request("mobile_redirect_url is required"));
+    }
+    if !is_allowed_mobile_redirect(mobile_redirect) {
+        return with_cors(bad_request("mobile_redirect_url is not allowed"));
+    }
+
+    let token_value = access_token
+        .filter(|v| !v.trim().is_empty())
+        .or_else(|| token.filter(|v| !v.trim().is_empty()))
+        .unwrap_or("");
+    if token_value.is_empty() {
+        return with_cors(bad_request("access_token is required"));
+    }
+
+    let mut url = match Url::parse(mobile_redirect) {
+        Ok(v) => v,
+        Err(_) => return with_cors(bad_request("invalid mobile_redirect_url")),
+    };
+    {
+        let mut qp = url.query_pairs_mut();
+        qp.append_pair("access_token", token_value);
+        if let Some(rt) = refresh_token.filter(|v| !v.trim().is_empty()) {
+            qp.append_pair("refresh_token", rt);
+        }
+        if let Some(s) = state.filter(|v| !v.trim().is_empty()) {
+            qp.append_pair("state", s);
+        }
+    }
+
+    let resp = Response::builder()
+        .status(302)
+        .header("Location", url.as_str())
+        .body(ResponseBody::from(""))
+        .unwrap();
+    with_cors(resp)
 }
 
 // ── Callback ──────────────────────────────────────────────────────────────────

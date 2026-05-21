@@ -51,6 +51,20 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
             let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
             auth::handle_callback(&bytes).await
         }
+        "auth_mobile_callback" => {
+            let access_token = q(&params, "access_token");
+            let token = q(&params, "token");
+            let refresh_token = q(&params, "refresh_token");
+            let state = q(&params, "state");
+            let mobile_redirect_url = q(&params, "mobile_redirect_url");
+            auth::handle_mobile_callback_get(
+                access_token,
+                token,
+                refresh_token,
+                state,
+                mobile_redirect_url,
+            )
+        }
         "auth_refresh" => {
             let body = req.into_body();
             let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();

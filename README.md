@@ -46,8 +46,9 @@ MONGODB_URI=mongodb+srv://...
 JWT_SECRET=your-secret
 NEO_ID_URL=https://id.neomovies.ru
 NEO_ID_API_KEY=...
-NEO_ID_API_SECRET=...
-KINOPOISK_API_KEY=...
+NEO_ID_SITE_ID=...
+PUBLIC_API_URL=https://api.neomovies.ru
+KPAPI_KEY=...
 
 # Video players (optional, enable as needed)
 ALLOHA_TOKEN=...
@@ -105,6 +106,16 @@ The Netlify deploy button is docs-only plus API proxying, so it does not require
 Full spec: [`openapi.yaml`](openapi.yaml)  
 Docs (local build in repo): [`docs/build`](docs/build)  
 Docs (production): [api.neomovies.ru](https://api.neomovies.ru)
+
+### Mobile Neo ID callback
+
+For mobile clients, backend supports redirect trampoline:
+
+- `POST /api/v1/auth/neo-id/login` with `mobile_redirect_url` (e.g. `neomovies://auth/neo-id/callback`)
+- Neo ID redirects to `/api/v1/auth/neo-id/mobile-callback`
+- API redirects (`302`) to mobile deep link with `access_token` in query
+
+Important: set `PUBLIC_API_URL` in Vercel env (example: `https://api.neomovies.ru`).
 
 ## License
 

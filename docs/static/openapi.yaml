@@ -1065,6 +1065,9 @@ paths:
                 redirect_url:
                   type: string
                   format: uri
+                mobile_redirect_url:
+                  type: string
+                  description: Optional mobile deep link redirect (for example `neomovies://auth/neo-id/callback`)
                 state:
                   type: string
                 mode:
@@ -1119,6 +1122,48 @@ paths:
                 $ref: "#/components/schemas/TokenPair"
         "401":
           description: Invalid Neo ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/neo-id/mobile-callback:
+    get:
+      tags: [Auth]
+      summary: Mobile redirect trampoline for Neo ID callback
+      operationId: authMobileCallback
+      parameters:
+        - in: query
+          name: mobile_redirect_url
+          required: true
+          schema:
+            type: string
+          description: Allowed app deep link, e.g. `neomovies://auth/neo-id/callback`
+        - in: query
+          name: access_token
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: token
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: refresh_token
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to mobile deep link with `access_token` (and optionally `refresh_token`, `state`)
+        "400":
+          description: Invalid or missing parameters
           content:
             application/json:
               schema:

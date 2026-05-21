@@ -190,6 +190,22 @@ async fn route_auth_callback(req: AxumRequest) -> AxumResponse {
     from_vercel(auth::handle_callback(&bytes).await).await
 }
 
+async fn route_auth_mobile_callback(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
+    let access_token = params.get("access_token").map(|s| s.as_str());
+    let token = params.get("token").map(|s| s.as_str());
+    let refresh_token = params.get("refresh_token").map(|s| s.as_str());
+    let state = params.get("state").map(|s| s.as_str());
+    let mobile_redirect_url = params.get("mobile_redirect_url").map(|s| s.as_str());
+    from_vercel(auth::handle_mobile_callback_get(
+        access_token,
+        token,
+        refresh_token,
+        state,
+        mobile_redirect_url,
+    ))
+    .await
+}
+
 async fn route_auth_refresh(req: AxumRequest) -> AxumResponse {
     let (_, body) = req.into_parts();
     let bytes = axum::body::to_bytes(body, usize::MAX)
@@ -305,6 +321,7 @@ async fn main() {
         .route("/api/v1/support/list", get(route_support))
         .route("/api/v1/auth/neo-id/login", post(route_auth_login))
         .route("/api/v1/auth/neo-id/callback", post(route_auth_callback))
+        .route("/api/v1/auth/neo-id/mobile-callback", get(route_auth_mobile_callback))
         .route("/api/v1/auth/refresh", post(route_auth_refresh))
         .route("/api/v1/auth/profile", get(route_auth_profile_get))
         .route("/api/v1/auth/profile", put(route_auth_profile_put))

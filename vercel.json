@@ -30,6 +30,10 @@
       "destination": "/api/index?route=auth_callback"
     },
     {
+      "source": "/api/v1/auth/neo-id/mobile-callback",
+      "destination": "/api/index?route=auth_mobile_callback"
+    },
+    {
       "source": "/api/v1/auth/refresh",
       "destination": "/api/index?route=auth_refresh"
     },
