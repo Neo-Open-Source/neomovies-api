@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use url::Url;
 use vercel_runtime::{Response, ResponseBody};
+use std::collections::HashSet;
 
 use crate::{
     Config, internal_error, not_found, success, unauthorized, with_cors, bad_request, bad_gateway,
@@ -46,7 +47,26 @@ pub struct LoginBody {
 }
 
 fn is_allowed_mobile_redirect(url: &str) -> bool {
-    url.starts_with("neomovies://")
+    let parsed = match Url::parse(url) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let scheme = parsed.scheme().trim().to_ascii_lowercase();
+    if scheme.is_empty() || scheme == "http" || scheme == "https" {
+        return false;
+    }
+
+    let raw = std::env::var("MOBILE_REDIRECT_SCHEMES").unwrap_or_else(|_| "neomovies".to_string());
+    let allowed: HashSet<String> = raw
+        .split(|c| c == ',' || c == ';' || c == ' ')
+        .map(|v| v.trim().to_ascii_lowercase())
+        .filter(|v| !v.is_empty())
+        .collect();
+
+    if allowed.is_empty() {
+        return scheme == "neomovies";
+    }
+    allowed.contains(&scheme)
 }
 
 pub async fn handle_login(body_bytes: &[u8]) -> VResp {
@@ -62,15 +82,7 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
         if !is_allowed_mobile_redirect(mobile_redirect) {
             return with_cors(bad_request("mobile_redirect_url is not allowed"));
         }
-        let public_api_url = match config.public_api_url.as_deref() {
-            Some(v) if !v.trim().is_empty() => v.trim().trim_end_matches('/'),
-            _ => return with_cors(bad_request("PUBLIC_API_URL is required for mobile redirect flow")),
-        };
-        let encoded_mobile: String = url::form_urlencoded::byte_serialize(mobile_redirect.as_bytes()).collect();
-        format!(
-            "{}/api/v1/auth/neo-id/mobile-callback?mobile_redirect_url={}",
-            public_api_url, encoded_mobile
-        )
+        mobile_redirect.trim().to_string()
     } else {
         body.redirect_url.clone()
     };
