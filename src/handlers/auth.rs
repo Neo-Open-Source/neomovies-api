@@ -84,7 +84,12 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
         }
     }
 
-    let neo_id = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
+    let neo_id = NeoIdClient::new(
+        &config.neo_id_url,
+        &config.neo_id_api_key,
+        &config.neo_id_site_id,
+        &config.neo_id_client_secret,
+    );
     match neo_id.request_login_url(
         &body.redirect_url,
         &body.state,
@@ -100,16 +105,28 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
                 .unwrap();
             with_cors(resp)
         }
-        Err(_) => with_cors(bad_gateway("neo id service unavailable")),
+        Err(err) => {
+            let details = err.trim();
+            let message = if details.is_empty() {
+                "neo id service unavailable".to_string()
+            } else {
+                // Keep response readable and avoid very large upstream payloads.
+                let capped = if details.len() > 240 { &details[..240] } else { details };
+                format!("neo id service unavailable: {}", capped)
+            };
+            with_cors(bad_gateway(&message))
+        }
     }
 }
 
-pub fn handle_mobile_callback_get(
+pub async fn handle_mobile_callback_get(
     access_token: Option<&str>,
     token: Option<&str>,
+    code: Option<&str>,
     refresh_token: Option<&str>,
     state: Option<&str>,
     mobile_redirect_url: Option<&str>,
+    callback_url: Option<&str>,
 ) -> VResp {
     let mobile_redirect = mobile_redirect_url.unwrap_or("").trim();
     if mobile_redirect.is_empty() {
@@ -119,24 +136,101 @@ pub fn handle_mobile_callback_get(
         return with_cors(bad_request("mobile_redirect_url is not allowed"));
     }
 
-    let token_value = access_token
-        .filter(|v| !v.trim().is_empty())
-        .or_else(|| token.filter(|v| !v.trim().is_empty()))
-        .unwrap_or("");
-
-    let mut url = match Url::parse(mobile_redirect) {
+    // Neo ID may append `?code=...` using naive string concat when redirect_uri already had query.
+    // In that case code/error/state land inside mobile_redirect_url value instead of top-level query.
+    let parsed_mobile = match Url::parse(mobile_redirect) {
         Ok(v) => v,
         Err(_) => return with_cors(bad_request("invalid mobile_redirect_url")),
     };
+    let nested_code = parsed_mobile
+        .query_pairs()
+        .find(|(k, _)| k == "code")
+        .map(|(_, v)| v.to_string());
+    let nested_state = parsed_mobile
+        .query_pairs()
+        .find(|(k, _)| k == "state")
+        .map(|(_, v)| v.to_string());
+    let nested_error = parsed_mobile
+        .query_pairs()
+        .find(|(k, _)| k == "error")
+        .map(|(_, v)| v.to_string());
+    let nested_error_description = parsed_mobile
+        .query_pairs()
+        .find(|(k, _)| k == "error_description")
+        .map(|(_, v)| v.to_string());
 
-    if !token_value.is_empty() {
+    let effective_code = code
+        .filter(|v| !v.trim().is_empty())
+        .map(|v| v.trim().to_string())
+        .or(nested_code);
+    let effective_state = state
+        .filter(|v| !v.trim().is_empty())
+        .map(|v| v.trim().to_string())
+        .or(nested_state);
+
+    let direct_token = access_token
+        .filter(|v| !v.trim().is_empty())
+        .or_else(|| token.filter(|v| !v.trim().is_empty()))
+        .map(|v| v.trim().to_string());
+
+    let token_value = if let Some(tok) = direct_token {
+        tok
+    } else if let Some(incoming_code) = effective_code.as_deref() {
+        let callback_redirect_uri = callback_url.unwrap_or("").trim();
+        if callback_redirect_uri.is_empty() {
+            return with_cors(bad_request("redirect_uri is required when using code"));
+        }
+
+        let config = match Config::from_env() {
+            Ok(c) => c,
+            Err(_) => return with_cors(internal_error()),
+        };
+        let neo_id_client = NeoIdClient::new(
+            &config.neo_id_url,
+            &config.neo_id_api_key,
+            &config.neo_id_site_id,
+            &config.neo_id_client_secret,
+        );
+        match neo_id_client
+            .exchange_auth_code(incoming_code.trim(), callback_redirect_uri)
+            .await
+        {
+            Ok(tok) => tok,
+            Err(err) => {
+                let mut error_url = parsed_mobile.clone();
+                error_url.set_query(None);
+                {
+                    let mut qp = error_url.query_pairs_mut();
+                    qp.append_pair("error", "invalid_neo_id_code");
+                    qp.append_pair("error_description", &err);
+                    if let Some(s) = effective_state.as_deref() {
+                        qp.append_pair("state", s);
+                    }
+                }
+                let resp = Response::builder()
+                    .status(302)
+                    .header("Location", error_url.as_str())
+                    .body(ResponseBody::from(""))
+                    .unwrap();
+                return with_cors(resp);
+            }
+        }
+    } else {
+        String::new()
+    };
+
+    let mut url = parsed_mobile;
+    // Ensure OAuth transport params from the broken nested callback are not leaked to app deeplink.
+    url.set_query(None);
+
+    if !token_value.trim().is_empty() {
         {
             let mut qp = url.query_pairs_mut();
-            qp.append_pair("access_token", token_value);
+            qp.append_pair("access_token", &token_value);
             if let Some(rt) = refresh_token.filter(|v| !v.trim().is_empty()) {
                 qp.append_pair("refresh_token", rt);
             }
-            if let Some(s) = state.filter(|v| !v.trim().is_empty()) {
+            if let Some(s) = effective_state.as_deref() {
                 qp.append_pair("state", s);
             }
         }
@@ -172,10 +266,33 @@ pub fn handle_mobile_callback_get(
         const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
         const queryParams = new URLSearchParams(window.location.search || '');
         const token = hashParams.get('access_token') || hashParams.get('token') || queryParams.get('access_token') || queryParams.get('token');
+        const code = hashParams.get('code') || queryParams.get('code');
         const refresh = hashParams.get('refresh_token') || queryParams.get('refresh_token');
         const state = hashParams.get('state') || queryParams.get('state');
+        const error = hashParams.get('error') || queryParams.get('error');
+        const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
+        if (!error) {{
+          const nested = new URL(mobile);
+          const nestedError = nested.searchParams.get('error');
+          const nestedErrorDescription = nested.searchParams.get('error_description');
+          if (nestedError) {{
+            const msg = 'OAuth error: ' + nestedError + (nestedErrorDescription ? (' (' + nestedErrorDescription + ')') : '');
+            document.body.innerHTML = '<div class="box">' + msg + '</div>';
+            return;
+          }}
+        }}
+        if (!token && code) {{
+          const current = new URL(window.location.href);
+          current.hash = '';
+          current.searchParams.set('code', code);
+          window.location.replace(current.toString());
+          return;
+        }}
         if (!token) {{
-          document.body.innerHTML = '<div class="box">Auth token missing</div>';
+          const msg = error
+            ? ('OAuth error: ' + error + (errorDescription ? (' (' + errorDescription + ')') : ''))
+            : 'Auth token/code missing';
+          document.body.innerHTML = '<div class="box">' + msg + '</div>';
           return;
         }}
         const target = new URL(mobile);
@@ -213,7 +330,12 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
         Ok(b) => b,
         Err(_) => return with_cors(unauthorized("invalid neo id token")),
     };
-    let neo_id_client = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
+    let neo_id_client = NeoIdClient::new(
+        &config.neo_id_url,
+        &config.neo_id_api_key,
+        &config.neo_id_site_id,
+        &config.neo_id_client_secret,
+    );
     let incoming_token = body
         .access_token
         .or(body.token)
@@ -467,7 +589,12 @@ pub async fn handle_delete(headers: &HeaderMap) -> VResp {
         return with_cors(internal_error());
     }
     let neo_id = auth_user.neo_id.clone();
-    let neo_id_client = NeoIdClient::new(&config.neo_id_url, &config.neo_id_api_key, &config.neo_id_site_id);
+    let neo_id_client = NeoIdClient::new(
+        &config.neo_id_url,
+        &config.neo_id_api_key,
+        &config.neo_id_site_id,
+        &config.neo_id_client_secret,
+    );
     tokio::spawn(async move { neo_id_client.notify_user_deleted(&neo_id).await; });
     with_cors(success(json!({})))
 }

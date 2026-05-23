@@ -4,6 +4,7 @@ pub struct NeoIdClient {
     pub base_url: String,
     pub api_key: String,
     pub site_id: String,
+    pub client_secret: String,
     client: reqwest::Client,
 }
 
@@ -76,11 +77,12 @@ struct OAuthTokenResponse {
 }
 
 impl NeoIdClient {
-    pub fn new(base_url: &str, api_key: &str, site_id: &str) -> Self {
+    pub fn new(base_url: &str, api_key: &str, site_id: &str, client_secret: &str) -> Self {
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
             api_key: api_key.to_string(),
             site_id: site_id.to_string(),
+            client_secret: client_secret.to_string(),
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
                 .build()
@@ -183,7 +185,7 @@ impl NeoIdClient {
             urlencoding::encode(code),
             urlencoding::encode(redirect_uri),
             urlencoding::encode(&self.site_id),
-            urlencoding::encode(&self.api_key)
+            urlencoding::encode(&self.client_secret)
         );
 
         eprintln!("[OAuth] Exchanging code for token");

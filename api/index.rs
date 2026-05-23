@@ -21,6 +21,17 @@ fn q<'a>(params: &'a [(String, String)], key: &str) -> Option<&'a str> {
     params.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
 }
 
+fn raw_q(query: &str, key: &str) -> Option<String> {
+    for pair in query.split('&') {
+        let mut it = pair.splitn(2, '=');
+        let k = it.next().unwrap_or("");
+        if k == key {
+            return Some(it.next().unwrap_or("").to_string());
+        }
+    }
+    None
+}
+
 pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
     let params = parse_query(req.uri().query().unwrap_or(""));
     let route = q(&params, "route").unwrap_or("");
@@ -54,16 +65,27 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
         "auth_mobile_callback" => {
             let access_token = q(&params, "access_token");
             let token = q(&params, "token");
+            let code = q(&params, "code");
             let refresh_token = q(&params, "refresh_token");
             let state = q(&params, "state");
             let mobile_redirect_url = q(&params, "mobile_redirect_url");
+            let raw_query = req.uri().query().unwrap_or("");
+            let callback_url = raw_q(raw_query, "mobile_redirect_url").map(|raw_mobile_redirect| {
+                format!(
+                    "https://api.neomovies.ru/api/v1/auth/neo-id/mobile-callback?mobile_redirect_url={}",
+                    raw_mobile_redirect
+                )
+            });
             auth::handle_mobile_callback_get(
                 access_token,
                 token,
+                code,
                 refresh_token,
                 state,
                 mobile_redirect_url,
+                callback_url.as_deref(),
             )
+            .await
         }
         "auth_refresh" => {
             let body = req.into_body();

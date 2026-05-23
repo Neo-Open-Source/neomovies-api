@@ -26,6 +26,17 @@ use neomovies_api::handlers::{
     auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, torrents, webhook,
 };
 
+fn raw_q(query: &str, key: &str) -> Option<String> {
+    for pair in query.split('&') {
+        let mut it = pair.splitn(2, '=');
+        let k = it.next().unwrap_or("");
+        if k == key {
+            return Some(it.next().unwrap_or("").to_string());
+        }
+    }
+    None
+}
+
 async fn from_vercel(resp: Response<ResponseBody>) -> AxumResponse {
     let (parts, body) = resp.into_parts();
     let status = StatusCode::from_u16(parts.status.as_u16()).unwrap_or(StatusCode::OK);
@@ -190,19 +201,33 @@ async fn route_auth_callback(req: AxumRequest) -> AxumResponse {
     from_vercel(auth::handle_callback(&bytes).await).await
 }
 
-async fn route_auth_mobile_callback(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
+async fn route_auth_mobile_callback(req: AxumRequest) -> AxumResponse {
+    let uri = req.uri().clone();
+    let raw_query = uri.query().unwrap_or("");
+    let params: HashMap<String, String> = url::form_urlencoded::parse(raw_query.as_bytes())
+        .into_owned()
+        .collect();
     let access_token = params.get("access_token").map(|s| s.as_str());
     let token = params.get("token").map(|s| s.as_str());
+    let code = params.get("code").map(|s| s.as_str());
     let refresh_token = params.get("refresh_token").map(|s| s.as_str());
     let state = params.get("state").map(|s| s.as_str());
     let mobile_redirect_url = params.get("mobile_redirect_url").map(|s| s.as_str());
+    let callback_url = raw_q(raw_query, "mobile_redirect_url").map(|raw_mobile_redirect| {
+        format!(
+            "https://api.neomovies.ru/api/v1/auth/neo-id/mobile-callback?mobile_redirect_url={}",
+            raw_mobile_redirect
+        )
+    });
     from_vercel(auth::handle_mobile_callback_get(
         access_token,
         token,
+        code,
         refresh_token,
         state,
         mobile_redirect_url,
-    ))
+        callback_url.as_deref(),
+    ).await)
     .await
 }
 
