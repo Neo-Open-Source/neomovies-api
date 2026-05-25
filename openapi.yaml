@@ -498,6 +498,82 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /tv/{kp_id}/season/{season}/episode/{episode}:
+    get:
+      tags: [Media]
+      summary: Get TV episode description by Kinopoisk ID
+      operationId: getTvEpisodeDescription
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: season
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: episode
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ru-RU, ru, en-US, en]
+            default: ru-RU
+      responses:
+        "200":
+          description: Episode description
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [id, name, overview, airDate, seasonNumber, episodeNumber, language]
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                          overview:
+                            type: string
+                          airDate:
+                            type: string
+                          seasonNumber:
+                            type: integer
+                          episodeNumber:
+                            type: integer
+                          stillPath:
+                            type: string
+                            nullable: true
+                          language:
+                            type: string
+        "400":
+          description: Invalid kp_id, season, episode, or media type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Media or episode not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /images/proxy:
     get:
       tags: [Images]

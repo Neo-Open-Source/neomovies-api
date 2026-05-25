@@ -85,6 +85,14 @@ async fn route_film(Path(kp_id): Path<String>) -> AxumResponse {
     from_vercel(media::handle_film(&kp_id).await).await
 }
 
+async fn route_tv_episode_description(
+    Path((kp_id, season, episode)): Path<(String, u32, u32)>,
+    Query(params): Query<HashMap<String, String>>,
+) -> AxumResponse {
+    let language = params.get("language").map(|s| s.as_str());
+    from_vercel(media::handle_tv_episode_description(&kp_id, season, episode, language).await).await
+}
+
 async fn route_image_proxy(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
     let url = params.get("url").map(|s| s.as_str()).unwrap_or("");
     from_vercel(images::handle_proxy(url).await).await
@@ -370,6 +378,7 @@ async fn main() {
         .route("/api/v1/movies/top-rated", get(route_top_rated))
         .route("/api/v1/tv/top-rated", get(route_tv_top_rated))
         .route("/api/v1/movie/{kp_id}", get(route_film))
+        .route("/api/v1/tv/{kp_id}/season/{season}/episode/{episode}", get(route_tv_episode_description))
         .route("/api/v1/players/{provider}/kp/{kp_id}", get(route_player))
         .route("/api/v1/players/cdn/{cdn_id}", get(route_cdn_player))
         .route("/api/v1/players/cdn/kp/{kp_id}", get(route_cdn_player_by_kp))

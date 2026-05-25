@@ -78,6 +78,10 @@
       "destination": "/api/index?route=media_film&id=:id"
     },
     {
+      "source": "/api/v1/tv/:kp_id/season/:season/episode/:episode",
+      "destination": "/api/index?route=media_tv_episode_description&kp_id=:kp_id&season=:season&episode=:episode"
+    },
+    {
       "source": "/api/v1/images/proxy",
       "destination": "/api/index?route=image_proxy"
     },

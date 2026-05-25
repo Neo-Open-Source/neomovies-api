@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy)]
 pub enum MediaType {
@@ -62,6 +62,30 @@ struct ImageItem {
 pub struct TmdbLookup {
     pub tmdb_id: u64,
     pub imdb_id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EpisodeDescription {
+    pub id: u64,
+    pub name: String,
+    pub overview: String,
+    pub air_date: String,
+    pub season_number: u32,
+    pub episode_number: u32,
+    pub still_path: Option<String>,
+    pub language: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct EpisodeDetailsResponse {
+    id: Option<u64>,
+    name: Option<String>,
+    overview: Option<String>,
+    air_date: Option<String>,
+    season_number: Option<u32>,
+    episode_number: Option<u32>,
+    still_path: Option<String>,
 }
 
 #[derive(Debug)]
@@ -272,5 +296,52 @@ impl TmdbClient {
     pub async fn logo_path(&self, tmdb_id: u64, media_type: MediaType) -> Result<String, TmdbError> {
         let body = self.images(tmdb_id, media_type).await?;
         body.logos.and_then(Self::pick_with_lang_priority).ok_or(TmdbError::NotFound)
+    }
+
+    pub async fn tv_episode_description(
+        &self,
+        tmdb_id: u64,
+        season: u32,
+        episode: u32,
+        language: &str,
+    ) -> Result<EpisodeDescription, TmdbError> {
+        let resp = self
+            .client
+            .get(format!(
+                "{}/tv/{}/season/{}/episode/{}",
+                self.base_url, tmdb_id, season, episode
+            ))
+            .query(&[("api_key", self.api_key.as_str()), ("language", language)])
+            .send()
+            .await
+            .map_err(|e| TmdbError::Upstream(format!("episode send: {}", e)))?;
+
+        if !resp.status().is_success() {
+            if resp.status() == reqwest::StatusCode::NOT_FOUND {
+                return Err(TmdbError::NotFound);
+            }
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(TmdbError::Upstream(format!(
+                "episode status {} body {}",
+                status, body
+            )));
+        }
+
+        let body: EpisodeDetailsResponse = resp
+            .json()
+            .await
+            .map_err(|e| TmdbError::Upstream(format!("episode decode: {}", e)))?;
+
+        Ok(EpisodeDescription {
+            id: body.id.unwrap_or(0),
+            name: body.name.unwrap_or_default(),
+            overview: body.overview.unwrap_or_default(),
+            air_date: body.air_date.unwrap_or_default(),
+            season_number: body.season_number.unwrap_or(season),
+            episode_number: body.episode_number.unwrap_or(episode),
+            still_path: body.still_path,
+            language: language.to_string(),
+        })
     }
 }

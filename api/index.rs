@@ -146,6 +146,19 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
             let id = q(&params, "id").unwrap_or("");
             media::handle_film(id).await
         }
+        "media_tv_episode_description" => {
+            let kp_id = q(&params, "kp_id").unwrap_or("");
+            let season = match q(&params, "season").and_then(|s| s.parse::<u32>().ok()) {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("not found"))),
+            };
+            let episode = match q(&params, "episode").and_then(|s| s.parse::<u32>().ok()) {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("not found"))),
+            };
+            let language = q(&params, "language");
+            media::handle_tv_episode_description(kp_id, season, episode, language).await
+        }
 
         "image_proxy" => {
             let url = q(&params, "url").unwrap_or("");
