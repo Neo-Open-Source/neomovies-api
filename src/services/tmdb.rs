@@ -75,6 +75,13 @@ pub struct EpisodeDescription {
     pub episode_number: u32,
     pub still_path: Option<String>,
     pub language: String,
+    pub ratings: Ratings,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Ratings {
+    pub tmdb: Option<f64>,
+    pub imdb: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -86,6 +93,12 @@ struct EpisodeDetailsResponse {
     season_number: Option<u32>,
     episode_number: Option<u32>,
     still_path: Option<String>,
+    vote_average: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MediaDetailsResponse {
+    vote_average: Option<f64>,
 }
 
 #[derive(Debug)]
@@ -342,6 +355,41 @@ impl TmdbClient {
             episode_number: body.episode_number.unwrap_or(episode),
             still_path: body.still_path,
             language: language.to_string(),
+            ratings: Ratings {
+                tmdb: body.vote_average,
+                imdb: None,
+            },
         })
+    }
+
+    pub async fn media_tmdb_rating(&self, tmdb_id: u64, media_type: MediaType) -> Result<Option<f64>, TmdbError> {
+        let path = match media_type {
+            MediaType::Movie => format!("movie/{}", tmdb_id),
+            MediaType::Tv => format!("tv/{}", tmdb_id),
+        };
+
+        let resp = self
+            .client
+            .get(format!("{}/{}", self.base_url, path))
+            .query(&[("api_key", self.api_key.as_str())])
+            .send()
+            .await
+            .map_err(|e| TmdbError::Upstream(format!("details send: {}", e)))?;
+
+        if !resp.status().is_success() {
+            if resp.status() == reqwest::StatusCode::NOT_FOUND {
+                return Err(TmdbError::NotFound);
+            }
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(TmdbError::Upstream(format!("details status {} body {}", status, body)));
+        }
+
+        let body: MediaDetailsResponse = resp
+            .json()
+            .await
+            .map_err(|e| TmdbError::Upstream(format!("details decode: {}", e)))?;
+
+        Ok(body.vote_average)
     }
 }

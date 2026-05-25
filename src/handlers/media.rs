@@ -1,4 +1,5 @@
 use crate::{Config, bad_gateway, bad_request, internal_error, not_found, success, with_cors};
+use crate::services::kinopoisk::RatingsDto;
 use crate::services::KinopoiskClient;
 use crate::services::tmdb::{MediaType, TmdbClient, TmdbError};
 use vercel_runtime::{Response, ResponseBody};
@@ -58,7 +59,38 @@ pub async fn handle_film(kp_id_str: &str) -> Response<ResponseBody> {
     };
     let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
     match kp.get_film(id).await {
-        Ok(film) => with_cors(success(film)),
+        Ok(mut film) => {
+            let media_kind = film.media_type.to_lowercase();
+            let media_type = if matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial") {
+                MediaType::Tv
+            } else {
+                MediaType::Movie
+            };
+
+            if let Ok(tmdb) = TmdbClient::from_env() {
+                if let Ok(tmdb_id) = resolve_tmdb_id_with_fallback(
+                    &tmdb,
+                    media_type,
+                    film.external_ids.imdb.as_deref(),
+                    &film.original_title,
+                    &film.title,
+                    &film.release_date,
+                )
+                .await
+                {
+                    film.external_ids.tmdb = Some(tmdb_id as i64);
+                    if let Ok(tmdb_rating) = tmdb.media_tmdb_rating(tmdb_id, media_type).await {
+                        film.ratings = RatingsDto {
+                            kp: film.rating,
+                            imdb: film.ratings.imdb,
+                            tmdb: tmdb_rating,
+                        };
+                    }
+                }
+            }
+
+            with_cors(success(film))
+        }
         Err(e) if e.contains("not_found") => with_cors(not_found("not found")),
         Err(_) => with_cors(bad_gateway("upstream error")),
     }
@@ -180,7 +212,10 @@ pub async fn handle_tv_episode_description(
         .tv_episode_description(tmdb_id, season, episode, lang)
         .await
     {
-        Ok(data) => with_cors(success(data)),
+        Ok(mut data) => {
+            data.ratings.imdb = film.ratings.imdb;
+            with_cors(success(data))
+        }
         Err(e) => map_tmdb_err(e),
     }
 }

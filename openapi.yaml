@@ -104,6 +104,22 @@ components:
           type: string
           nullable: true
 
+    Ratings:
+      type: object
+      required: [kp, imdb, tmdb]
+      properties:
+        kp:
+          type: number
+          format: float
+        imdb:
+          type: number
+          format: float
+          nullable: true
+        tmdb:
+          type: number
+          format: float
+          nullable: true
+
     SearchResultItem:
       type: object
       required:
@@ -130,6 +146,8 @@ components:
         rating:
           type: number
           format: float
+        ratings:
+          $ref: "#/components/schemas/Ratings"
         posterUrl:
           type: string
           example: /api/v1/images/kp_small/326
@@ -202,6 +220,8 @@ components:
         rating:
           type: number
           format: float
+        ratings:
+          $ref: "#/components/schemas/Ratings"
         posterUrl:
           type: string
           example: /api/v1/images/kp_small/326
@@ -536,7 +556,7 @@ paths:
                     properties:
                       data:
                         type: object
-                        required: [id, name, overview, airDate, seasonNumber, episodeNumber, language]
+                        required: [id, name, overview, airDate, seasonNumber, episodeNumber, language, ratings]
                         properties:
                           id:
                             type: integer
@@ -555,6 +575,18 @@ paths:
                             nullable: true
                           language:
                             type: string
+                          ratings:
+                            type: object
+                            required: [tmdb, imdb]
+                            properties:
+                              tmdb:
+                                type: number
+                                format: float
+                                nullable: true
+                              imdb:
+                                type: number
+                                format: float
+                                nullable: true
         "400":
           description: Invalid kp_id, season, episode, or media type
           content:

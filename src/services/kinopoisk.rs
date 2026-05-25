@@ -60,6 +60,7 @@ pub struct KpFilmShort {
     pub poster_url_preview: Option<String>,
     pub cover_url: Option<String>,
     pub rating_kinopoisk: Option<f64>,
+    pub rating_imdb: Option<f64>,
     pub rating: Option<String>, // old format
     pub year: Option<Value>,    // FlexibleInt: can be int, string, or null
     pub description: Option<String>,
@@ -142,6 +143,7 @@ pub struct MediaDetailsDto {
     pub media_type: String,
     pub genres: Vec<GenreDto>,
     pub rating: f64,
+    pub ratings: RatingsDto,
     pub poster_url: String,
     pub backdrop_url: String,
     pub duration: i32,
@@ -173,6 +175,7 @@ pub struct SearchResultItem {
     pub original_title: String,
     pub year: Option<i32>,
     pub rating: f64,
+    pub ratings: RatingsDto,
     pub poster_url: String,
     pub genres: Vec<GenreDto>,
     pub description: String,
@@ -187,6 +190,13 @@ pub struct SearchResponse {
     pub results: Vec<SearchResultItem>,
     pub total: i32,
     pub pages: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RatingsDto {
+    pub kp: f64,
+    pub imdb: Option<f64>,
+    pub tmdb: Option<f64>,
 }
 
 fn to_local_image_path(url: &str, default_kind: &str) -> String {
@@ -391,6 +401,11 @@ fn map_film_to_dto(f: KpFilm) -> MediaDetailsDto {
         media_type,
         genres,
         rating,
+        ratings: RatingsDto {
+            kp: rating,
+            imdb: f.rating_imdb,
+            tmdb: None,
+        },
         poster_url,
         backdrop_url,
         duration,
@@ -426,6 +441,11 @@ fn map_short_to_search_item(f: KpFilmShort) -> SearchResultItem {
         original_title,
         year,
         rating,
+        ratings: RatingsDto {
+            kp: rating,
+            imdb: f.rating_imdb,
+            tmdb: None,
+        },
         poster_url,
         genres,
         description,
