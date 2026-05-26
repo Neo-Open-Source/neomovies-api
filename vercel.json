@@ -138,6 +138,10 @@
       "destination": "/api/index?route=player&provider=:provider&kp_id=:kp_id"
     },
     {
+      "source": "/api/v1/alloha/catalog/kp/:kp_id",
+      "destination": "/api/index?route=alloha_catalog&kp_id=:kp_id"
+    },
+    {
       "source": "/api/v1/hls/proxy",
       "destination": "/api/index?route=hls_proxy"
     },

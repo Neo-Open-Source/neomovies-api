@@ -148,6 +148,54 @@ pub async fn get_alloha_player(
     Ok(html)
 }
 
+/// Returns raw JSON payload from Alloha catalog API by KP ID.
+/// Uses the same TLS-relaxed client as other Alloha calls.
+pub async fn get_alloha_catalog(kp_id: u64, token: &str) -> Result<Value, String> {
+    if token.is_empty() {
+        return Err("not_configured".to_string());
+    }
+
+    let mut resp_opt = None;
+    let mut last_err: Option<String> = None;
+    let urls = [
+        format!("https://api.alloha.tv/?token={}&kp={}", token, kp_id),
+        format!("http://api.alloha.tv/?token={}&kp={}", token, kp_id),
+    ];
+    for url in &urls {
+        match alloha_http_client()
+            .get(url)
+            .header("Accept", "application/json")
+            .header("User-Agent", "NeoMovies/2.0 (+https://neomovies.ru)")
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                resp_opt = Some(resp);
+                break;
+            }
+            Err(err) => last_err = Some(err.to_string()),
+        }
+    }
+
+    let resp = match resp_opt {
+        Some(r) => r,
+        None => {
+            return Err(format!(
+                "alloha request failed: {}",
+                last_err.unwrap_or_else(|| "unknown error".to_string())
+            ))
+        }
+    };
+
+    if !resp.status().is_success() {
+        return Err("not_found".to_string());
+    }
+
+    resp.json::<Value>()
+        .await
+        .map_err(|e| format!("failed to parse alloha response: {}", e))
+}
+
 // ── Lumex ─────────────────────────────────────────────────────────────────────
 
 /// Returns HTML iframe page for Lumex player by KP ID.

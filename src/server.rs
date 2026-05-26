@@ -23,7 +23,7 @@ use tracing::Level;
 use vercel_runtime::{Response, ResponseBody};
 
 use neomovies_api::handlers::{
-    auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, torrents, webhook,
+    alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, torrents, webhook,
 };
 
 fn raw_q(query: &str, key: &str) -> Option<String> {
@@ -159,6 +159,10 @@ async fn route_player(
     let season = params.get("season").and_then(|s| s.parse().ok());
     let episode = params.get("episode").and_then(|s| s.parse().ok());
     from_vercel(players::handle(&provider, kp_id, season, episode).await).await
+}
+
+async fn route_alloha_catalog(Path(kp_id): Path<u64>) -> AxumResponse {
+    from_vercel(alloha::handle_catalog_by_kp(kp_id).await).await
 }
 
 async fn route_cdn_player(
@@ -380,6 +384,7 @@ async fn main() {
         .route("/api/v1/movie/{kp_id}", get(route_film))
         .route("/api/v1/tv/{kp_id}/season/{season}/episode/{episode}", get(route_tv_episode_description))
         .route("/api/v1/players/{provider}/kp/{kp_id}", get(route_player))
+        .route("/api/v1/alloha/catalog/kp/{kp_id}", get(route_alloha_catalog))
         .route("/api/v1/players/cdn/{cdn_id}", get(route_cdn_player))
         .route("/api/v1/players/cdn/kp/{kp_id}", get(route_cdn_player_by_kp))
         .route("/api/v1/hls/proxy", get(route_hls_proxy))

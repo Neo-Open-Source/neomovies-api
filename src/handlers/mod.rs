@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod alloha;
 pub mod cdn_player;
 pub mod hls_proxy;
 pub mod media;
