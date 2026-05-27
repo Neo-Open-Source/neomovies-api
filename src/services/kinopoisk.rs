@@ -231,33 +231,65 @@ impl KinopoiskClient {
             api_key: api_key.to_string(),
             base_url: base_url.trim_end_matches('/').to_string(),
             client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(10))
+                .connect_timeout(std::time::Duration::from_secs(4))
+                .timeout(std::time::Duration::from_secs(15))
+                .user_agent("neomovies-api/1.0 (+https://api.neomovies.ru)")
                 .build()
                 .unwrap(),
         }
     }
 
     async fn get<T: for<'de> Deserialize<'de>>(&self, url: &str) -> Result<T, String> {
-        let resp = self
-            .client
-            .get(url)
-            .header("X-API-KEY", &self.api_key)
-            .header("Accept", "application/json")
-            .send()
-            .await
-            .map_err(|e| format!("kp request failed: {}", e))?;
+        let mut last_err = String::from("kp request failed");
 
-        let status = resp.status();
-        if status == reqwest::StatusCode::NOT_FOUND {
-            return Err("not_found".to_string());
-        }
-        if !status.is_success() {
-            return Err(format!("upstream error: {}", status));
+        for attempt in 1..=2 {
+            let resp = self
+                .client
+                .get(url)
+                .header("X-API-KEY", &self.api_key)
+                .header("Accept", "application/json")
+                .send()
+                .await;
+
+            let resp = match resp {
+                Ok(v) => v,
+                Err(e) => {
+                    last_err = format!("kp request failed (attempt {}): {}", attempt, e);
+                    if attempt < 2 && (e.is_timeout() || e.is_connect()) {
+                        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                        continue;
+                    }
+                    return Err(last_err);
+                }
+            };
+
+            let status = resp.status();
+            if status == reqwest::StatusCode::NOT_FOUND {
+                return Err("not_found".to_string());
+            }
+            if !status.is_success() {
+                let body = resp.text().await.unwrap_or_default();
+                let body_snippet: String = body.chars().take(300).collect();
+                last_err = format!(
+                    "kp upstream status {} (attempt {}): {}",
+                    status, attempt, body_snippet
+                );
+                if attempt < 2
+                    && (status == reqwest::StatusCode::TOO_MANY_REQUESTS || status.is_server_error())
+                {
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    continue;
+                }
+                return Err(last_err);
+            }
+
+            return resp
+                .json::<T>()
+                .await
+                .map_err(|e| format!("failed to parse kp response: {}", e));
         }
 
-        resp.json::<T>()
-            .await
-            .map_err(|e| format!("failed to parse kp response: {}", e))
+        Err(last_err)
     }
 
     /// Search films by keyword. Returns SearchResponse.

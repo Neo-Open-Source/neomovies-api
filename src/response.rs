@@ -38,6 +38,17 @@ pub fn bad_gateway(message: &str) -> Response<ResponseBody> {
     json_response(502, json!({ "error": message }))
 }
 
+pub fn service_unavailable_maintenance() -> Response<ResponseBody> {
+    json_response(
+        503,
+        json!({
+            "error": "service temporarily unavailable",
+            "code": "MAINTENANCE_MODE",
+            "message": "The service is under maintenance for an indefinite period."
+        }),
+    )
+}
+
 pub fn with_cors(mut response: Response<ResponseBody>) -> Response<ResponseBody> {
     let headers = response.headers_mut();
     headers.insert("Access-Control-Allow-Origin", "*".parse().unwrap());

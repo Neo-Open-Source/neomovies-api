@@ -1,4 +1,4 @@
-use crate::{Config, bad_gateway, bad_request, internal_error, not_found, success, with_cors};
+use crate::{Config, bad_gateway, bad_request, internal_error, not_found, service_unavailable_maintenance, success, with_cors};
 use crate::services::kinopoisk::RatingsDto;
 use crate::services::KinopoiskClient;
 use crate::services::tmdb::{MediaType, TmdbClient, TmdbError};
@@ -20,7 +20,10 @@ pub async fn handle_popular(page: u32) -> Response<ResponseBody> {
     let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
     match kp.get_popular(page).await {
         Ok(r) => with_cors(success(r)),
-        Err(_) => with_cors(bad_gateway("upstream error")),
+        Err(e) => {
+            eprintln!("media_popular upstream error (page={}): {}", page, e);
+            with_cors(service_unavailable_maintenance())
+        }
     }
 }
 
@@ -32,7 +35,10 @@ pub async fn handle_top_rated(page: u32) -> Response<ResponseBody> {
     let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
     match kp.get_top_rated(page).await {
         Ok(r) => with_cors(success(r)),
-        Err(_) => with_cors(bad_gateway("upstream error")),
+        Err(e) => {
+            eprintln!("media_top_rated upstream error (page={}): {}", page, e);
+            with_cors(service_unavailable_maintenance())
+        }
     }
 }
 
@@ -44,7 +50,10 @@ pub async fn handle_top_rated_tv(page: u32) -> Response<ResponseBody> {
     let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
     match kp.get_top_rated_tv(page).await {
         Ok(r) => with_cors(success(r)),
-        Err(_) => with_cors(bad_gateway("upstream error")),
+        Err(e) => {
+            eprintln!("media_tv_top_rated upstream error (page={}): {}", page, e);
+            with_cors(service_unavailable_maintenance())
+        }
     }
 }
 
@@ -92,7 +101,10 @@ pub async fn handle_film(kp_id_str: &str) -> Response<ResponseBody> {
             with_cors(success(film))
         }
         Err(e) if e.contains("not_found") => with_cors(not_found("not found")),
-        Err(_) => with_cors(bad_gateway("upstream error")),
+        Err(e) => {
+            eprintln!("media_film upstream error (kp_id={}): {}", id, e);
+            with_cors(service_unavailable_maintenance())
+        }
     }
 }
 
@@ -177,7 +189,10 @@ pub async fn handle_tv_episode_description(
     let film = match kp.get_film(id).await {
         Ok(film) => film,
         Err(e) if e.contains("not_found") => return with_cors(not_found("not found")),
-        Err(_) => return with_cors(bad_gateway("upstream error")),
+        Err(e) => {
+            eprintln!("media_tv_episode_description film upstream error (kp_id={}): {}", id, e);
+            return with_cors(service_unavailable_maintenance());
+        }
     };
 
     let media_kind = film.media_type.to_lowercase();
