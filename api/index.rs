@@ -71,9 +71,11 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
             let mobile_redirect_url = q(&params, "mobile_redirect_url");
             let raw_query = req.uri().query().unwrap_or("");
             let callback_url = raw_q(raw_query, "mobile_redirect_url").map(|raw_mobile_redirect| {
+                let base = std::env::var("PUBLIC_API_URL")
+                    .unwrap_or_else(|_| "https://api.neome.uk".into());
                 format!(
-                    "https://api.neomovies.ru/api/v1/auth/neo-id/mobile-callback?mobile_redirect_url={}",
-                    raw_mobile_redirect
+                    "{}/api/v1/auth/neo-id/mobile-callback?mobile_redirect_url={}",
+                    base.trim_end_matches('/'), raw_mobile_redirect
                 )
             });
             auth::handle_mobile_callback_get(
