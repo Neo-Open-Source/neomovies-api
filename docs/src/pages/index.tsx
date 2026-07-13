@@ -86,7 +86,7 @@ export default function Home(): React.JSX.Element {
             </Link>
           </div>
           <div className={styles.baseUrl}>
-            <code>https://api.neomovies.ru/api/v1</code>
+            <code>https://api.neome.uk</code>
           </div>
         </div>
       </header>

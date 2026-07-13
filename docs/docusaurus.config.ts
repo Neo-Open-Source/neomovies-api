@@ -4,7 +4,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 const config: Config = {
   title: "NeoMovies API",
   tagline: "NeoMovies API v2 Documentation",
-  url: "https://docs.neomovies.ru",
+  url: "https://docs.neome.uk",
   baseUrl: "/",
   onBrokenLinks: "warn",
   favicon: "img/favicon.ico",

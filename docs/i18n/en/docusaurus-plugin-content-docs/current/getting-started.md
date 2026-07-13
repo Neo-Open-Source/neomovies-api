@@ -7,7 +7,7 @@ sidebar_position: 2
 
 ## Base URLs
 
-- Production API: `https://api.neomovies.ru/api/v1`
+- Production API: `https://api.neome.uk/api/v1`
 - Local API (Axum): `http://localhost:3000/api/v1`
 
 ## 1. Get a Token
@@ -18,19 +18,19 @@ Quick flow:
 
 ```bash
 # 1. Get the login URL
-curl -X POST https://api.neomovies.ru/api/v1/auth/neo-id/login \
+curl -X POST https://api.neome.uk/api/v1/auth/neo-id/login \
   -H "Content-Type: application/json" \
   -d '{"redirect_url":"https://yourapp.com/callback","state":"random_state"}'
 
 # Response:
-# { "login_url": "https://id.neomovies.ru/..." }
+# { "login_url": "https://id.neome.uk/..." }
 ```
 
 The user opens `login_url`, authenticates, and Neo ID redirects back with an `access_token`.
 
 ```bash
 # 2. Exchange the Neo ID token for API tokens
-curl -X POST https://api.neomovies.ru/api/v1/auth/neo-id/callback \
+curl -X POST https://api.neome.uk/api/v1/auth/neo-id/callback \
   -H "Content-Type: application/json" \
   -d '{"access_token":"<neo_id_token>"}'
 
@@ -43,7 +43,7 @@ curl -X POST https://api.neomovies.ru/api/v1/auth/neo-id/callback \
 Pass `accessToken` in the `Authorization` header:
 
 ```bash
-curl https://api.neomovies.ru/api/v1/auth/profile \
+curl https://api.neome.uk/api/v1/auth/profile \
   -H "Authorization: Bearer eyJ..."
 ```
 
@@ -52,7 +52,7 @@ curl https://api.neomovies.ru/api/v1/auth/profile \
 Access token lifetime is **15 minutes**:
 
 ```bash
-curl -X POST https://api.neomovies.ru/api/v1/auth/refresh \
+curl -X POST https://api.neome.uk/api/v1/auth/refresh \
   -H "Content-Type: application/json" \
   -d '{"refreshToken":"a3f..."}'
 ```
@@ -60,17 +60,34 @@ curl -X POST https://api.neomovies.ru/api/v1/auth/refresh \
 ## Search
 
 ```bash
-curl "https://api.neomovies.ru/api/v1/search?query=matrix"
+# v1 — keyword search
+curl "https://api.neome.uk/api/v1/search?query=matrix"
+
+# v2 — filtered search
+curl "https://api.neome.uk/api/v2/search?keyword=matrix&genre=1&order=RATING"
 ```
 
 ## Media Details
 
 ```bash
-# Numeric Kinopoisk ID
-curl https://api.neomovies.ru/api/v1/movie/326
+# v1 — legacy details
+curl https://api.neome.uk/api/v1/movie/326
 
-# With prefix
-curl https://api.neomovies.ru/api/v1/movie/kp_326
+# v2 — clean response (no duplicate fields)
+curl https://api.neome.uk/api/v2/movie/kp_326
+```
+
+## Genres & Categories
+
+```bash
+# List all genres
+curl https://api.neome.uk/api/v1/genres
+
+# Films by genre (genre_id from /genres)
+curl "https://api.neome.uk/api/v1/category/1?films&order=RATING"
+
+# TV series by genre
+curl "https://api.neome.uk/api/v1/category/1?tv&order=RATING"
 ```
 
 ## Notes About Docs URLs

@@ -71,3 +71,25 @@ Authorization: Bearer <token>
 POST /api/v1/favorites/326?type=anime
 # { "error": "type must be movie or tv" }
 ```
+
+## Watch Later
+
+Watch later follows the same pattern as favorites but in a separate collection.
+
+```bash
+# List
+GET /api/v1/watch-later
+Authorization: Bearer <token>
+
+# Add (idempotent)
+POST /api/v1/watch-later/326?type=movie
+Authorization: Bearer <token>
+
+# Remove
+DELETE /api/v1/watch-later/326?type=movie
+Authorization: Bearer <token>
+
+# Check
+GET /api/v1/watch-later/326/check?type=movie
+Authorization: Bearer <token>
+```

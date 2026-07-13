@@ -54,7 +54,7 @@ GET /api/v1/players/collaps/kp/77044?season=1&episode=3
 
 ```html
 <iframe
-  src="https://api.neomovies.ru/api/v1/players/alloha/kp/326"
+  src="https://api.neome.uk/api/v1/players/alloha/kp/326"
   width="100%"
   height="500"
   frameborder="0"

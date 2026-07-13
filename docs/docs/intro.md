@@ -10,16 +10,18 @@ NeoMovies API v2 is a serverless REST API built in Rust, deployed on Vercel.
 
 ## Key Features
 
-- **Authentication** — via [Neo ID SSO](https://id.neomovies.ru) only
+- **Authentication** — via [Neo ID SSO](https://id.neome.uk) only
 - **Media data** — Kinopoisk API and TMDB
-- **Database** — MongoDB (users, favorites, refresh tokens)
+- **Database** — MongoDB (users, favorites, watch later, sync progress, refresh tokens)
 - **Deployment** — Vercel Serverless Functions (Rust)
 - **CORS** — allowed for all origins (`*`)
+- **v2** — cleaner media details, filtered search
 
-## Base URL
+## Base URLs
 
 ```
-https://api.neomovies.ru/api/v1
+https://api.neome.uk/api/v1   (legacy, backward-compatible)
+https://api.neome.uk/api/v2   (new, cleaner responses)
 ```
 
 ## Response Format
