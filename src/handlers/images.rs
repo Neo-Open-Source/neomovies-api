@@ -1,7 +1,7 @@
-use crate::{bad_gateway, bad_request, not_found, with_cors};
 use crate::services::tmdb::{MediaType, TmdbClient, TmdbError};
 use crate::services::KinopoiskClient;
 use crate::Config;
+use crate::{bad_gateway, bad_request, not_found, with_cors};
 use serde_json::json;
 use std::sync::OnceLock;
 use vercel_runtime::{Response, ResponseBody};
@@ -57,7 +57,7 @@ pub async fn handle_proxy(url_param: &str) -> Response<ResponseBody> {
 
     let resp = match get_client()
         .get(parsed)
-        .header("User-Agent", "NeoMovies/2.0 (+https://neomovies.ru)")
+        .header("User-Agent", "NeoMovies/2.0 (+https://watch.neome.uk)")
         .send()
         .await
     {
@@ -113,9 +113,7 @@ pub async fn handle_proxy(url_param: &str) -> Response<ResponseBody> {
         builder = builder.header("Last-Modified", lm);
     }
 
-    let response = builder
-        .body(ResponseBody::from(bytes.to_vec()))
-        .unwrap();
+    let response = builder.body(ResponseBody::from(bytes.to_vec())).unwrap();
 
     with_cors(response)
 }
@@ -140,11 +138,17 @@ fn map_tmdb_err(err: TmdbError) -> Response<ResponseBody> {
     match err {
         TmdbError::MissingApiKey => with_cors(bad_request("TMDB_API_KEY is not configured")),
         TmdbError::NotFound => with_cors(not_found("title not found")),
-        TmdbError::Upstream(msg) => with_cors(bad_gateway(&format!("tmdb upstream error: {}", msg))),
+        TmdbError::Upstream(msg) => {
+            with_cors(bad_gateway(&format!("tmdb upstream error: {}", msg)))
+        }
     }
 }
 
-pub async fn handle_screens_resolve(title: &str, year: u32, media_type: &str) -> Response<ResponseBody> {
+pub async fn handle_screens_resolve(
+    title: &str,
+    year: u32,
+    media_type: &str,
+) -> Response<ResponseBody> {
     if title.trim().is_empty() || year < 1900 {
         return with_cors(bad_request("invalid title or year"));
     }
@@ -165,14 +169,21 @@ pub async fn handle_screens_resolve(title: &str, year: u32, media_type: &str) ->
         "imdb_id": lookup.imdb_id,
         "proxy_url": format!("/api/v1/images/screens/{}", lookup.imdb_id),
     });
-    with_cors(Response::builder()
-        .status(200)
-        .header("Content-Type", "application/json; charset=utf-8")
-        .body(ResponseBody::from(payload.to_string()))
-        .unwrap())
+    with_cors(
+        Response::builder()
+            .status(200)
+            .header("Content-Type", "application/json; charset=utf-8")
+            .body(ResponseBody::from(payload.to_string()))
+            .unwrap(),
+    )
 }
 
-pub async fn handle_screens_proxy(imdb_id: &str, media_type: &str, season: Option<u32>, episode: Option<u32>) -> Response<ResponseBody> {
+pub async fn handle_screens_proxy(
+    imdb_id: &str,
+    media_type: &str,
+    season: Option<u32>,
+    episode: Option<u32>,
+) -> Response<ResponseBody> {
     let media_type = match parse_media_type(media_type) {
         Some(mt) => mt,
         None => return with_cors(bad_request("invalid media type")),
@@ -190,15 +201,17 @@ pub async fn handle_screens_proxy(imdb_id: &str, media_type: &str, season: Optio
         MediaType::Movie => format!("https://images.metahub.space/poster/small/{imdb_id}/img"),
         MediaType::Tv => format!(
             "https://episodes.metahub.space/{}/{}/{}/w780.jpg",
-            imdb_id,
-            season,
-            episode
+            imdb_id, season, episode
         ),
     };
     handle_proxy(&target).await
 }
 
-pub async fn handle_backdrop_proxy(imdb_id: &str, media_type: &str, size: Option<&str>) -> Response<ResponseBody> {
+pub async fn handle_backdrop_proxy(
+    imdb_id: &str,
+    media_type: &str,
+    size: Option<&str>,
+) -> Response<ResponseBody> {
     let media_type = match parse_media_type(media_type) {
         Some(mt) => mt,
         None => return with_cors(bad_request("invalid media type")),
@@ -228,9 +241,11 @@ pub async fn handle_backdrop_proxy(imdb_id: &str, media_type: &str, size: Option
     handle_proxy(&target).await
 }
 
-
 fn parse_year_from_release(release_date: &str) -> Option<u32> {
-    release_date.get(0..4).and_then(|v| v.parse::<u32>().ok()).filter(|y| *y >= 1900)
+    release_date
+        .get(0..4)
+        .and_then(|v| v.parse::<u32>().ok())
+        .filter(|y| *y >= 1900)
 }
 
 async fn resolve_tmdb_id_with_fallback(
@@ -250,9 +265,13 @@ async fn resolve_tmdb_id_with_fallback(
     let year = parse_year_from_release(release_date).ok_or(TmdbError::NotFound)?;
     let mut candidates: Vec<(String, u32)> = Vec::new();
     for base in [original_title.trim(), title.trim()] {
-        if base.is_empty() { continue; }
+        if base.is_empty() {
+            continue;
+        }
         candidates.push((base.to_string(), year));
-        if year > 1900 { candidates.push((base.to_string(), year - 1)); }
+        if year > 1900 {
+            candidates.push((base.to_string(), year - 1));
+        }
         candidates.push((base.to_string(), year + 1));
     }
 
@@ -280,7 +299,12 @@ fn normalize_size(size: Option<&str>) -> Option<&'static str> {
     }
 }
 
-pub async fn handle_screens_by_kp(kp_id_str: &str, season: Option<u32>, episode: Option<u32>, size: Option<&str>) -> Response<ResponseBody> {
+pub async fn handle_screens_by_kp(
+    kp_id_str: &str,
+    season: Option<u32>,
+    episode: Option<u32>,
+    size: Option<&str>,
+) -> Response<ResponseBody> {
     let kp_id: u64 = match kp_id_str.parse() {
         Ok(v) => v,
         Err(_) => return with_cors(bad_request("invalid kp_id")),
@@ -299,9 +323,20 @@ pub async fn handle_screens_by_kp(kp_id_str: &str, season: Option<u32>, episode:
     };
 
     let media_kind = film.media_type.to_lowercase();
-    let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
-    let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
-    let title = if !film.original_title.trim().is_empty() { film.original_title } else { film.title };
+    let is_tv = matches!(
+        media_kind.as_str(),
+        "tv" | "tv-series" | "tv_series" | "series" | "serial"
+    );
+    let media_type = if is_tv {
+        MediaType::Tv
+    } else {
+        MediaType::Movie
+    };
+    let title = if !film.original_title.trim().is_empty() {
+        film.original_title
+    } else {
+        film.title
+    };
     let year = film
         .release_date
         .get(0..4)
@@ -327,7 +362,10 @@ pub async fn handle_screens_by_kp(kp_id_str: &str, season: Option<u32>, episode:
     let target = if is_tv {
         let s = season.unwrap_or(1);
         let e = episode.unwrap_or(1);
-        format!("https://episodes.metahub.space/{}/{}/{}/{}.jpg", lookup.imdb_id, s, e, size)
+        format!(
+            "https://episodes.metahub.space/{}/{}/{}/{}.jpg",
+            lookup.imdb_id, s, e, size
+        )
     } else {
         let file_path = match tmdb.media_backdrop_path(lookup.tmdb_id, media_type).await {
             Ok(v) => v,
@@ -358,8 +396,15 @@ pub async fn handle_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> Respo
     };
 
     let media_kind = film.media_type.to_lowercase();
-    let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
-    let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
+    let is_tv = matches!(
+        media_kind.as_str(),
+        "tv" | "tv-series" | "tv_series" | "series" | "serial"
+    );
+    let media_type = if is_tv {
+        MediaType::Tv
+    } else {
+        MediaType::Movie
+    };
 
     let tmdb = match TmdbClient::from_env() {
         Ok(c) => c,
@@ -373,7 +418,9 @@ pub async fn handle_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> Respo
         &film.original_title,
         &film.title,
         &film.release_date,
-    ).await {
+    )
+    .await
+    {
         Ok(v) => v,
         Err(e) => return map_tmdb_err(e),
     };
@@ -390,13 +437,18 @@ pub async fn handle_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> Respo
     handle_proxy(&target).await
 }
 
-
-pub async fn handle_page_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> Response<ResponseBody> {
+pub async fn handle_page_backdrop_by_kp(
+    kp_id_str: &str,
+    size: Option<&str>,
+) -> Response<ResponseBody> {
     let kp_id: u64 = match kp_id_str.parse() {
         Ok(v) => v,
         Err(_) => return with_cors(bad_request("invalid kp_id")),
     };
-    let config = match Config::from_env() { Ok(c) => c, Err(_) => return with_cors(bad_gateway("config error")) };
+    let config = match Config::from_env() {
+        Ok(c) => c,
+        Err(_) => return with_cors(bad_gateway("config error")),
+    };
     let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
     let film = match kp.get_film(kp_id).await {
         Ok(v) => v,
@@ -404,9 +456,19 @@ pub async fn handle_page_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> 
         Err(_) => return with_cors(bad_gateway("kp upstream error")),
     };
     let media_kind = film.media_type.to_lowercase();
-    let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
-    let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
-    let tmdb = match TmdbClient::from_env() { Ok(c) => c, Err(e) => return map_tmdb_err(e) };
+    let is_tv = matches!(
+        media_kind.as_str(),
+        "tv" | "tv-series" | "tv_series" | "series" | "serial"
+    );
+    let media_type = if is_tv {
+        MediaType::Tv
+    } else {
+        MediaType::Movie
+    };
+    let tmdb = match TmdbClient::from_env() {
+        Ok(c) => c,
+        Err(e) => return map_tmdb_err(e),
+    };
     let tmdb_id = match resolve_tmdb_id_with_fallback(
         &tmdb,
         media_type,
@@ -414,12 +476,20 @@ pub async fn handle_page_backdrop_by_kp(kp_id_str: &str, size: Option<&str>) -> 
         &film.original_title,
         &film.title,
         &film.release_date,
-    ).await {
+    )
+    .await
+    {
         Ok(v) => v,
         Err(e) => return map_tmdb_err(e),
     };
-    let file_path = match tmdb.page_backdrop_path(tmdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) };
-    let size = match normalize_size(size) { Some(s) => s, None => return with_cors(bad_request("invalid size")) };
+    let file_path = match tmdb.page_backdrop_path(tmdb_id, media_type).await {
+        Ok(v) => v,
+        Err(e) => return map_tmdb_err(e),
+    };
+    let size = match normalize_size(size) {
+        Some(s) => s,
+        None => return with_cors(bad_request("invalid size")),
+    };
     let target = format!("https://image.tmdb.org/t/p/{size}{file_path}");
     handle_proxy(&target).await
 }
@@ -429,7 +499,10 @@ pub async fn handle_logo_by_kp(kp_id_str: &str, size: Option<&str>) -> Response<
         Ok(v) => v,
         Err(_) => return with_cors(bad_request("invalid kp_id")),
     };
-    let config = match Config::from_env() { Ok(c) => c, Err(_) => return with_cors(bad_gateway("config error")) };
+    let config = match Config::from_env() {
+        Ok(c) => c,
+        Err(_) => return with_cors(bad_gateway("config error")),
+    };
     let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
     let film = match kp.get_film(kp_id).await {
         Ok(v) => v,
@@ -437,9 +510,19 @@ pub async fn handle_logo_by_kp(kp_id_str: &str, size: Option<&str>) -> Response<
         Err(_) => return with_cors(bad_gateway("kp upstream error")),
     };
     let media_kind = film.media_type.to_lowercase();
-    let is_tv = matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial");
-    let media_type = if is_tv { MediaType::Tv } else { MediaType::Movie };
-    let tmdb = match TmdbClient::from_env() { Ok(c) => c, Err(e) => return map_tmdb_err(e) };
+    let is_tv = matches!(
+        media_kind.as_str(),
+        "tv" | "tv-series" | "tv_series" | "series" | "serial"
+    );
+    let media_type = if is_tv {
+        MediaType::Tv
+    } else {
+        MediaType::Movie
+    };
+    let tmdb = match TmdbClient::from_env() {
+        Ok(c) => c,
+        Err(e) => return map_tmdb_err(e),
+    };
     let tmdb_id = match resolve_tmdb_id_with_fallback(
         &tmdb,
         media_type,
@@ -447,11 +530,16 @@ pub async fn handle_logo_by_kp(kp_id_str: &str, size: Option<&str>) -> Response<
         &film.original_title,
         &film.title,
         &film.release_date,
-    ).await {
+    )
+    .await
+    {
         Ok(v) => v,
         Err(e) => return map_tmdb_err(e),
     };
-    let file_path = match tmdb.logo_path(tmdb_id, media_type).await { Ok(v) => v, Err(e) => return map_tmdb_err(e) };
+    let file_path = match tmdb.logo_path(tmdb_id, media_type).await {
+        Ok(v) => v,
+        Err(e) => return map_tmdb_err(e),
+    };
     let logo_size = match size.unwrap_or("w500") {
         "small" | "w300" => "w300",
         "medium" | "large" | "w500" => "w500",

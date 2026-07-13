@@ -62,15 +62,6 @@ struct VerifyResponse {
     user: Option<NeoIdUser>,
 }
 
-#[derive(Serialize)]
-struct OAuthTokenRequest<'a> {
-    grant_type: &'a str,
-    code: &'a str,
-    redirect_uri: &'a str,
-    client_id: &'a str,
-    client_secret: &'a str,
-}
-
 #[derive(Deserialize)]
 struct OAuthTokenResponse {
     access_token: Option<String>,

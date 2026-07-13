@@ -150,11 +150,11 @@ pub async fn handle_mobile_callback_get(
         .query_pairs()
         .find(|(k, _)| k == "state")
         .map(|(_, v)| v.to_string());
-    let nested_error = parsed_mobile
+    let _nested_error = parsed_mobile
         .query_pairs()
         .find(|(k, _)| k == "error")
         .map(|(_, v)| v.to_string());
-    let nested_error_description = parsed_mobile
+    let _nested_error_description = parsed_mobile
         .query_pairs()
         .find(|(k, _)| k == "error_description")
         .map(|(_, v)| v.to_string());

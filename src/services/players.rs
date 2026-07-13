@@ -100,7 +100,7 @@ pub async fn get_alloha_player(
         match alloha_http_client()
             .get(url)
             .header("Accept", "application/json")
-            .header("User-Agent", "NeoMovies/2.0 (+https://neomovies.ru)")
+            .header("User-Agent", "NeoMovies/2.0 (+https://neome.uk)")
             .send()
             .await
         {
@@ -165,7 +165,7 @@ pub async fn get_alloha_catalog(kp_id: u64, token: &str) -> Result<Value, String
         match alloha_http_client()
             .get(url)
             .header("Accept", "application/json")
-            .header("User-Agent", "NeoMovies/2.0 (+https://neomovies.ru)")
+            .header("User-Agent", "NeoMovies/2.0 (+https://neome.uk)")
             .send()
             .await
         {
