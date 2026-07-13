@@ -8,10 +8,8 @@ info:
     favorites, watch later, torrents, image proxy, and genres.
 
 servers:
-  - url: https://api.neome.uk/api/v1
-    description: Production (v1)
-  - url: https://api.neome.uk/api/v2
-    description: Production (v2)
+  - url: https://api.neome.uk
+    description: Production
 
 tags:
   - name: System
@@ -329,7 +327,6 @@ components:
         - id
         - title
         - originalTitle
-        - rating
         - posterUrl
         - genres
         - description
@@ -346,9 +343,6 @@ components:
         year:
           type: integer
           nullable: true
-        rating:
-          type: number
-          format: float
         ratings:
           $ref: "#/components/schemas/Ratings"
         posterUrl:
@@ -567,7 +561,7 @@ components:
 
 paths:
   # ── System ────────────────────────────────────────────────────────────────────
-  /health:
+  /api/v1/health:
     get:
       tags: [System]
       summary: Health check
@@ -585,7 +579,7 @@ paths:
                     example: ok
 
   # ── Support ──────────────────────────────────────────────────────────────────
-  /support/list:
+  /api/v1/support/list:
     get:
       tags: [Support]
       summary: List project supporters
@@ -606,7 +600,7 @@ paths:
                           $ref: "#/components/schemas/Supporter"
 
   # ── Search (v1) ──────────────────────────────────────────────────────────────
-  /search:
+  /api/v1/search:
     get:
       tags: [Search]
       summary: Search media by keyword (v1)
@@ -644,7 +638,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Search (v2) ──────────────────────────────────────────────────────────────
-  /v2/search:
+  /api/v2/search:
     get:
       tags: [Search]
       summary: Search media with filters (v2)
@@ -725,7 +719,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Media ────────────────────────────────────────────────────────────────────
-  /movies/popular:
+  /api/v1/movies/popular:
     get:
       tags: [Media]
       summary: Popular titles
@@ -745,7 +739,7 @@ paths:
                       data:
                         $ref: "#/components/schemas/SearchResponse"
 
-  /movies/top-rated:
+  /api/v1/movies/top-rated:
     get:
       tags: [Media]
       summary: Top-rated titles
@@ -765,7 +759,7 @@ paths:
                       data:
                         $ref: "#/components/schemas/SearchResponse"
 
-  /tv/top-rated:
+  /api/v1/tv/top-rated:
     get:
       tags: [Media]
       summary: Top-rated TV series
@@ -785,7 +779,7 @@ paths:
                       data:
                         $ref: "#/components/schemas/SearchResponse"
 
-  /movie/{kp_id}:
+  /api/v1/movie/{kp_id}:
     get:
       tags: [Media]
       summary: Get media details by Kinopoisk ID (v1)
@@ -817,7 +811,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /v2/movie/{kp_id}:
+  /api/v2/movie/{kp_id}:
     get:
       tags: [Media]
       summary: Get media details by Kinopoisk ID (v2, cleaner response)
@@ -849,7 +843,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /tv/{kp_id}/season/{season}/episode/{episode}:
+  /api/v1/tv/{kp_id}/season/{season}/episode/{episode}:
     get:
       tags: [Media]
       summary: Get TV episode description by Kinopoisk ID
@@ -938,7 +932,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Genres ────────────────────────────────────────────────────────────────────
-  /genres:
+  /api/v1/genres:
     get:
       tags: [Media]
       summary: List all available genres
@@ -958,7 +952,7 @@ paths:
                         items:
                           $ref: "#/components/schemas/GenreCatalogItem"
 
-  /category/{genre_id}:
+  /api/v1/category/{genre_id}:
     get:
       tags: [Media]
       summary: Get films by genre
@@ -1010,7 +1004,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Images ────────────────────────────────────────────────────────────────────
-  /images/proxy:
+  /api/v1/images/proxy:
     get:
       tags: [Images]
       summary: Proxy external image by URL
@@ -1047,7 +1041,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/{kind}/{id}:
+  /api/v1/images/{kind}/{id}:
     get:
       tags: [Images]
       summary: Proxy Kinopoisk poster by kind/id
@@ -1082,7 +1076,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/screens/{kp_id}:
+  /api/v1/images/screens/{kp_id}:
     get:
       tags: [Images]
       summary: Resolve and proxy a screen or fallback backdrop by Kinopoisk ID
@@ -1135,7 +1129,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/screens/{kp_id}/{season}/{episode}:
+  /api/v1/images/screens/{kp_id}/{season}/{episode}:
     get:
       tags: [Images]
       summary: Proxy a TV episode still by Kinopoisk ID, season, and episode
@@ -1186,7 +1180,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/screens/{kp_id}/{season}/{episode}/{size}:
+  /api/v1/images/screens/{kp_id}/{season}/{episode}/{size}:
     get:
       tags: [Images]
       summary: Proxy a TV episode still by Kinopoisk ID with path-based size
@@ -1236,7 +1230,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/backdrops/{kp_id}:
+  /api/v1/images/backdrops/{kp_id}:
     get:
       tags: [Images]
       summary: Proxy a backdrop by Kinopoisk ID
@@ -1275,7 +1269,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/backdrops/{kp_id}/{size}:
+  /api/v1/images/backdrops/{kp_id}/{size}:
     get:
       tags: [Images]
       summary: Proxy a backdrop by Kinopoisk ID with path-based size
@@ -1313,7 +1307,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/backdrops/page/{kp_id}:
+  /api/v1/images/backdrops/page/{kp_id}:
     get:
       tags: [Images]
       summary: Proxy a page/backdrop hero image by Kinopoisk ID
@@ -1352,7 +1346,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/backdrops/page/{kp_id}/{size}:
+  /api/v1/images/backdrops/page/{kp_id}/{size}:
     get:
       tags: [Images]
       summary: Proxy a page/backdrop hero image by Kinopoisk ID with path-based size
@@ -1390,7 +1384,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/logos/{kp_id}:
+  /api/v1/images/logos/{kp_id}:
     get:
       tags: [Images]
       summary: Proxy a localized logo by Kinopoisk ID
@@ -1429,7 +1423,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /images/logos/{kp_id}/{size}:
+  /api/v1/images/logos/{kp_id}/{size}:
     get:
       tags: [Images]
       summary: Proxy a localized logo by Kinopoisk ID with path-based size
@@ -1468,7 +1462,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Players ──────────────────────────────────────────────────────────────────
-  /players/{provider}/kp/{kp_id}:
+  /api/v1/players/{provider}/kp/{kp_id}:
     get:
       tags: [Players]
       summary: Get embedded player HTML
@@ -1516,7 +1510,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Torrents ─────────────────────────────────────────────────────────────────
-  /torrents/search:
+  /api/v1/torrents/search:
     get:
       tags: [Torrents]
       summary: Search torrents by Kinopoisk ID
@@ -1564,7 +1558,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Auth ──────────────────────────────────────────────────────────────────────
-  /auth/neo-id/login:
+  /api/v1/auth/neo-id/login:
     post:
       tags: [Auth]
       summary: Request Neo ID login URL
@@ -1613,7 +1607,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/neo-id/callback:
+  /api/v1/auth/neo-id/callback:
     post:
       tags: [Auth]
       summary: Exchange Neo ID token for API tokens
@@ -1642,7 +1636,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/neo-id/mobile-callback:
+  /api/v1/auth/neo-id/mobile-callback:
     get:
       tags: [Auth]
       summary: Mobile redirect trampoline for Neo ID callback
@@ -1684,7 +1678,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/refresh:
+  /api/v1/auth/refresh:
     post:
       tags: [Auth]
       summary: Refresh JWT pair
@@ -1713,7 +1707,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/profile:
+  /api/v1/auth/profile:
     get:
       tags: [Auth]
       summary: Get current profile
@@ -1774,7 +1768,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/refresh-tokens/revoke:
+  /api/v1/auth/refresh-tokens/revoke:
     post:
       tags: [Auth]
       summary: Revoke one refresh token
@@ -1805,7 +1799,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/refresh-tokens/revoke-all:
+  /api/v1/auth/refresh-tokens/revoke-all:
     post:
       tags: [Auth]
       summary: Revoke all refresh tokens
@@ -1826,7 +1820,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/delete-account:
+  /api/v1/auth/delete-account:
     delete:
       tags: [Auth]
       summary: Delete account and related data
@@ -1848,7 +1842,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Webhooks ─────────────────────────────────────────────────────────────────
-  /webhooks/neo-id:
+  /api/v1/webhooks/neo-id:
     post:
       tags: [Webhooks]
       summary: Neo ID webhook
@@ -1881,7 +1875,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Favorites ────────────────────────────────────────────────────────────────
-  /favorites:
+  /api/v1/favorites:
     get:
       tags: [Favorites]
       summary: List favorites
@@ -1909,7 +1903,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /favorites/{kp_id}:
+  /api/v1/favorites/{kp_id}:
     post:
       tags: [Favorites]
       summary: Add favorite (idempotent)
@@ -1967,7 +1961,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /favorites/{kp_id}/check:
+  /api/v1/favorites/{kp_id}/check:
     get:
       tags: [Favorites]
       summary: Check favorite status
@@ -2007,7 +2001,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Watch Later ──────────────────────────────────────────────────────────────
-  /watch-later:
+  /api/v1/watch-later:
     get:
       tags: [WatchLater]
       summary: List watch later items
@@ -2035,7 +2029,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /watch-later/{kp_id}:
+  /api/v1/watch-later/{kp_id}:
     post:
       tags: [WatchLater]
       summary: Add to watch later (idempotent)
@@ -2094,7 +2088,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Sync Progress ─────────────────────────────────────────────────────────
-  /sync/progress:
+  /api/v1/sync/progress:
     get:
       tags: [Favorites]
       summary: Get watch progress for user
@@ -2237,7 +2231,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /sync/progress/batch:
+  /api/v1/sync/progress/batch:
     post:
       tags: [Favorites]
       summary: Batch sync progress (push local + pull server state)
@@ -2307,7 +2301,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /watch-later/{kp_id}/check:
+  /api/v1/watch-later/{kp_id}/check:
     get:
       tags: [WatchLater]
       summary: Check watch later status
