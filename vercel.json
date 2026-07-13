@@ -58,16 +58,16 @@
       "destination": "/api/index?route=webhook_neoid"
     },
     {
-      "source": "/api/v2/search",
-      "destination": "/api/index?route=v2_search"
-    },
-    {
-      "source": "/api/v2/movie/:kp_id",
-      "destination": "/api/index?route=media_movie_v2&kp_id=:kp_id"
+      "source": "/api/v1/search",
+      "destination": "/api/index?route=search"
     },
     {
       "source": "/api/v2/search",
       "destination": "/api/index?route=search_v2"
+    },
+    {
+      "source": "/api/v2/movie/:kp_id",
+      "destination": "/api/index?route=media_movie_v2&kp_id=:kp_id"
     },
     {
       "source": "/api/v1/movies/popular",
