@@ -1,5 +1,5 @@
 use crate::{Config, bad_gateway, bad_request, internal_error, not_found, service_unavailable_maintenance, success, with_cors};
-use crate::services::kinopoisk::RatingsDto;
+use crate::services::kinopoisk::{GenreCatalogDto, RatingsDto, map_film_to_v2_dto};
 use crate::services::KinopoiskClient;
 use crate::services::tmdb::{MediaType, TmdbClient, TmdbError};
 use vercel_runtime::{Response, ResponseBody};
@@ -57,6 +57,47 @@ pub async fn handle_top_rated_tv(page: u32) -> Response<ResponseBody> {
     }
 }
 
+pub async fn handle_genres() -> Response<ResponseBody> {
+    let config = match Config::from_env() {
+        Ok(c) => c,
+        Err(_) => return with_cors(internal_error()),
+    };
+    let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
+    match kp.get_filters().await {
+        Ok(filters) => {
+            let genres: Vec<GenreCatalogDto> = filters.genres.into_iter().map(|g| GenreCatalogDto {
+                id: g.id,
+                name: g.genre,
+            }).collect();
+            with_cors(success(genres))
+        }
+        Err(e) => {
+            eprintln!("media_genres upstream error: {}", e);
+            with_cors(service_unavailable_maintenance())
+        }
+    }
+}
+
+pub async fn handle_category(genre_id: i32, is_films: bool, is_tv: bool, order: Option<&str>, page: u32) -> Response<ResponseBody> {
+    let film_type = match (is_films, is_tv) {
+        (true, false) => Some("FILM"),
+        (false, true) => Some("TV_SERIES"),
+        _ => None,
+    };
+    let config = match Config::from_env() {
+        Ok(c) => c,
+        Err(_) => return with_cors(internal_error()),
+    };
+    let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
+    match kp.get_by_genre(genre_id, film_type, order, page).await {
+        Ok(r) => with_cors(success(r)),
+        Err(e) => {
+            eprintln!("media_category upstream error (genre={}, page={}): {}", genre_id, page, e);
+            with_cors(service_unavailable_maintenance())
+        }
+    }
+}
+
 pub async fn handle_film(kp_id_str: &str) -> Response<ResponseBody> {
     let id = match parse_kp_id(kp_id_str) {
         Some(n) => n,
@@ -103,6 +144,55 @@ pub async fn handle_film(kp_id_str: &str) -> Response<ResponseBody> {
         Err(e) if e.contains("not_found") => with_cors(not_found("not found")),
         Err(e) => {
             eprintln!("media_film upstream error (kp_id={}): {}", id, e);
+            with_cors(service_unavailable_maintenance())
+        }
+    }
+}
+
+pub async fn handle_movie_v2(kp_id_str: &str) -> Response<ResponseBody> {
+    let id = match parse_kp_id(kp_id_str) {
+        Some(n) => n,
+        None => return with_cors(bad_request("invalid kp_id")),
+    };
+    let config = match Config::from_env() {
+        Ok(c) => c,
+        Err(_) => return with_cors(internal_error()),
+    };
+    let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
+    match kp.get_film_raw(id).await {
+        Ok(film) => {
+            let mut v2 = map_film_to_v2_dto(film);
+
+            let media_kind = v2.media_type.to_lowercase();
+            let media_type = if matches!(media_kind.as_str(), "tv" | "tv-series" | "tv_series" | "series" | "serial") {
+                MediaType::Tv
+            } else {
+                MediaType::Movie
+            };
+
+            if let Ok(tmdb) = TmdbClient::from_env() {
+                if let Ok(tmdb_id) = resolve_tmdb_id_with_fallback(
+                    &tmdb,
+                    media_type,
+                    v2.ids.imdb.as_deref(),
+                    &v2.original_title,
+                    &v2.title,
+                    &v2.release_date.clone().unwrap_or_default(),
+                )
+                .await
+                {
+                    v2.ids.tmdb = Some(tmdb_id as i64);
+                    if let Ok(tmdb_rating) = tmdb.media_tmdb_rating(tmdb_id, media_type).await {
+                        v2.ratings.tmdb = tmdb_rating;
+                    }
+                }
+            }
+
+            with_cors(success(v2))
+        }
+        Err(e) if e.contains("not_found") => with_cors(not_found("not found")),
+        Err(e) => {
+            eprintln!("media_movie_v2 upstream error (kp_id={}): {}", id, e);
             with_cors(service_unavailable_maintenance())
         }
     }

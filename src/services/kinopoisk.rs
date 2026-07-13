@@ -128,6 +128,84 @@ struct KpCollectionResponse {
     films: Option<Vec<KpFilmShort>>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KpFilterSearchResponse {
+    pub total: i32,
+    pub total_pages: i32,
+    pub items: Vec<KpFilmFilterItem>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KpFilmFilterItem {
+    pub kinopoisk_id: i64,
+    pub imdb_id: Option<String>,
+    pub name_ru: Option<String>,
+    pub name_en: Option<String>,
+    pub name_original: Option<String>,
+    pub countries: Option<Vec<KpCountry>>,
+    pub genres: Option<Vec<KpGenre>>,
+    pub rating_kinopoisk: Option<f64>,
+    #[serde(alias = "ratingImbd")]
+    pub rating_imdb: Option<f64>,
+    pub year: Option<i32>,
+    #[serde(rename = "type")]
+    pub film_type: Option<String>,
+    pub poster_url: String,
+    pub poster_url_preview: String,
+}
+
+impl KpFilmFilterItem {
+    pub fn id(&self) -> i64 {
+        self.kinopoisk_id
+    }
+
+    pub fn title(&self) -> String {
+        self.name_ru
+            .clone()
+            .or_else(|| self.name_en.clone())
+            .or_else(|| self.name_original.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn poster(&self) -> String {
+        if !self.poster_url_preview.is_empty() {
+            self.poster_url_preview.clone()
+        } else {
+            self.poster_url.clone()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KpFiltersResponse {
+    pub genres: Vec<KpGenreItem>,
+    pub countries: Vec<KpCountryItem>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KpGenreItem {
+    pub id: i32,
+    pub genre: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KpCountryItem {
+    pub id: i32,
+    pub country: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenreCatalogDto {
+    pub id: i32,
+    pub name: String,
+}
+
 // ── Unified MediaDetailsDto ───────────────────────────────────────────────────
 
 #[derive(Debug, Serialize)]
@@ -163,6 +241,42 @@ pub struct ExternalIdsDto {
     pub kp: Option<i64>,
     pub tmdb: Option<i64>,
     pub imdb: Option<String>,
+}
+
+// ── V2 MediaDetailsDto (cleaner response) ─────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaDetailsV2Dto {
+    pub id: String,
+    pub title: String,
+    pub original_title: String,
+    pub description: String,
+    #[serde(rename = "type")]
+    pub media_type: String,
+    pub year: Option<i32>,
+    pub release_date: Option<String>,
+    pub genres: Vec<String>,
+    pub countries: Vec<String>,
+    pub duration: i32,
+    pub poster: String,
+    pub backdrop: String,
+    pub ratings: RatingsV2Dto,
+    pub ids: IdsDto,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RatingsV2Dto {
+    pub kp: f64,
+    pub imdb: Option<f64>,
+    pub tmdb: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct IdsDto {
+    pub kp: i64,
+    pub imdb: Option<String>,
+    pub tmdb: Option<i64>,
 }
 
 // ── Search result item (for search endpoint) ─────────────────────────────────
@@ -233,7 +347,7 @@ impl KinopoiskClient {
             client: reqwest::Client::builder()
                 .connect_timeout(std::time::Duration::from_secs(4))
                 .timeout(std::time::Duration::from_secs(15))
-                .user_agent("neomovies-api/1.0 (+https://api.neomovies.ru)")
+                .user_agent("neomovies-api/1.0 (+https://api.neome.uk)")
                 .build()
                 .unwrap(),
         }
@@ -332,6 +446,108 @@ impl KinopoiskClient {
         let url = format!("{}/v2.2/films/{}", self.base_url, kp_id);
         let film: KpFilm = self.get(&url).await?;
         Ok(map_film_to_dto(film))
+    }
+
+    /// Fetch raw KpFilm for custom mapping (used by v2 detail).
+    pub async fn get_film_raw(&self, kp_id: u64) -> Result<KpFilm, String> {
+        let url = format!("{}/v2.2/films/{}", self.base_url, kp_id);
+        self.get(&url).await
+    }
+
+    /// Search films by filters (genres, year, rating, order, etc.)
+    /// Wraps GET /api/v2.2/films
+    #[allow(clippy::too_many_arguments)]
+    pub async fn search_by_filters(
+        &self,
+        genres: Option<&str>,
+        countries: Option<&str>,
+        order: Option<&str>,
+        film_type: Option<&str>,
+        rating_from: Option<f64>,
+        rating_to: Option<f64>,
+        year_from: Option<i32>,
+        year_to: Option<i32>,
+        keyword: Option<&str>,
+        page: u32,
+    ) -> Result<SearchResponse, String> {
+        let mut params: Vec<(String, String)> = Vec::new();
+        if let Some(v) = genres { params.push(("genres".into(), v.to_string())); }
+        if let Some(v) = countries { params.push(("countries".into(), v.to_string())); }
+        if let Some(v) = order { params.push(("order".into(), v.to_string())); }
+        if let Some(v) = film_type { params.push(("type".into(), v.to_string())); }
+        if let Some(v) = rating_from { params.push(("ratingFrom".into(), v.to_string())); }
+        if let Some(v) = rating_to { params.push(("ratingTo".into(), v.to_string())); }
+        if let Some(v) = year_from { params.push(("yearFrom".into(), v.to_string())); }
+        if let Some(v) = year_to { params.push(("yearTo".into(), v.to_string())); }
+        if let Some(v) = keyword { params.push(("keyword".into(), v.to_string())); }
+        params.push(("page".into(), page.to_string()));
+
+        let qs = params.iter()
+            .map(|(k, v)| format!("{}={}", urlencoding::encode(k), urlencoding::encode(v)))
+            .collect::<Vec<_>>()
+            .join("&");
+
+        let url = format!("{}/v2.2/films?{}", self.base_url, qs);
+        let raw: KpFilterSearchResponse = self.get(&url).await?;
+
+        let total = raw.total;
+        let pages = raw.total_pages;
+        let results = raw.items
+            .into_iter()
+            .map(|f| {
+                let kp_id = f.id();
+                let id = format!("kp_{}", kp_id);
+                let title = f.title();
+                let original_title = f.name_original.clone().or_else(|| f.name_en.clone()).unwrap_or_default();
+                let year = f.year;
+                let rating = f.rating_kinopoisk.unwrap_or(0.0);
+                let poster_url = to_local_image_path(&f.poster(), "kp_small");
+                let description = String::new();
+                let media_type = map_kp_type(&f.film_type, None);
+                let genres_dto = f.genres.unwrap_or_default().into_iter().map(|g| GenreDto {
+                    id: g.genre.to_lowercase(),
+                    name: g.genre,
+                }).collect();
+
+                SearchResultItem {
+                    id,
+                    title,
+                    original_title,
+                    year,
+                    rating,
+                    ratings: RatingsDto { kp: rating, imdb: f.rating_imdb, tmdb: None },
+                    poster_url,
+                    genres: genres_dto,
+                    description,
+                    media_type,
+                    external_ids: ExternalIdsDto { kp: Some(kp_id), tmdb: None, imdb: f.imdb_id },
+                }
+            })
+            .collect();
+
+        Ok(SearchResponse { results, total, pages })
+    }
+
+    /// Get list of available genres and countries (filters).
+    pub async fn get_filters(&self) -> Result<KpFiltersResponse, String> {
+        let url = format!("{}/v2.2/films/filters", self.base_url);
+        self.get(&url).await
+    }
+
+    /// Get films by genre ID.
+    pub async fn get_by_genre(
+        &self,
+        genre_id: i32,
+        film_type: Option<&str>,
+        order: Option<&str>,
+        page: u32,
+    ) -> Result<SearchResponse, String> {
+        self.search_by_filters(
+            Some(&genre_id.to_string()),
+            None, order, film_type,
+            None, None, None, None,
+            None, page,
+        ).await
     }
 
     /// Get popular films collection.
@@ -447,6 +663,82 @@ fn map_film_to_dto(f: KpFilm) -> MediaDetailsDto {
             kp: Some(kp_id),
             tmdb: None,
             imdb: f.imdb_id,
+        },
+    }
+}
+
+pub fn map_film_to_v2_dto(f: KpFilm) -> MediaDetailsV2Dto {
+    let kp_id = f.kinopoisk_id.unwrap_or(0);
+    let id = format!("kp_{}", kp_id);
+
+    let title = f.name_ru
+        .clone()
+        .or_else(|| f.name_en.clone())
+        .or_else(|| f.name_original.clone())
+        .unwrap_or_default();
+
+    let original_title = f.name_original
+        .clone()
+        .or_else(|| f.name_en.clone())
+        .unwrap_or_default();
+
+    let description = f.description
+        .or(f.short_description)
+        .unwrap_or_default();
+
+    let year = f.year.or(f.start_year);
+    let release_date = f.year.map(|y| format!("{}-01-01", y))
+        .or_else(|| f.start_year.map(|y| format!("{}-01-01", y)));
+
+    let media_type = map_kp_type(&f.film_type, f.serial);
+
+    let genres: Vec<String> = f.genres
+        .unwrap_or_default()
+        .into_iter()
+        .map(|g| g.genre)
+        .collect();
+
+    let countries: Vec<String> = f.countries
+        .unwrap_or_default()
+        .into_iter()
+        .map(|c| c.country)
+        .collect();
+
+    let rating = f.rating_kinopoisk.unwrap_or(0.0);
+
+    let poster_raw = f.poster_url_preview
+        .or(f.poster_url)
+        .unwrap_or_default();
+    let poster = to_local_image_path(&poster_raw, "kp_small");
+    let backdrop = to_local_image_path(
+        &f.cover_url.unwrap_or_else(|| poster_raw),
+        "kp_big",
+    );
+
+    let duration = f.film_length.unwrap_or(0);
+
+    MediaDetailsV2Dto {
+        id,
+        title,
+        original_title,
+        description,
+        media_type,
+        year,
+        release_date,
+        genres,
+        countries,
+        duration,
+        poster,
+        backdrop,
+        ratings: RatingsV2Dto {
+            kp: rating,
+            imdb: f.rating_imdb,
+            tmdb: None,
+        },
+        ids: IdsDto {
+            kp: kp_id,
+            imdb: f.imdb_id,
+            tmdb: None,
         },
     }
 }
