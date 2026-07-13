@@ -5,11 +5,13 @@ info:
   description: |
     NeoMovies API v2 — Rust serverless API on Vercel.
     Includes Neo ID authentication, Kinopoisk-based media/search, player HTML endpoints,
-    favorites, torrents, and image proxy.
+    favorites, watch later, torrents, image proxy, and genres.
 
 servers:
-  - url: https://api.neomovies.ru/api/v1
-    description: Production
+  - url: https://api.neome.uk/api/v1
+    description: Production (v1)
+  - url: https://api.neome.uk/api/v2
+    description: Production (v2)
 
 tags:
   - name: System
@@ -21,6 +23,7 @@ tags:
   - name: Players
   - name: Torrents
   - name: Favorites
+  - name: WatchLater
   - name: Support
 
 components:
@@ -104,6 +107,22 @@ components:
           type: string
           nullable: true
 
+    Ratings:
+      type: object
+      required: [kp, imdb, tmdb]
+      properties:
+        kp:
+          type: number
+          format: float
+        imdb:
+          type: number
+          format: float
+          nullable: true
+        tmdb:
+          type: number
+          format: float
+          nullable: true
+
     SearchResultItem:
       type: object
       required:
@@ -130,6 +149,8 @@ components:
         rating:
           type: number
           format: float
+        ratings:
+          $ref: "#/components/schemas/Ratings"
         posterUrl:
           type: string
           example: /api/v1/images/kp_small/326
@@ -202,6 +223,8 @@ components:
         rating:
           type: number
           format: float
+        ratings:
+          $ref: "#/components/schemas/Ratings"
         posterUrl:
           type: string
           example: /api/v1/images/kp_small/326
@@ -216,6 +239,183 @@ components:
           type: string
         externalIds:
           $ref: "#/components/schemas/ExternalIds"
+
+    # ── V2 schemas ──────────────────────────────────────────────────────────────
+
+    MediaDetailsV2:
+      type: object
+      required:
+        - id
+        - title
+        - originalTitle
+        - description
+        - type
+        - genres
+        - countries
+        - duration
+        - poster
+        - backdrop
+        - ratings
+        - ids
+      properties:
+        id:
+          type: string
+          example: kp_326
+        title:
+          type: string
+        originalTitle:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [movie, tv]
+        year:
+          type: integer
+          nullable: true
+        releaseDate:
+          type: string
+          nullable: true
+          example: "2014-11-07"
+        genres:
+          type: array
+          items:
+            type: string
+          example: ["драма", "фантастика"]
+        countries:
+          type: array
+          items:
+            type: string
+          example: ["США", "Великобритания"]
+        duration:
+          type: integer
+        poster:
+          type: string
+          example: /api/v1/images/kp_small/326
+        backdrop:
+          type: string
+          example: /api/v1/images/kp_big/326
+        ratings:
+          type: object
+          required: [kp, imdb, tmdb]
+          properties:
+            kp:
+              type: number
+              format: float
+            imdb:
+              type: number
+              format: float
+              nullable: true
+            tmdb:
+              type: number
+              format: float
+              nullable: true
+        ids:
+          type: object
+          required: [kp, imdb, tmdb]
+          properties:
+            kp:
+              type: integer
+            imdb:
+              type: string
+              nullable: true
+            tmdb:
+              type: integer
+              nullable: true
+
+    V2SearchResultItem:
+      type: object
+      required:
+        - id
+        - title
+        - originalTitle
+        - rating
+        - posterUrl
+        - genres
+        - description
+        - type
+        - externalIds
+      properties:
+        id:
+          type: string
+          example: kp_326
+        title:
+          type: string
+        originalTitle:
+          type: string
+        year:
+          type: integer
+          nullable: true
+        rating:
+          type: number
+          format: float
+        ratings:
+          $ref: "#/components/schemas/Ratings"
+        posterUrl:
+          type: string
+          example: /api/v1/images/kp_small/326
+        genres:
+          type: array
+          items:
+            $ref: "#/components/schemas/Genre"
+        description:
+          type: string
+        type:
+          type: string
+          enum: [movie, tv]
+        externalIds:
+          $ref: "#/components/schemas/ExternalIds"
+
+    V2SearchResponse:
+      type: object
+      required: [results, total, pages]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/V2SearchResultItem"
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    GenreCatalogItem:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: триллер
+
+    WatchLaterItem:
+      type: object
+      required: [id, mediaId, mediaType, title, posterUrl, createdAt]
+      properties:
+        id:
+          type: string
+        mediaId:
+          type: string
+        mediaType:
+          type: string
+          enum: [movie, tv]
+        title:
+          type: string
+        posterUrl:
+          type: string
+        rating:
+          type: number
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── V1 schemas (legacy) ─────────────────────────────────────────────────────
 
     Profile:
       type: object
@@ -309,6 +509,40 @@ components:
         total:
           type: integer
 
+    SyncProgressItem:
+      type: object
+      required: [mediaId, mediaType, progress, duration, status, updatedAt, createdAt]
+      properties:
+        mediaId:
+          type: string
+          example: kp_258687
+        mediaType:
+          type: string
+          enum: [movie, tv]
+        season:
+          type: integer
+          nullable: true
+        episode:
+          type: integer
+          nullable: true
+        progress:
+          type: number
+          format: float
+          description: Seconds into the video
+        duration:
+          type: number
+          format: float
+          description: Total duration in seconds
+        status:
+          type: string
+          enum: [watching, completed, paused, dropped]
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
     Supporter:
       type: object
       required: [id, name, type, year, isActive]
@@ -332,6 +566,7 @@ components:
           type: boolean
 
 paths:
+  # ── System ────────────────────────────────────────────────────────────────────
   /health:
     get:
       tags: [System]
@@ -349,6 +584,7 @@ paths:
                     type: string
                     example: ok
 
+  # ── Support ──────────────────────────────────────────────────────────────────
   /support/list:
     get:
       tags: [Support]
@@ -369,10 +605,11 @@ paths:
                         items:
                           $ref: "#/components/schemas/Supporter"
 
+  # ── Search (v1) ──────────────────────────────────────────────────────────────
   /search:
     get:
       tags: [Search]
-      summary: Search media
+      summary: Search media by keyword (v1)
       operationId: searchMedia
       parameters:
         - name: query
@@ -406,6 +643,88 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Search (v2) ──────────────────────────────────────────────────────────────
+  /v2/search:
+    get:
+      tags: [Search]
+      summary: Search media with filters (v2)
+      operationId: searchMediaV2
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search keyword
+        - name: genre
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Genre ID (e.g. "1")
+        - name: yearFrom
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: yearTo
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: ratingFrom
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: ratingTo
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [FILM, TV_SERIES, TV_SHOW, MINI_SERIES, ALL]
+          description: Media type filter
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [RATING, YEAR, NUM_VOTE, RATING_KO]
+          description: Sort order
+        - name: country
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Country ID
+        - $ref: "#/components/parameters/PageQuery"
+      responses:
+        "200":
+          description: Filtered search results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/V2SearchResponse"
+        "502":
+          description: Upstream search error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Media ────────────────────────────────────────────────────────────────────
   /movies/popular:
     get:
       tags: [Media]
@@ -469,7 +788,7 @@ paths:
   /movie/{kp_id}:
     get:
       tags: [Media]
-      summary: Get media details by Kinopoisk ID
+      summary: Get media details by Kinopoisk ID (v1)
       operationId: getMovieByKpId
       parameters:
         - $ref: "#/components/parameters/KpIdPath"
@@ -498,6 +817,199 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /v2/movie/{kp_id}:
+    get:
+      tags: [Media]
+      summary: Get media details by Kinopoisk ID (v2, cleaner response)
+      operationId: getMovieByKpIdV2
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+      responses:
+        "200":
+          description: Media details (v2 format)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MediaDetailsV2"
+        "400":
+          description: Invalid kp_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Media not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tv/{kp_id}/season/{season}/episode/{episode}:
+    get:
+      tags: [Media]
+      summary: Get TV episode description by Kinopoisk ID
+      operationId: getTvEpisodeDescription
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - name: season
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: episode
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ru-RU, ru, en-US, en]
+            default: ru-RU
+      responses:
+        "200":
+          description: Episode description
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [id, name, overview, airDate, seasonNumber, episodeNumber, language, ratings]
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                          overview:
+                            type: string
+                          airDate:
+                            type: string
+                          seasonNumber:
+                            type: integer
+                          episodeNumber:
+                            type: integer
+                          stillPath:
+                            type: string
+                            nullable: true
+                          language:
+                            type: string
+                          ratings:
+                            type: object
+                            required: [tmdb, imdb]
+                            properties:
+                              tmdb:
+                                type: number
+                                format: float
+                                nullable: true
+                              imdb:
+                                type: number
+                                format: float
+                                nullable: true
+        "400":
+          description: Invalid kp_id, season, episode, or media type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Media or episode not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Genres ────────────────────────────────────────────────────────────────────
+  /genres:
+    get:
+      tags: [Media]
+      summary: List all available genres
+      operationId: getGenreList
+      responses:
+        "200":
+          description: Genre list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/GenreCatalogItem"
+
+  /category/{genre_id}:
+    get:
+      tags: [Media]
+      summary: Get films by genre
+      operationId: getFilmsByGenre
+      parameters:
+        - name: genre_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Genre ID from /genres
+        - name: films
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pass `films` to filter only movies
+        - name: tv
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pass `tv` to filter only TV series
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [RATING, YEAR, NUM_VOTE]
+          description: Sort order
+        - $ref: "#/components/parameters/PageQuery"
+      responses:
+        "200":
+          description: Films by genre
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/V2SearchResponse"
+        "502":
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Images ────────────────────────────────────────────────────────────────────
   /images/proxy:
     get:
       tags: [Images]
@@ -955,6 +1467,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Players ──────────────────────────────────────────────────────────────────
   /players/{provider}/kp/{kp_id}:
     get:
       tags: [Players]
@@ -1002,6 +1515,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Torrents ─────────────────────────────────────────────────────────────────
   /torrents/search:
     get:
       tags: [Torrents]
@@ -1049,6 +1563,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Auth ──────────────────────────────────────────────────────────────────────
   /auth/neo-id/login:
     post:
       tags: [Auth]
@@ -1332,6 +1847,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Webhooks ─────────────────────────────────────────────────────────────────
   /webhooks/neo-id:
     post:
       tags: [Webhooks]
@@ -1364,6 +1880,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Favorites ────────────────────────────────────────────────────────────────
   /favorites:
     get:
       tags: [Favorites]
@@ -1475,6 +1992,346 @@ paths:
                         required: [isFavorite]
                         properties:
                           isFavorite:
+                            type: boolean
+        "400":
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Watch Later ──────────────────────────────────────────────────────────────
+  /watch-later:
+    get:
+      tags: [WatchLater]
+      summary: List watch later items
+      operationId: getWatchLaterList
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Watch later list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/WatchLaterItem"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /watch-later/{kp_id}:
+    post:
+      tags: [WatchLater]
+      summary: Add to watch later (idempotent)
+      operationId: addWatchLater
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - $ref: "#/components/parameters/MediaTypeQuery"
+      responses:
+        "200":
+          description: Added (or already exists)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags: [WatchLater]
+      summary: Remove from watch later
+      operationId: removeWatchLater
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - $ref: "#/components/parameters/MediaTypeQuery"
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Sync Progress ─────────────────────────────────────────────────────────
+  /sync/progress:
+    get:
+      tags: [Favorites]
+      summary: Get watch progress for user
+      operationId: getSyncProgress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mediaId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by media ID (e.g. kp_258687). Returns all if omitted.
+      responses:
+        "200":
+          description: Progress items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SyncProgressItem"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags: [Favorites]
+      summary: Upsert watch progress (last-write-wins by updatedAt)
+      operationId: upsertSyncProgress
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mediaId, mediaType, progress, duration, status, updatedAt]
+              properties:
+                mediaId:
+                  type: string
+                mediaType:
+                  type: string
+                  enum: [movie, tv]
+                season:
+                  type: integer
+                  nullable: true
+                episode:
+                  type: integer
+                  nullable: true
+                progress:
+                  type: number
+                  format: float
+                duration:
+                  type: number
+                  format: float
+                status:
+                  type: string
+                  enum: [watching, completed, paused, dropped]
+                updatedAt:
+                  type: string
+                  format: date-time
+      responses:
+        "200":
+          description: Upsert result with saved item
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          saved:
+                            type: boolean
+                          item:
+                            $ref: "#/components/schemas/SyncProgressItem"
+                            nullable: true
+        "400":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags: [Favorites]
+      summary: Delete watch progress for a media/episode
+      operationId: deleteSyncProgress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mediaId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: episode
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          description: Missing mediaId
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sync/progress/batch:
+    post:
+      tags: [Favorites]
+      summary: Batch sync progress (push local + pull server state)
+      operationId: batchSyncProgress
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [mediaId, mediaType, progress, duration, status, updatedAt]
+                    properties:
+                      mediaId:
+                        type: string
+                      mediaType:
+                        type: string
+                        enum: [movie, tv]
+                      season:
+                        type: integer
+                        nullable: true
+                      episode:
+                        type: integer
+                        nullable: true
+                      progress:
+                        type: number
+                        format: float
+                      duration:
+                        type: number
+                        format: float
+                      status:
+                        type: string
+                        enum: [watching, completed, paused, dropped]
+                      updatedAt:
+                        type: string
+                        format: date-time
+      responses:
+        "200":
+          description: Batch sync result with all current server items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          saved:
+                            type: integer
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/SyncProgressItem"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /watch-later/{kp_id}/check:
+    get:
+      tags: [WatchLater]
+      summary: Check watch later status
+      operationId: checkWatchLater
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/KpIdPath"
+        - $ref: "#/components/parameters/MediaTypeQuery"
+      responses:
+        "200":
+          description: Watch later status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [isWatchLater]
+                        properties:
+                          isWatchLater:
                             type: boolean
         "400":
           description: Invalid params
