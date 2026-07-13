@@ -24,6 +24,7 @@ const sidebars: SidebarsConfig = {
         "guides/search",
         "guides/players",
         "guides/favorites",
+        "guides/sync-progress",
       ],
     },
     {
