@@ -7,7 +7,7 @@ const config: Config = {
   url: "https://docs.neome.uk",
   baseUrl: "/",
   onBrokenLinks: "warn",
-  favicon: "img/favicon.ico",
+  favicon: "img/favicon.png",
 
   markdown: {
     hooks: {
@@ -94,7 +94,24 @@ const config: Config = {
     },
     footer: {
       style: "dark",
-      copyright: `© ${new Date().getFullYear()} Neo-Open-Source`,
+      links: [
+        {
+          title: "Resources",
+          items: [
+            { label: "NeoMovies", href: "https://w.neome.uk" },
+            { label: "Blog", href: "https://blog.neome.uk" },
+            { label: "NeoID", href: "https://id.neome.uk" },
+          ],
+        },
+        {
+          title: "Community",
+          items: [
+            { label: "Telegram", href: "https://t.me/neomovies_news" },
+            { label: "GitHub", href: "https://github.com/Neo-Open-Source/neomovies-api" },
+          ],
+        },
+      ],
+      copyright: `© 2024-${new Date().getFullYear()} Neo-Open-Source`,
     },
     prism: {
       additionalLanguages: ["rust", "bash", "json"],
