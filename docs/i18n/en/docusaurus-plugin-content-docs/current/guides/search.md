@@ -42,11 +42,16 @@ GET /api/v1/search?query=matrix&page=1
 Advanced search with multiple filters. Powered by the Kinopoisk v2.2 API.
 
 ```bash
-# By keyword
+# By keyword (or use query= instead)
 GET /api/v2/search?keyword=matrix
+GET /api/v2/search?query=matrix
 
-# By genre
-GET /api/v2/search?genre=1&order=RATING
+# By genre (ID or name, comma-separated)
+GET /api/v2/search?genres=1&order=RATING
+GET /api/v2/search?genres=драма,комедия
+
+# By country (ID or name, comma-separated)
+GET /api/v2/search?genres=1&countries=США
 
 # By year range
 GET /api/v2/search?yearFrom=2000&yearTo=2010&order=YEAR
@@ -59,15 +64,17 @@ GET /api/v2/search?type=FILM
 GET /api/v2/search?type=TV_SERIES
 
 # Combined
-GET /api/v2/search?keyword=star&genre=2&yearFrom=2010&order=RATING&page=1
+GET /api/v2/search?query=star&genres=2&countries=США&yearFrom=2010&order=RATING&page=1
 ```
 
 ### Parameters
 
 | Param | Type | Description |
 |-------|------|-------------|
+| `query` | string | Search keyword (alias for `keyword`) |
 | `keyword` | string | Search keyword |
-| `genre` | string | Genre ID (from `/api/v1/genres`) |
+| `genres` | string | Genre IDs or names, comma-separated (e.g. `1`, `3,5`, `драма,комедия`) |
+| `countries` | string | Country IDs or names, comma-separated (e.g. `1`, `США,Россия`) |
 | `yearFrom` | integer | Start year |
 | `yearTo` | integer | End year |
 | `ratingFrom` | float | Minimum rating |
@@ -75,6 +82,10 @@ GET /api/v2/search?keyword=star&genre=2&yearFrom=2010&order=RATING&page=1
 | `type` | string | `FILM`, `TV_SERIES`, `TV_SHOW`, `MINI_SERIES`, or `ALL` |
 | `order` | string | `RATING`, `YEAR`, `NUM_VOTE`, `RATING_KO` |
 | `page` | integer | Page number (default: 1) |
+
+:::note
+Genre and country names are resolved to IDs automatically via the Kinopoisk filters API. You can pass names in any case (e.g. `драма`, `Драма`, `DRAMA`).
+:::
 
 ## Errors
 

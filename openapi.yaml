@@ -650,13 +650,29 @@ paths:
           required: false
           schema:
             type: string
-          description: Search keyword
-        - name: genre
+          description: Search keyword. Alias: `query`.
+        - name: query
           in: query
           required: false
           schema:
             type: string
-          description: Genre ID (e.g. "1")
+          description: Alias for `keyword`.
+        - name: genres
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            Genre filter. Accepts genre IDs or names, comma-separated (e.g. "1", "3,5" or "драма,комедия").
+            Names are resolved automatically via `/api/v1/genres`.
+        - name: countries
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            Country filter. Accepts country IDs or names, comma-separated (e.g. "1" or "США,Россия").
+            Names are resolved automatically.
         - name: yearFrom
           in: query
           required: false
@@ -693,12 +709,6 @@ paths:
             type: string
             enum: [RATING, YEAR, NUM_VOTE, RATING_KO]
           description: Sort order
-        - name: country
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Country ID
         - $ref: "#/components/parameters/PageQuery"
       responses:
         "200":
