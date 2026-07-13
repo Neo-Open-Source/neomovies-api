@@ -1,7 +1,7 @@
 use neomovies_api::handlers::{
-    alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, torrents, webhook,
+    alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, sync_progress, torrents, watch_later, webhook,
 };
-use neomovies_api::{not_found, with_cors};
+use neomovies_api::{bad_request, not_found, with_cors};
 use http_body_util::BodyExt;
 use vercel_runtime::{run, service_fn, Error, Request, Response, ResponseBody};
 
@@ -126,6 +126,10 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
                 .unwrap_or(1);
             search::handle(query, page).await
         }
+        "search_v2" => {
+            let map: std::collections::HashMap<String, String> = params.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+            search::handle_v2(&map).await
+        }
         "media_popular" => {
             let page = q(&params, "page")
                 .and_then(|s| s.parse::<u32>().ok())
@@ -138,11 +142,32 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
                 .unwrap_or(1);
             media::handle_top_rated(page).await
         }
+        "media_movie_v2" => {
+            let kp_id = match q(&params, "kp_id") {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("not found"))),
+            };
+            media::handle_movie_v2(&kp_id).await
+        }
         "media_tv_top_rated" => {
             let page = q(&params, "page")
                 .and_then(|s| s.parse::<u32>().ok())
                 .unwrap_or(1);
             media::handle_top_rated_tv(page).await
+        }
+        "media_genres" => media::handle_genres().await,
+        "media_category" => {
+            let genre_id = match q(&params, "genre_id").and_then(|s| s.parse::<i32>().ok()) {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("not found"))),
+            };
+            let is_films = params.iter().any(|(k, _)| k == "films");
+            let is_tv = params.iter().any(|(k, _)| k == "tv");
+            let order = q(&params, "order");
+            let page = q(&params, "page")
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(1);
+            media::handle_category(genre_id, is_films, is_tv, order, page).await
         }
         "media_film" => {
             let id = q(&params, "id").unwrap_or("");
@@ -256,6 +281,55 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
                 ("DELETE", false, _) => favorites::handle_remove(&headers, kp_id, media_type).await,
                 _ => with_cors(not_found("not found")),
             }
+        }
+
+        "watch_later" => {
+            let media_type = q(&params, "type").unwrap_or("movie");
+            let kp_id = q(&params, "kp_id").unwrap_or("");
+            let sub = q(&params, "sub").unwrap_or("");
+            match (method.as_str(), kp_id.is_empty(), sub) {
+                ("GET", true, _) => watch_later::handle_list(&headers).await,
+                ("GET", false, "check") => watch_later::handle_check(&headers, kp_id, media_type).await,
+                ("POST", false, _) => watch_later::handle_add(&headers, kp_id, media_type).await,
+                ("DELETE", false, _) => watch_later::handle_remove(&headers, kp_id, media_type).await,
+                _ => with_cors(not_found("not found")),
+            }
+        }
+
+        "sync_progress" => {
+            let body = req.into_body();
+            let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+            let sub = q(&params, "sub").unwrap_or("");
+            match (method.as_str(), sub) {
+                ("GET", _) => sync_progress::handle_get(&headers, q(&params, "mediaId")).await,
+                ("PUT", _) | ("POST", _) => {
+                    let body: sync_progress::UpsertProgressBody = match serde_json::from_slice(&bytes) {
+                        Ok(b) => b,
+                        Err(_) => return Ok(with_cors(bad_request("invalid body"))),
+                    };
+                    sync_progress::handle_upsert(&headers, body).await
+                }
+                ("DELETE", _) => {
+                    let media_id = match q(&params, "mediaId") {
+                        Some(v) => v,
+                        None => return Ok(with_cors(bad_request("mediaId is required"))),
+                    };
+                    let season = q(&params, "season").and_then(|s| s.parse::<i32>().ok());
+                    let episode = q(&params, "episode").and_then(|s| s.parse::<i32>().ok());
+                    sync_progress::handle_delete(&headers, media_id, season, episode).await
+                }
+                _ => with_cors(not_found("not found")),
+            }
+        }
+
+        "sync_progress_batch" => {
+            let body = req.into_body();
+            let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+            let body: sync_progress::BatchSyncBody = match serde_json::from_slice(&bytes) {
+                Ok(b) => b,
+                Err(_) => return Ok(with_cors(bad_request("invalid body"))),
+            };
+            sync_progress::handle_batch(&headers, body).await
         }
 
         _ => with_cors(not_found("not found")),

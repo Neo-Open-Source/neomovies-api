@@ -22,8 +22,9 @@ use tracing::{error, info};
 use tracing::Level;
 use vercel_runtime::{Response, ResponseBody};
 
+use neomovies_api::{bad_request, with_cors};
 use neomovies_api::handlers::{
-    alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, torrents, webhook,
+    alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, sync_progress, torrents, watch_later, webhook,
 };
 
 fn raw_q(query: &str, key: &str) -> Option<String> {
@@ -66,6 +67,10 @@ async fn route_search(Query(params): Query<HashMap<String, String>>) -> AxumResp
     from_vercel(search::handle(query, page).await).await
 }
 
+async fn route_search_v2(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
+    from_vercel(search::handle_v2(&params).await).await
+}
+
 async fn route_popular(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
     let page: u32 = params.get("page").and_then(|p| p.parse().ok()).unwrap_or(1);
     from_vercel(media::handle_popular(page).await).await
@@ -76,9 +81,28 @@ async fn route_top_rated(Query(params): Query<HashMap<String, String>>) -> AxumR
     from_vercel(media::handle_top_rated(page).await).await
 }
 
+async fn route_movie_v2(Path(kp_id): Path<String>) -> AxumResponse {
+    from_vercel(media::handle_movie_v2(&kp_id).await).await
+}
+
 async fn route_tv_top_rated(Query(params): Query<HashMap<String, String>>) -> AxumResponse {
     let page: u32 = params.get("page").and_then(|p| p.parse().ok()).unwrap_or(1);
     from_vercel(media::handle_top_rated_tv(page).await).await
+}
+
+async fn route_genres() -> AxumResponse {
+    from_vercel(media::handle_genres().await).await
+}
+
+async fn route_category(
+    Path(genre_id): Path<i32>,
+    Query(params): Query<HashMap<String, String>>,
+) -> AxumResponse {
+    let is_films = params.contains_key("films");
+    let is_tv = params.contains_key("tv");
+    let order = params.get("order").map(|s| s.as_str());
+    let page: u32 = params.get("page").and_then(|p| p.parse().ok()).unwrap_or(1);
+    from_vercel(media::handle_category(genre_id, is_films, is_tv, order, page).await).await
 }
 
 async fn route_film(Path(kp_id): Path<String>) -> AxumResponse {
@@ -311,6 +335,88 @@ async fn route_favorites_remove(
     from_vercel(favorites::handle_remove(&headers, &kp_id, media_type).await).await
 }
 
+async fn route_watch_later_list(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(watch_later::handle_list(&headers).await).await
+}
+
+async fn route_watch_later_add(
+    Path(kp_id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+    req: AxumRequest,
+) -> AxumResponse {
+    let media_type = params.get("type").map(|s| s.as_str()).unwrap_or("movie");
+    let headers = req.headers().clone();
+    from_vercel(watch_later::handle_add(&headers, &kp_id, media_type).await).await
+}
+
+async fn route_watch_later_remove(
+    Path(kp_id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+    req: AxumRequest,
+) -> AxumResponse {
+    let media_type = params.get("type").map(|s| s.as_str()).unwrap_or("movie");
+    let headers = req.headers().clone();
+    from_vercel(watch_later::handle_remove(&headers, &kp_id, media_type).await).await
+}
+
+async fn route_watch_later_check(
+    Path(kp_id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+    req: AxumRequest,
+) -> AxumResponse {
+    let media_type = params.get("type").map(|s| s.as_str()).unwrap_or("movie");
+    let headers = req.headers().clone();
+    from_vercel(watch_later::handle_check(&headers, &kp_id, media_type).await).await
+}
+
+// ── Sync Progress ────────────────────────────────────────────────────────────
+
+async fn route_sync_progress_upsert(req: AxumRequest) -> AxumResponse {
+    let (parts, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    let body: sync_progress::UpsertProgressBody = match serde_json::from_slice(&bytes) {
+        Ok(b) => b,
+        Err(_) => return from_vercel(with_cors(bad_request("invalid body"))).await,
+    };
+    let headers = &parts.headers;
+    from_vercel(sync_progress::handle_upsert(headers, body).await).await
+}
+
+async fn route_sync_progress_batch(req: AxumRequest) -> AxumResponse {
+    let (parts, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    let body: sync_progress::BatchSyncBody = match serde_json::from_slice(&bytes) {
+        Ok(b) => b,
+        Err(_) => return from_vercel(with_cors(bad_request("invalid body"))).await,
+    };
+    let headers = &parts.headers;
+    from_vercel(sync_progress::handle_batch(headers, body).await).await
+}
+
+async fn route_sync_progress_get(
+    Query(params): Query<HashMap<String, String>>,
+    req: AxumRequest,
+) -> AxumResponse {
+    let media_id = params.get("mediaId").map(|s| s.as_str());
+    let headers = req.headers().clone();
+    from_vercel(sync_progress::handle_get(&headers, media_id).await).await
+}
+
+async fn route_sync_progress_delete(
+    Query(params): Query<HashMap<String, String>>,
+    req: AxumRequest,
+) -> AxumResponse {
+    let media_id = match params.get("mediaId") {
+        Some(v) => v.clone(),
+        None => return from_vercel(with_cors(bad_request("mediaId is required"))).await,
+    };
+    let season = params.get("season").and_then(|s| s.parse().ok());
+    let episode = params.get("episode").and_then(|s| s.parse().ok());
+    let headers = req.headers().clone();
+    from_vercel(sync_progress::handle_delete(&headers, &media_id, season, episode).await).await
+}
+
 async fn route_favorites_check(
     Path(kp_id): Path<String>,
     Query(params): Query<HashMap<String, String>>,
@@ -369,6 +475,8 @@ async fn main() {
         .route("/api/v1/auth/delete-account", delete(route_auth_delete))
         .route("/api/v1/webhooks/neo-id", post(route_webhook_neoid))
         .route("/api/v1/search", get(route_search))
+        .route("/api/v2/search", get(route_search_v2))
+        .route("/api/v2/movie/{kp_id}", get(route_movie_v2))
         .route("/api/v1/images/proxy", get(route_image_proxy))
         .route("/api/v1/images/{kind}/{id}", get(route_image_kp))
         .route("/api/v1/images/screens/{kp_id}", get(route_image_screens))
@@ -383,6 +491,8 @@ async fn main() {
         .route("/api/v1/movies/popular", get(route_popular))
         .route("/api/v1/movies/top-rated", get(route_top_rated))
         .route("/api/v1/tv/top-rated", get(route_tv_top_rated))
+        .route("/api/v1/genres", get(route_genres))
+        .route("/api/v1/category/{genre_id}", get(route_category))
         .route("/api/v1/movie/{kp_id}", get(route_film))
         .route("/api/v1/tv/{kp_id}/season/{season}/episode/{episode}", get(route_tv_episode_description))
         .route("/api/v1/players/{provider}/kp/{kp_id}", get(route_player))
@@ -395,6 +505,14 @@ async fn main() {
         .route("/api/v1/favorites/{kp_id}", post(route_favorites_add))
         .route("/api/v1/favorites/{kp_id}", delete(route_favorites_remove))
         .route("/api/v1/favorites/{kp_id}/check", get(route_favorites_check))
+        .route("/api/v1/watch-later", get(route_watch_later_list))
+        .route("/api/v1/watch-later/{kp_id}", post(route_watch_later_add))
+        .route("/api/v1/watch-later/{kp_id}", delete(route_watch_later_remove))
+        .route("/api/v1/watch-later/{kp_id}/check", get(route_watch_later_check))
+        .route("/api/v1/sync/progress", get(route_sync_progress_get))
+        .route("/api/v1/sync/progress", put(route_sync_progress_upsert))
+        .route("/api/v1/sync/progress", delete(route_sync_progress_delete))
+        .route("/api/v1/sync/progress/batch", post(route_sync_progress_batch))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::new().level(Level::INFO))

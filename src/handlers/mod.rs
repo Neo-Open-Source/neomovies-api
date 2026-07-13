@@ -8,6 +8,8 @@ pub mod search;
 pub mod torrents;
 pub mod players;
 pub mod favorites;
+pub mod watch_later;
+pub mod sync_progress;
 pub mod webhook;
 pub mod support;
 pub mod health;

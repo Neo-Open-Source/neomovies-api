@@ -58,8 +58,16 @@
       "destination": "/api/index?route=webhook_neoid"
     },
     {
-      "source": "/api/v1/search",
-      "destination": "/api/index?route=search"
+      "source": "/api/v2/search",
+      "destination": "/api/index?route=v2_search"
+    },
+    {
+      "source": "/api/v2/movie/:kp_id",
+      "destination": "/api/index?route=media_movie_v2&kp_id=:kp_id"
+    },
+    {
+      "source": "/api/v2/search",
+      "destination": "/api/index?route=search_v2"
     },
     {
       "source": "/api/v1/movies/popular",
@@ -72,6 +80,14 @@
     {
       "source": "/api/v1/tv/top-rated",
       "destination": "/api/index?route=media_tv_top_rated"
+    },
+    {
+      "source": "/api/v1/genres",
+      "destination": "/api/index?route=media_genres"
+    },
+    {
+      "source": "/api/v1/category/:genre_id",
+      "destination": "/api/index?route=media_category&genre_id=:genre_id"
     },
     {
       "source": "/api/v1/movie/:id",
@@ -160,6 +176,26 @@
     {
       "source": "/api/v1/favorites/:kp_id",
       "destination": "/api/index?route=favorites&kp_id=:kp_id"
+    },
+    {
+      "source": "/api/v1/watch-later",
+      "destination": "/api/index?route=watch_later"
+    },
+    {
+      "source": "/api/v1/watch-later/:kp_id/check",
+      "destination": "/api/index?route=watch_later&kp_id=:kp_id&sub=check"
+    },
+    {
+      "source": "/api/v1/watch-later/:kp_id",
+      "destination": "/api/index?route=watch_later&kp_id=:kp_id"
+    },
+    {
+      "source": "/api/v1/sync/progress/batch",
+      "destination": "/api/index?route=sync_progress_batch"
+    },
+    {
+      "source": "/api/v1/sync/progress",
+      "destination": "/api/index?route=sync_progress"
     },
     {
       "source": "/api",
