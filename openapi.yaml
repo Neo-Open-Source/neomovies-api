@@ -22,6 +22,7 @@ tags:
   - name: Torrents
   - name: Favorites
   - name: WatchLater
+  - name: SyncProgress
   - name: Support
 
 components:
@@ -2090,7 +2091,7 @@ paths:
   # ── Sync Progress ─────────────────────────────────────────────────────────
   /api/v1/sync/progress:
     get:
-      tags: [Favorites]
+      tags: [SyncProgress]
       summary: Get watch progress for user
       operationId: getSyncProgress
       security:
@@ -2123,7 +2124,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     put:
-      tags: [Favorites]
+      tags: [SyncProgress]
       summary: Upsert watch progress (last-write-wins by updatedAt)
       operationId: upsertSyncProgress
       security:
@@ -2190,7 +2191,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     delete:
-      tags: [Favorites]
+      tags: [SyncProgress]
       summary: Delete watch progress for a media/episode
       operationId: deleteSyncProgress
       security:
@@ -2233,7 +2234,7 @@ paths:
 
   /api/v1/sync/progress/batch:
     post:
-      tags: [Favorites]
+      tags: [SyncProgress]
       summary: Batch sync progress (push local + pull server state)
       operationId: batchSyncProgress
       security:
