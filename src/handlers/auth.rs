@@ -8,8 +8,8 @@ use vercel_runtime::{Response, ResponseBody};
 use std::collections::HashSet;
 
 use crate::{
-    Config, internal_error, not_found, success, unauthorized, with_cors, bad_request, bad_gateway,
-    auth::{build_claims, encode_access_token, encode_refresh_token, middleware::require_auth_headers},
+    Config, internal_error, not_found, success, unauthorized, with_cors, bad_request,
+    auth::{build_claims, encode_access_token, encode_refresh_token, verify_neo_id_token, middleware::require_auth_headers},
     models::user::{RefreshToken, User, collection},
     services::NeoIdClient,
 };
@@ -23,6 +23,7 @@ pub struct ProfileDto {
     pub email: String,
     pub name: String,
     pub avatar: String,
+    pub role: String,
     pub is_admin: bool,
     pub created_at: String,
     pub updated_at: String,
@@ -56,7 +57,7 @@ fn is_allowed_mobile_redirect(url: &str) -> bool {
         return false;
     }
 
-    let raw = std::env::var("MOBILE_REDIRECT_SCHEMES").unwrap_or_else(|_| "neomovies".to_string());
+    let raw = std::env::var("MOBILE_REDIRECT_SCHEMES").unwrap_or_else(|_| "neowatch".to_string());
     let allowed: HashSet<String> = raw
         .split(|c| c == ',' || c == ';' || c == ' ')
         .map(|v| v.trim().to_ascii_lowercase())
@@ -64,7 +65,7 @@ fn is_allowed_mobile_redirect(url: &str) -> bool {
         .collect();
 
     if allowed.is_empty() {
-        return scheme == "neomovies";
+        return scheme == "neowatch";
     }
     allowed.contains(&scheme)
 }
@@ -86,37 +87,22 @@ pub async fn handle_login(body_bytes: &[u8]) -> VResp {
 
     let neo_id = NeoIdClient::new(
         &config.neo_id_url,
-        &config.neo_id_api_key,
-        &config.neo_id_site_id,
+        &config.neo_id_client_id,
         &config.neo_id_client_secret,
     );
-    match neo_id.request_login_url(
+    let login_url = neo_id.build_authorize_url(
         &body.redirect_url,
         &body.state,
-        body.mode.as_deref(),
         body.code_challenge.as_deref(),
         body.code_challenge_method.as_deref(),
-    ).await {
-        Ok(login_url) => {
-            let resp = Response::builder()
-                .status(200)
-                .header("Content-Type", "application/json")
-                .body(ResponseBody::from(json!({ "login_url": login_url }).to_string()))
-                .unwrap();
-            with_cors(resp)
-        }
-        Err(err) => {
-            let details = err.trim();
-            let message = if details.is_empty() {
-                "neo id service unavailable".to_string()
-            } else {
-                // Keep response readable and avoid very large upstream payloads.
-                let capped = if details.len() > 240 { &details[..240] } else { details };
-                format!("neo id service unavailable: {}", capped)
-            };
-            with_cors(bad_gateway(&message))
-        }
-    }
+    );
+
+    let resp = Response::builder()
+        .status(200)
+        .header("Content-Type", "application/json")
+        .body(ResponseBody::from(json!({ "login_url": login_url }).to_string()))
+        .unwrap();
+    with_cors(resp)
 }
 
 pub async fn handle_mobile_callback_get(
@@ -136,8 +122,6 @@ pub async fn handle_mobile_callback_get(
         return with_cors(bad_request("mobile_redirect_url is not allowed"));
     }
 
-    // Neo ID may append `?code=...` using naive string concat when redirect_uri already had query.
-    // In that case code/error/state land inside mobile_redirect_url value instead of top-level query.
     let parsed_mobile = match Url::parse(mobile_redirect) {
         Ok(v) => v,
         Err(_) => return with_cors(bad_request("invalid mobile_redirect_url")),
@@ -187,15 +171,14 @@ pub async fn handle_mobile_callback_get(
         };
         let neo_id_client = NeoIdClient::new(
             &config.neo_id_url,
-            &config.neo_id_api_key,
-            &config.neo_id_site_id,
+            &config.neo_id_client_id,
             &config.neo_id_client_secret,
         );
         match neo_id_client
-            .exchange_auth_code(incoming_code.trim(), callback_redirect_uri)
+            .exchange_auth_code(incoming_code.trim(), callback_redirect_uri, None)
             .await
         {
-            Ok(tok) => tok,
+            Ok(token_result) => token_result.access_token,
             Err(err) => {
                 let mut error_url = parsed_mobile.clone();
                 error_url.set_query(None);
@@ -220,7 +203,6 @@ pub async fn handle_mobile_callback_get(
     };
 
     let mut url = parsed_mobile;
-    // Ensure OAuth transport params from the broken nested callback are not leaked to app deeplink.
     url.set_query(None);
 
     if !token_value.trim().is_empty() {
@@ -252,7 +234,7 @@ pub async fn handle_mobile_callback_get(
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>NeoMovies Auth Redirect</title>
+    <title>NeoWatch Auth Redirect</title>
     <style>
       body {{ margin:0; background:#0b0c0f; color:#f3f4f6; font:14px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; display:grid; place-items:center; min-height:100vh; }}
       .box {{ opacity:0.8; }}
@@ -332,8 +314,7 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
     };
     let neo_id_client = NeoIdClient::new(
         &config.neo_id_url,
-        &config.neo_id_api_key,
-        &config.neo_id_site_id,
+        &config.neo_id_client_id,
         &config.neo_id_client_secret,
     );
     let incoming_token = body
@@ -344,18 +325,15 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
         .to_string();
     let incoming_code = body.code.unwrap_or_default().trim().to_string();
 
-    let effective_neo_access_token = if !incoming_token.is_empty() {
+    let neo_access_token = if !incoming_token.is_empty() {
         incoming_token
     } else if !incoming_code.is_empty() {
         let redirect_uri = body.redirect_uri.unwrap_or_default().trim().to_string();
         if redirect_uri.is_empty() {
             return with_cors(bad_request("redirect_uri is required when using code"));
         }
-        if !is_allowed_mobile_redirect(&redirect_uri) {
-            return with_cors(bad_request("redirect_uri is not allowed"));
-        }
-        match neo_id_client.exchange_auth_code(&incoming_code, &redirect_uri).await {
-            Ok(token) => token,
+        match neo_id_client.exchange_auth_code(&incoming_code, &redirect_uri, None).await {
+            Ok(token_result) => token_result.access_token,
             Err(err) => {
                 let msg = format!("invalid neo id code: {}", err);
                 return with_cors(unauthorized(&msg));
@@ -365,26 +343,57 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
         return with_cors(unauthorized("invalid neo id token"));
     };
 
-    let neo_user = match neo_id_client.verify_token(&effective_neo_access_token).await {
-        Ok(u) => u,
+    // Verify the NeoID access token locally (RS256)
+    let neo_claims = match verify_neo_id_token(&neo_access_token, &config.neo_id_url).await {
+        Ok(c) => c,
         Err(_) => return with_cors(unauthorized("invalid neo id token")),
     };
+
+    let neo_id = neo_claims.sub.clone();
+    let email = neo_claims.email.clone();
+    let role = neo_claims.role.unwrap_or_else(|| "user".to_string());
+
     let db = match crate::db::get_db().await { Ok(d) => d, Err(_) => return with_cors(internal_error()) };
     let col = collection(db);
     let now_ms = Utc::now().timestamp_millis();
     let now_bson = DateTime::from_millis(now_ms);
-    let resolved_name = neo_user.display_name_resolved();
-    let resolved_avatar = neo_user.avatar.clone().unwrap_or_default();
 
-    let user = match col.find_one(doc! { "neo_id": &neo_user.unified_id }).await {
+    // Fetch profile from NeoID for display name / avatar
+    let neo_profile = neo_id_client.get_profile(&neo_access_token).await.ok();
+    let resolved_name = neo_profile.as_ref().map(|p| p.display_name_resolved()).unwrap_or_else(|| {
+        email.split('@').next().unwrap_or("").to_string()
+    });
+    let resolved_avatar = neo_profile.as_ref().and_then(|p| p.avatar.clone()).unwrap_or_default();
+
+    let user = match col.find_one(doc! { "neo_id": &neo_id }).await {
         Ok(Some(mut existing)) => {
-            if existing.name != resolved_name || existing.avatar != resolved_avatar {
+            let mut needs_update = false;
+            let mut set = doc! {};
+            if existing.name != resolved_name {
                 existing.name = resolved_name.clone();
+                set.insert("name", &resolved_name);
+                needs_update = true;
+            }
+            if existing.avatar != resolved_avatar {
                 existing.avatar = resolved_avatar.clone();
-                existing.updated_at = now_bson;
+                set.insert("avatar", &resolved_avatar);
+                needs_update = true;
+            }
+            if existing.email != email {
+                existing.email = email.clone();
+                set.insert("email", &email);
+                needs_update = true;
+            }
+            if existing.role != role {
+                existing.role = role.clone();
+                set.insert("role", &role);
+                needs_update = true;
+            }
+            if needs_update {
+                set.insert("updated_at", now_bson);
                 let _ = col.update_one(
-                    doc! { "neo_id": &neo_user.unified_id },
-                    doc! { "$set": { "name": &resolved_name, "avatar": &resolved_avatar, "updated_at": now_bson } },
+                    doc! { "neo_id": &neo_id },
+                    doc! { "$set": set },
                 ).await;
             }
             existing
@@ -392,11 +401,11 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
         Ok(None) => {
             let new_user = User {
                 id: None,
-                neo_id: neo_user.unified_id.clone(),
-                email: neo_user.email.clone(),
+                neo_id: neo_id.clone(),
+                email: email.clone(),
                 name: resolved_name.clone(),
                 avatar: resolved_avatar.clone(),
-                is_admin: false,
+                role: role.clone(),
                 created_at: now_bson,
                 updated_at: now_bson,
                 refresh_tokens: vec![],
@@ -410,7 +419,7 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
     };
 
     let user_id = match user.id { Some(oid) => oid.to_hex(), None => return with_cors(internal_error()) };
-    let claims = build_claims(user_id, user.neo_id.clone(), user.email.clone(), user.is_admin);
+    let claims = build_claims(user_id, user.neo_id.clone(), user.email.clone(), user.role.clone());
     let access_token = match encode_access_token(&claims, &config.jwt_secret) {
         Ok(t) => t,
         Err(_) => return with_cors(internal_error()),
@@ -433,7 +442,8 @@ pub async fn handle_callback(body_bytes: &[u8]) -> VResp {
                 "email": user.email,
                 "name": user.name,
                 "avatar": user.avatar,
-                "is_admin": user.is_admin
+                "role": user.role,
+                "is_admin": user.role == "admin"
             }
         }).to_string()))
         .unwrap();
@@ -470,7 +480,7 @@ pub async fn handle_refresh(body_bytes: &[u8]) -> VResp {
     }
     let _ = col.update_one(doc! { "_id": user.id }, doc! { "$pull": { "refresh_tokens": { "token": &body.refresh_token } } }).await;
     let user_id = user.id.map(|id| id.to_hex()).unwrap_or_default();
-    let claims = build_claims(user_id, user.neo_id, user.email, user.is_admin);
+    let claims = build_claims(user_id, user.neo_id, user.email, user.role);
     let access_token = match encode_access_token(&claims, &config.jwt_secret) {
         Ok(t) => t,
         Err(_) => return with_cors(internal_error()),
@@ -509,7 +519,8 @@ pub async fn handle_profile_get(headers: &HeaderMap) -> VResp {
     with_cors(success(ProfileDto {
         id: user.id.map(|id| id.to_hex()).unwrap_or_default(),
         neo_id: user.neo_id, email: user.email, name: user.name, avatar: user.avatar,
-        is_admin: user.is_admin,
+        role: user.role.clone(),
+        is_admin: user.role == "admin",
         created_at: bson_dt_to_iso(user.created_at),
         updated_at: bson_dt_to_iso(user.updated_at),
     }))
@@ -536,7 +547,8 @@ pub async fn handle_profile_put(headers: &HeaderMap, body_bytes: &[u8]) -> VResp
     with_cors(success(ProfileDto {
         id: updated.id.map(|id| id.to_hex()).unwrap_or_default(),
         neo_id: updated.neo_id, email: updated.email, name: updated.name, avatar: updated.avatar,
-        is_admin: updated.is_admin,
+        role: updated.role.clone(),
+        is_admin: updated.role == "admin",
         created_at: bson_dt_to_iso(updated.created_at),
         updated_at: bson_dt_to_iso(updated.updated_at),
     }))
@@ -591,8 +603,7 @@ pub async fn handle_delete(headers: &HeaderMap) -> VResp {
     let neo_id = auth_user.neo_id.clone();
     let neo_id_client = NeoIdClient::new(
         &config.neo_id_url,
-        &config.neo_id_api_key,
-        &config.neo_id_site_id,
+        &config.neo_id_client_id,
         &config.neo_id_client_secret,
     );
     tokio::spawn(async move { neo_id_client.notify_user_deleted(&neo_id).await; });

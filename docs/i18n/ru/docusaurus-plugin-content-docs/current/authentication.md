@@ -5,7 +5,7 @@ sidebar_position: 3
 
 # Аутентификация
 
-NeoMovies API использует **Neo ID SSO** как единственный способ входа. Email/пароль и OAuth (Google и др.) не поддерживаются.
+NeoWatch API использует **Neo ID SSO** как единственный способ входа. Email/пароль и OAuth (Google и др.) не поддерживаются.
 
 ## Схема
 

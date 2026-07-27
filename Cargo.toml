@@ -1,10 +1,10 @@
 [package]
-name = "neomovies-api"
+name = "neowatch-api"
 version = "2.0.1"
 edition = "2021"
 
 [lib]
-name = "neomovies_api"
+name = "neowatch_api"
 path = "src/lib.rs"
 
 [[bin]]
@@ -30,7 +30,7 @@ futures-util = "0.3"
 http-body-util = "0.1"
 axum = { version = "0.8.8", features = ["json"] }
 dotenvy = "0.15"
-tower-http = { version = "0.6.8", features = ["cors", "trace"] }
+tower-http = { version = "0.6.8", features = ["cors", "trace", "fs"] }
 http = "1"
 url = "2"
 urlencoding = "2"

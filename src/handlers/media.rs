@@ -1,5 +1,6 @@
 use crate::{Config, bad_gateway, bad_request, internal_error, not_found, service_unavailable_maintenance, success, with_cors};
 use crate::services::kinopoisk::{GenreCatalogDto, RatingsDto, map_film_to_v2_dto};
+use crate::services::players::{resolve_tmdb_by_kp};
 use crate::services::KinopoiskClient;
 use crate::services::tmdb::{MediaType, TmdbClient, TmdbError};
 use vercel_runtime::{Response, ResponseBody};
@@ -107,6 +108,26 @@ pub async fn handle_film(kp_id_str: &str) -> Response<ResponseBody> {
         Ok(c) => c,
         Err(_) => return with_cors(internal_error()),
     };
+
+    // Check if content is blocked
+    if let Ok(db) = crate::db::get_db().await {
+        let col = crate::models::blocked_content::collection(db);
+        if let Ok(Some(blocked)) = col.find_one(mongodb::bson::doc! { "kp_id": id as i64 }).await {
+            use serde_json::json;
+            let resp = vercel_runtime::Response::builder()
+                .status(451)
+                .header("Content-Type", "application/json")
+                .body(vercel_runtime::ResponseBody::from(json!({
+                    "success": false,
+                    "error": "content_blocked",
+                    "error_code": blocked.error_code,
+                    "reason": blocked.reason,
+                }).to_string()))
+                .unwrap();
+            return with_cors(resp);
+        }
+    }
+
     let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
     match kp.get_film(id).await {
         Ok(mut film) => {
@@ -118,13 +139,15 @@ pub async fn handle_film(kp_id_str: &str) -> Response<ResponseBody> {
             };
 
             if let Ok(tmdb) = TmdbClient::from_env() {
-                if let Ok(tmdb_id) = resolve_tmdb_id_with_fallback(
+                if let Ok(tmdb_id) = resolve_tmdb_id(
                     &tmdb,
+                    id,
                     media_type,
                     film.external_ids.imdb.as_deref(),
                     &film.original_title,
                     &film.title,
                     &film.release_date,
+                    config.alloha_token.as_deref().unwrap_or(""),
                 )
                 .await
                 {
@@ -158,6 +181,26 @@ pub async fn handle_movie_v2(kp_id_str: &str) -> Response<ResponseBody> {
         Ok(c) => c,
         Err(_) => return with_cors(internal_error()),
     };
+
+    // Check if content is blocked
+    if let Ok(db) = crate::db::get_db().await {
+        let col = crate::models::blocked_content::collection(db);
+        if let Ok(Some(blocked)) = col.find_one(mongodb::bson::doc! { "kp_id": id as i64 }).await {
+            use serde_json::json;
+            let resp = vercel_runtime::Response::builder()
+                .status(451)
+                .header("Content-Type", "application/json")
+                .body(vercel_runtime::ResponseBody::from(json!({
+                    "success": false,
+                    "error": "content_blocked",
+                    "error_code": blocked.error_code,
+                    "reason": blocked.reason,
+                }).to_string()))
+                .unwrap();
+            return with_cors(resp);
+        }
+    }
+
     let kp = KinopoiskClient::new(&config.kpapi_key, &config.kpapi_base_url);
     match kp.get_film_raw(id).await {
         Ok(film) => {
@@ -171,13 +214,15 @@ pub async fn handle_movie_v2(kp_id_str: &str) -> Response<ResponseBody> {
             };
 
             if let Ok(tmdb) = TmdbClient::from_env() {
-                if let Ok(tmdb_id) = resolve_tmdb_id_with_fallback(
+                if let Ok(tmdb_id) = resolve_tmdb_id(
                     &tmdb,
+                    id,
                     media_type,
                     v2.ids.imdb.as_deref(),
                     &v2.original_title,
                     &v2.title,
                     &v2.release_date.clone().unwrap_or_default(),
+                    config.alloha_token.as_deref().unwrap_or(""),
                 )
                 .await
                 {
@@ -196,6 +241,25 @@ pub async fn handle_movie_v2(kp_id_str: &str) -> Response<ResponseBody> {
             with_cors(service_unavailable_maintenance())
         }
     }
+}
+
+/// Resolve TMDB ID: Alloha first (by KP ID), then fallback (IMDB → title search).
+async fn resolve_tmdb_id(
+    tmdb: &TmdbClient,
+    kp_id: u64,
+    media_type: MediaType,
+    imdb_id: Option<&str>,
+    original_title: &str,
+    title: &str,
+    release_date: &str,
+    alloha_token: &str,
+) -> Result<u64, TmdbError> {
+    if !alloha_token.is_empty() {
+        if let Some(tmdb_id) = resolve_tmdb_by_kp(kp_id, alloha_token).await {
+            return Ok(tmdb_id);
+        }
+    }
+    resolve_tmdb_id_with_fallback(tmdb, media_type, imdb_id, original_title, title, release_date).await
 }
 
 fn parse_year_from_release(release_date: &str) -> Option<u32> {

@@ -1,4 +1,4 @@
-use neomovies_api::is_empty_query;
+use neowatch_api::is_empty_query;
 use proptest::prelude::*;
 
 fn whitespace_string() -> impl Strategy<Value = String> {
@@ -9,7 +9,7 @@ fn whitespace_string() -> impl Strategy<Value = String> {
     .prop_map(|chars| chars.into_iter().collect::<String>())
 }
 
-// Feature: neomovies-api-v2, Property 8: Empty/whitespace search query returns 400
+// Feature: neowatch-api-v2, Property 8: Empty/whitespace search query returns 400
 // Validates: Requirement 6.3
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(100))]

@@ -392,4 +392,113 @@ impl TmdbClient {
 
         Ok(body.vote_average)
     }
+
+    /// Get TMDB genre list for movies or TV.
+    pub async fn get_genres(&self, media_type: MediaType) -> Result<Vec<TmdbGenre>, TmdbError> {
+        let path = match media_type {
+            MediaType::Movie => "genre/movie/list",
+            MediaType::Tv => "genre/tv/list",
+        };
+        let resp = self.client
+            .get(format!("{}/{}", self.base_url, path))
+            .query(&[("api_key", self.api_key.as_str()), ("language", "ru-RU")])
+            .send().await
+            .map_err(|e| TmdbError::Upstream(e.to_string()))?;
+        if !resp.status().is_success() {
+            return Err(TmdbError::Upstream(format!("genres status {}", resp.status())));
+        }
+        #[derive(Deserialize)]
+        struct Resp { genres: Vec<TmdbGenre> }
+        let body: Resp = resp.json().await.map_err(|e| TmdbError::Upstream(e.to_string()))?;
+        Ok(body.genres)
+    }
+
+    /// Search TMDB companies by name.
+    pub async fn search_companies(&self, query: &str) -> Result<Vec<TmdbCompany>, TmdbError> {
+        let resp = self.client
+            .get(format!("{}/search/company", self.base_url))
+            .query(&[("api_key", self.api_key.as_str()), ("query", query)])
+            .send().await
+            .map_err(|e| TmdbError::Upstream(e.to_string()))?;
+        if !resp.status().is_success() {
+            return Err(TmdbError::Upstream(format!("company search status {}", resp.status())));
+        }
+        #[derive(Deserialize)]
+        struct Resp { results: Vec<TmdbCompany> }
+        let body: Resp = resp.json().await.map_err(|e| TmdbError::Upstream(e.to_string()))?;
+        Ok(body.results)
+    }
+
+    /// Discover movies or TV by genre/company IDs.
+    pub async fn discover(
+        &self,
+        media_type: MediaType,
+        genre_ids: &[i32],
+        company_ids: &[i64],
+        sort_by: Option<&str>,
+        page: u32,
+    ) -> Result<TmdbDiscoverResponse, TmdbError> {
+        let path = match media_type {
+            MediaType::Movie => "discover/movie",
+            MediaType::Tv => "discover/tv",
+        };
+        let mut params = vec![
+            ("api_key".to_string(), self.api_key.clone()),
+            ("language".to_string(), "ru-RU".to_string()),
+            ("page".to_string(), page.to_string()),
+            ("sort_by".to_string(), sort_by.unwrap_or("popularity.desc").to_string()),
+        ];
+        if !genre_ids.is_empty() {
+            params.push(("with_genres".to_string(), genre_ids.iter().map(|g| g.to_string()).collect::<Vec<_>>().join(",")));
+        }
+        if !company_ids.is_empty() {
+            params.push(("with_companies".to_string(), company_ids.iter().map(|c| c.to_string()).collect::<Vec<_>>().join("|")));
+        }
+        let resp = self.client
+            .get(format!("{}/{}", self.base_url, path))
+            .query(&params)
+            .send().await
+            .map_err(|e| TmdbError::Upstream(e.to_string()))?;
+        if !resp.status().is_success() {
+            return Err(TmdbError::Upstream(format!("discover status {}", resp.status())));
+        }
+        resp.json().await.map_err(|e| TmdbError::Upstream(e.to_string()))
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TmdbGenre {
+    pub id: i32,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TmdbCompany {
+    pub id: i64,
+    pub name: String,
+    pub logo_path: Option<String>,
+    pub origin_country: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TmdbDiscoverResponse {
+    pub page: u32,
+    pub total_pages: u32,
+    pub total_results: u32,
+    pub results: Vec<TmdbDiscoverItem>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TmdbDiscoverItem {
+    pub id: u64,
+    pub title: Option<String>,          // movie
+    pub name: Option<String>,           // tv
+    pub original_title: Option<String>, // movie
+    pub original_name: Option<String>,  // tv
+    pub overview: Option<String>,
+    pub release_date: Option<String>,   // movie
+    pub first_air_date: Option<String>, // tv
+    pub vote_average: Option<f64>,
+    pub poster_path: Option<String>,
+    pub genre_ids: Option<Vec<i32>>,
 }

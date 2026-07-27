@@ -13,3 +13,6 @@ pub mod sync_progress;
 pub mod webhook;
 pub mod support;
 pub mod health;
+pub mod recommendations;
+pub mod sequels;
+pub mod admin;

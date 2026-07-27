@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Deployment
 
-NeoMovies API v2 деплоится на Vercel как набор Rust serverless-функций (`api/*.rs`) и одновременно собирает документацию Docusaurus из `docs/`.
+NeoWatch API v2 деплоится на Vercel как набор Rust serverless-функций (`api/*.rs`) и одновременно собирает документацию Docusaurus из `docs/`.
 
 ## Требования
 
@@ -68,7 +68,7 @@ vercel deploy --prod
 |----------|----------|-------------|
 | `MONGO_URI` | ✅ | MongoDB connection string |
 | `JWT_SECRET` | ✅ | JWT signing secret |
-| `MONGO_DB_NAME` | — | DB name (default: `neomovies`) |
+| `MONGO_DB_NAME` | — | DB name (default: `neowatch`) |
 | `KPAPI_KEY` | ✅ | Kinopoisk API key |
 | `KPAPI_BASE_URL` | — | KP API base URL |
 | `NEO_ID_URL` | ✅ | Neo ID base URL |

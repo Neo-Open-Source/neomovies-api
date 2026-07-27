@@ -1,26 +1,33 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde_json;
 
 pub struct NeoIdClient {
     pub base_url: String,
-    pub api_key: String,
-    pub site_id: String,
+    pub client_id: String,
     pub client_secret: String,
     client: reqwest::Client,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct NeoIdUser {
-    pub unified_id: String,
+    pub id: String,
     pub email: String,
     pub display_name: Option<String>,
     pub avatar: Option<String>,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
+    pub username: Option<String>,
+    pub role: String,
 }
 
 impl NeoIdUser {
     pub fn display_name_resolved(&self) -> String {
         if let Some(name) = &self.display_name {
+            if !name.trim().is_empty() {
+                return name.clone();
+            }
+        }
+        if let Some(name) = &self.username {
             if !name.trim().is_empty() {
                 return name.clone();
             }
@@ -35,44 +42,28 @@ impl NeoIdUser {
     }
 }
 
-#[derive(Serialize)]
-struct LoginRequest<'a> {
-    redirect_url: &'a str,
-    state: &'a str,
-    mode: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    code_challenge: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    code_challenge_method: Option<&'a str>,
-}
-
 #[derive(Deserialize)]
-struct LoginResponse {
-    login_url: Option<String>,
-}
-
-#[derive(Serialize)]
-struct VerifyRequest<'a> {
-    token: &'a str,
-}
-
-#[derive(Deserialize)]
-struct VerifyResponse {
-    valid: bool,
-    user: Option<NeoIdUser>,
-}
-
-#[derive(Deserialize)]
-struct OAuthTokenResponse {
+#[allow(dead_code)]
+struct OAuthTokenData {
     access_token: Option<String>,
+    refresh_token: Option<String>,
+    id_token: Option<String>,
+    token_type: Option<String>,
+    expires_in: Option<u64>,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct OAuthTokenResponse {
+    ok: bool,
+    data: OAuthTokenData,
 }
 
 impl NeoIdClient {
-    pub fn new(base_url: &str, api_key: &str, site_id: &str, client_secret: &str) -> Self {
+    pub fn new(base_url: &str, client_id: &str, client_secret: &str) -> Self {
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
-            api_key: api_key.to_string(),
-            site_id: site_id.to_string(),
+            client_id: client_id.to_string(),
             client_secret: client_secret.to_string(),
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
@@ -81,157 +72,135 @@ impl NeoIdClient {
         }
     }
 
-    /// Request a login URL from Neo ID. Returns the login_url string.
-    /// Returns Err with message if Neo ID returns non-200.
-    pub async fn request_login_url(
+    /// Build the OAuth2 authorize URL for the consent screen.
+    pub fn build_authorize_url(
         &self,
-        redirect_url: &str,
+        redirect_uri: &str,
         state: &str,
-        mode: Option<&str>,
         code_challenge: Option<&str>,
         code_challenge_method: Option<&str>,
-    ) -> Result<String, String> {
-        let url = format!("{}/api/service/login", self.base_url);
-        let body = LoginRequest {
-            redirect_url,
-            state,
-            mode: mode.unwrap_or("redirect"),
-            code_challenge,
-            code_challenge_method,
-        };
-
-        let resp = self
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("X-API-Key", &self.api_key)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("neo id login request failed: {}", e))?;
-
-        if !resp.status().is_success() {
-            return Err("neo id service unavailable".to_string());
+    ) -> String {
+        let mut url = format!(
+            "{}/api/v1/oauth/authorize?response_type=code&client_id={}&redirect_uri={}&state={}",
+            self.base_url,
+            urlencoding::encode(&self.client_id),
+            urlencoding::encode(redirect_uri),
+            urlencoding::encode(state),
+        );
+        if let Some(cc) = code_challenge {
+            url.push_str(&format!("&code_challenge={}", urlencoding::encode(cc)));
         }
-
-        let data: LoginResponse = resp
-            .json()
-            .await
-            .map_err(|e| format!("failed to parse neo id login response: {}", e))?;
-
-        let login_url = data.login_url.unwrap_or_default();
-        if login_url.is_empty() {
-            return Err("neo id returned empty login_url".to_string());
+        if let Some(ccm) = code_challenge_method {
+            url.push_str(&format!("&code_challenge_method={}", ccm));
         }
-
-        // Make absolute if relative
-        if login_url.starts_with('/') {
-            Ok(format!("{}{}", self.base_url, login_url))
-        } else {
-            Ok(login_url)
-        }
+        url
     }
 
-    /// Verify a Neo ID access token. Returns the NeoIdUser on success.
-    /// Returns Err if token is invalid or Neo ID returns non-200.
-    pub async fn verify_token(&self, access_token: &str) -> Result<NeoIdUser, String> {
-        let url = format!("{}/api/service/verify", self.base_url);
-        let body = VerifyRequest { token: access_token };
-
-        let resp = self
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("X-API-Key", &self.api_key)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("neo id verify request failed: {}", e))?;
-
-        if !resp.status().is_success() {
-            return Err("invalid neo id token".to_string());
-        }
-
-        let data: VerifyResponse = resp
-            .json()
-            .await
-            .map_err(|e| format!("failed to parse neo id verify response: {}", e))?;
-
-        if !data.valid {
-            return Err("invalid neo id token".to_string());
-        }
-
-        data.user.ok_or_else(|| "neo id returned no user".to_string())
-    }
-
+    /// Exchange authorization code for tokens.
+    /// Uses the OAuth2 Token endpoint with `grant_type=authorization_code`.
     pub async fn exchange_auth_code(
         &self,
         code: &str,
         redirect_uri: &str,
-    ) -> Result<String, String> {
-        let url = format!("{}/oauth/token", self.base_url);
-        
-        let body = format!(
-            "grant_type=authorization_code&code={}&redirect_uri={}&client_id={}&client_secret={}",
-            urlencoding::encode(code),
-            urlencoding::encode(redirect_uri),
-            urlencoding::encode(&self.site_id),
-            urlencoding::encode(&self.client_secret)
-        );
+        _code_verifier: Option<&str>,
+    ) -> Result<OAuthTokenResult, String> {
+        let url = format!("{}/api/v1/oauth/token", self.base_url);
 
-        eprintln!("[OAuth] Exchanging code for token");
-        eprintln!("[OAuth] URL: {}", url);
-        eprintln!("[OAuth] redirect_uri: {}", redirect_uri);
-        eprintln!("[OAuth] client_id: {}", self.site_id);
+        let body = serde_json::json!({
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+        });
+
+        eprintln!("[neoid] POST {} body: {}", url, serde_json::to_string_pretty(&body).unwrap_or_default());
 
         let resp = self
             .client
             .post(&url)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
+            .header("Content-Type", "application/json")
+            .json(&body)
             .send()
             .await
             .map_err(|e| format!("neo id oauth token request failed: {}", e))?;
 
         let status = resp.status();
-        eprintln!("[OAuth] Response status: {}", status);
-
+        let body_text = resp.text().await.unwrap_or_default();
         if !status.is_success() {
-            let body_text = resp.text().await.unwrap_or_default();
-            eprintln!("[OAuth] Error response: {}", body_text);
+            eprintln!("[neoid] token exchange failed ({}): {}", status, body_text);
             return Err(format!("neo id oauth token error {}: {}", status, body_text));
         }
+        eprintln!("[neoid] token exchange success");
 
-        let data: OAuthTokenResponse = resp
-            .json::<OAuthTokenResponse>()
-            .await
+        let wrapper: OAuthTokenResponse = serde_json::from_str(&body_text)
             .map_err(|e| format!("failed to parse neo id oauth token response: {}", e))?;
 
-        let access_token = data.access_token.unwrap_or_default();
-        if access_token.trim().is_empty() {
+        let access_token = wrapper.data.access_token.unwrap_or_default();
+        if access_token.is_empty() {
             return Err("neo id oauth token response missing access_token".to_string());
         }
 
-        eprintln!("[OAuth] Successfully exchanged code for token");
-        Ok(access_token)
+        Ok(OAuthTokenResult {
+            access_token,
+            refresh_token: wrapper.data.refresh_token,
+            id_token: wrapper.data.id_token,
+            expires_in: wrapper.data.expires_in,
+        })
     }
 
-    /// Fire-and-forget notification to Neo ID that a user deleted their account.
-    pub async fn notify_user_deleted(&self, unified_id: &str) {
-        if self.api_key.is_empty() || self.base_url.is_empty() {
+    /// Fetch user profile from NeoID using the access token.
+    pub async fn get_profile(&self, access_token: &str) -> Result<NeoIdUser, String> {
+        let url = format!("{}/api/v1/user/profile", self.base_url);
+        let resp = self
+            .client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", access_token))
+            .send()
+            .await
+            .map_err(|e| format!("neo id profile request failed: {}", e))?;
+
+        if !resp.status().is_success() {
+            return Err("neo id profile request failed".to_string());
+        }
+
+        #[derive(Deserialize)]
+        struct ProfileResponse {
+            data: NeoIdUser,
+        }
+
+        let profile: ProfileResponse = resp
+            .json()
+            .await
+            .map_err(|e| format!("failed to parse neo id profile response: {}", e))?;
+
+        Ok(profile.data)
+    }
+
+    /// Notify NeoID that a user deleted their account.
+    pub async fn notify_user_deleted(&self, user_id: &str) {
+        if self.base_url.is_empty() || self.client_secret.is_empty() {
             return;
         }
-        let url = format!("{}/api/service/user-deleted", self.base_url);
+        let url = format!("{}/api/v1/webhooks/user-deleted", self.base_url);
         let body = serde_json::json!({
             "event": "user.deleted",
-            "unified_id": unified_id,
+            "user_id": user_id,
+            "client_id": self.client_id,
         });
         let _ = self
             .client
             .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
             .json(&body)
             .send()
             .await;
     }
+}
+
+pub struct OAuthTokenResult {
+    pub access_token: String,
+    pub refresh_token: Option<String>,
+    pub id_token: Option<String>,
+    pub expires_in: Option<u64>,
 }

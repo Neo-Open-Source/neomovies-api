@@ -35,6 +35,8 @@ pub struct KpFilm {
     pub end_year: Option<i32>,
     pub countries: Option<Vec<KpCountry>>,
     pub genres: Option<Vec<KpGenre>>,
+    #[serde(rename = "ratingAgeLimits")]
+    pub rating_age_limits: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -194,6 +196,37 @@ pub struct KpGenreItem {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct KpSequelPrequel {
+    pub film_id: i64,
+    pub name_ru: Option<String>,
+    pub name_en: Option<String>,
+    pub name_original: Option<String>,
+    pub poster_url: Option<String>,
+    pub poster_url_preview: Option<String>,
+    pub relation_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KpSimilarFilm {
+    pub film_id: i64,
+    pub name_ru: Option<String>,
+    pub name_en: Option<String>,
+    pub name_original: Option<String>,
+    pub poster_url: Option<String>,
+    pub poster_url_preview: Option<String>,
+    pub relation_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KpSimilarsResponse {
+    pub total: i32,
+    pub items: Vec<KpSimilarFilm>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KpCountryItem {
     pub id: i32,
     pub country: String,
@@ -227,6 +260,7 @@ pub struct MediaDetailsDto {
     pub duration: i32,
     pub country: String,
     pub language: String,
+    pub age_rating: String,
     pub external_ids: ExternalIdsDto,
 }
 
@@ -262,6 +296,7 @@ pub struct MediaDetailsV2Dto {
     pub poster: String,
     pub backdrop: String,
     pub ratings: RatingsV2Dto,
+    pub age_rating: String,
     pub ids: IdsDto,
 }
 
@@ -307,6 +342,16 @@ pub struct SearchResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelatedFilmDto {
+    pub id: String,
+    pub title: String,
+    pub original_title: String,
+    pub poster_url: String,
+    pub relation_type: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct RatingsDto {
     pub kp: f64,
     pub imdb: Option<f64>,
@@ -347,7 +392,7 @@ impl KinopoiskClient {
             client: reqwest::Client::builder()
                 .connect_timeout(std::time::Duration::from_secs(4))
                 .timeout(std::time::Duration::from_secs(15))
-                .user_agent("neomovies-api/1.0 (+https://api.neome.uk)")
+                .user_agent("neowatch-api/1.0 (+https://api.neome.uk)")
                 .build()
                 .unwrap(),
         }
@@ -528,6 +573,39 @@ impl KinopoiskClient {
         Ok(SearchResponse { results, total, pages })
     }
 
+    /// Get similar films by KP ID from /api/v2.2/films/{id}/similars.
+    pub async fn get_similars(&self, kp_id: u64) -> Result<KpSimilarsResponse, String> {
+        let url = format!("{}/v2.2/films/{}/similars", self.base_url, kp_id);
+        self.get(&url).await
+    }
+
+    /// Get sequels and prequels by KP ID.
+    pub async fn get_sequels_and_prequels(&self, kp_id: u64) -> Result<Vec<RelatedFilmDto>, String> {
+        let url = format!("{}/v2.1/films/{}/sequels_and_prequels", self.base_url, kp_id);
+        let raw: Vec<KpSequelPrequel> = self.get(&url).await?;
+        Ok(raw.into_iter().map(|s| {
+            let title = s.name_ru
+                .clone()
+                .or_else(|| s.name_en.clone())
+                .or_else(|| s.name_original.clone())
+                .unwrap_or_default();
+            let original_title = s.name_original
+                .or(s.name_en)
+                .unwrap_or_default();
+            let poster_url = to_local_image_path(
+                &s.poster_url_preview.unwrap_or_default(),
+                "kp_small",
+            );
+            RelatedFilmDto {
+                id: format!("kp_{}", s.film_id),
+                title,
+                original_title,
+                poster_url,
+                relation_type: s.relation_type,
+            }
+        }).collect())
+    }
+
     /// Get list of available genres and countries (filters).
     pub async fn get_filters(&self) -> Result<KpFiltersResponse, String> {
         let url = format!("{}/v2.2/films/filters", self.base_url);
@@ -639,6 +717,8 @@ fn map_film_to_dto(f: KpFilm) -> MediaDetailsDto {
 
     let language = if f.name_ru.is_some() { "ru".to_string() } else { "en".to_string() };
 
+    let age_rating = f.rating_age_limits.unwrap_or_default();
+
     MediaDetailsDto {
         source_id: id.clone(),
         id,
@@ -659,6 +739,7 @@ fn map_film_to_dto(f: KpFilm) -> MediaDetailsDto {
         duration,
         country,
         language,
+        age_rating,
         external_ids: ExternalIdsDto {
             kp: Some(kp_id),
             tmdb: None,
@@ -717,6 +798,8 @@ pub fn map_film_to_v2_dto(f: KpFilm) -> MediaDetailsV2Dto {
 
     let duration = f.film_length.unwrap_or(0);
 
+    let age_rating = f.rating_age_limits.unwrap_or_default();
+
     MediaDetailsV2Dto {
         id,
         title,
@@ -735,6 +818,7 @@ pub fn map_film_to_v2_dto(f: KpFilm) -> MediaDetailsV2Dto {
             imdb: f.rating_imdb,
             tmdb: None,
         },
+        age_rating,
         ids: IdsDto {
             kp: kp_id,
             imdb: f.imdb_id,

@@ -3,14 +3,20 @@ use mongodb::bson::{doc, oid::ObjectId, Document};
 use mongodb::Database;
 use vercel_runtime::{Request, Response, ResponseBody};
 
-use crate::{config::Config, unauthorized};
+use crate::{Config, unauthorized};
 use super::jwt::decode_token;
 
 pub struct AuthUser {
     pub user_id: ObjectId,
     pub neo_id: String,
     pub email: String,
-    pub is_admin: bool,
+    pub role: String,
+}
+
+impl AuthUser {
+    pub fn is_admin(&self) -> bool {
+        self.role == "admin"
+    }
 }
 
 pub async fn require_auth(
@@ -60,7 +66,7 @@ pub async fn require_auth_headers(
         user_id,
         neo_id: claims.neo_id,
         email: claims.email,
-        is_admin: claims.is_admin,
+        role: claims.role,
     })
 }
 

@@ -57,7 +57,7 @@ pub async fn handle_proxy(url_param: &str) -> Response<ResponseBody> {
 
     let resp = match get_client()
         .get(parsed)
-        .header("User-Agent", "NeoMovies/2.0 (+https://watch.neome.uk)")
+        .header("User-Agent", "NeoWatch/2.0 (+https://watch.neome.uk)")
         .send()
         .await
     {

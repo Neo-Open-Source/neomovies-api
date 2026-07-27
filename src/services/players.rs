@@ -36,8 +36,7 @@ fn non_empty_str(v: Option<&Value>) -> Option<String> {
 
 fn first_translation_iframe(translation_obj: Option<&Value>) -> Option<String> {
     let obj = translation_obj?.as_object()?;
-    obj.values()
-        .find_map(|tr| non_empty_str(tr.get("iframe")))
+    obj.values().find_map(|tr| non_empty_str(tr.get("iframe")))
 }
 
 fn first_episode_iframe(episode_obj: Option<&Value>) -> Option<String> {
@@ -56,15 +55,21 @@ fn pick_alloha_iframe(data: &Value, season: Option<u32>, episode: Option<u32>) -
         let season_obj = seasons.get(&season_key)?;
         if let Some(ep) = episode {
             let episode_key = ep.to_string();
-            return first_episode_iframe(season_obj.get("episodes").and_then(|e| e.get(&episode_key)))
-                .or_else(|| non_empty_str(season_obj.get("iframe")));
+            return first_episode_iframe(
+                season_obj.get("episodes").and_then(|e| e.get(&episode_key)),
+            )
+            .or_else(|| non_empty_str(season_obj.get("iframe")));
         }
 
         return non_empty_str(season_obj.get("iframe")).or_else(|| {
             season_obj
                 .get("episodes")
                 .and_then(Value::as_object)
-                .and_then(|episodes| episodes.values().find_map(|ep| first_episode_iframe(Some(ep))))
+                .and_then(|episodes| {
+                    episodes
+                        .values()
+                        .find_map(|ep| first_episode_iframe(Some(ep)))
+                })
         });
     }
 
@@ -73,7 +78,11 @@ fn pick_alloha_iframe(data: &Value, season: Option<u32>, episode: Option<u32>) -
             season_obj
                 .get("episodes")
                 .and_then(Value::as_object)
-                .and_then(|episodes| episodes.values().find_map(|ep| first_episode_iframe(Some(ep))))
+                .and_then(|episodes| {
+                    episodes
+                        .values()
+                        .find_map(|ep| first_episode_iframe(Some(ep)))
+                })
         })
     })
 }
@@ -100,7 +109,7 @@ pub async fn get_alloha_player(
         match alloha_http_client()
             .get(url)
             .header("Accept", "application/json")
-            .header("User-Agent", "NeoMovies/2.0 (+https://neome.uk)")
+            .header("User-Agent", "NeoWatch/2.0 (+https://neome.uk)")
             .send()
             .await
         {
@@ -114,24 +123,27 @@ pub async fn get_alloha_player(
 
     let resp = match resp_opt {
         Some(r) => r,
-        None => return Err(format!("alloha request failed: {}", last_err.unwrap_or_else(|| "unknown error".to_string()))),
+        None => {
+            return Err(format!(
+                "alloha request failed: {}",
+                last_err.unwrap_or_else(|| "unknown error".to_string())
+            ))
+        }
     };
 
     if !resp.status().is_success() {
         return Err("not_found".to_string());
     }
 
-    let payload: Value = resp
-        .json()
-        .await
-        .map_err(|_| "not_found".to_string())?;
+    let payload: Value = resp.json().await.map_err(|_| "not_found".to_string())?;
 
     if payload.get("status").and_then(Value::as_str) != Some("success") {
         return Err("not_found".to_string());
     }
 
     let data = payload.get("data").unwrap_or(&Value::Null);
-    let iframe_code = pick_alloha_iframe(data, season, episode).ok_or_else(|| "not_found".to_string())?;
+    let iframe_code =
+        pick_alloha_iframe(data, season, episode).ok_or_else(|| "not_found".to_string())?;
 
     // If it's a plain URL (no HTML tags), wrap it in an iframe
     let html = if !iframe_code.contains('<') {
@@ -146,6 +158,46 @@ pub async fn get_alloha_player(
     };
 
     Ok(html)
+}
+
+/// Resolve TMDB ID from KP ID via Alloha API.
+pub async fn resolve_tmdb_by_kp(kp_id: u64, token: &str) -> Option<u64> {
+    let data = get_alloha_catalog(kp_id, token).await.ok()?;
+    let tmdb_id = data.get("data")?.get("id_tmdb")?;
+    tmdb_id.as_u64()
+}
+
+/// Resolve KP ID from TMDB ID via Alloha API.
+pub async fn resolve_kp_by_tmdb(tmdb_id: u64, token: &str) -> Option<u64> {
+    if token.is_empty() {
+        return None;
+    }
+
+    let urls = [
+        format!("https://api.alloha.tv/?token={}&tmdb={}", token, tmdb_id),
+        format!("http://api.alloha.tv/?token={}&tmdb={}", token, tmdb_id),
+    ];
+
+    for url in &urls {
+        if let Ok(resp) = alloha_http_client()
+            .get(url)
+            .header("Accept", "application/json")
+            .header("User-Agent", "NeoWatch/2.0 (+https://neome.uk)")
+            .send()
+            .await
+        {
+            if resp.status().is_success() {
+                if let Ok(payload) = resp.json::<Value>().await {
+                    if payload.get("status").and_then(Value::as_str) == Some("success") {
+                        if let Some(kp_id) = payload.get("data")?.get("id_kp")?.as_u64() {
+                            return Some(kp_id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Returns raw JSON payload from Alloha catalog API by KP ID.
@@ -165,7 +217,7 @@ pub async fn get_alloha_catalog(kp_id: u64, token: &str) -> Result<Value, String
         match alloha_http_client()
             .get(url)
             .header("Accept", "application/json")
-            .header("User-Agent", "NeoMovies/2.0 (+https://neome.uk)")
+            .header("User-Agent", "NeoWatch/2.0 (+https://neome.uk)")
             .send()
             .await
         {
@@ -224,7 +276,11 @@ pub async fn get_vibix_player(kp_id: u64, host: &str, token: &str) -> Result<Str
         return Err("not_configured".to_string());
     }
 
-    let vibix_host = if host.is_empty() { "https://vibix.org" } else { host };
+    let vibix_host = if host.is_empty() {
+        "https://vibix.org"
+    } else {
+        host
+    };
     let url = format!("{}/api/v1/publisher/videos/kinopoisk/{}", vibix_host, kp_id);
 
     let resp = http_client()
@@ -239,10 +295,7 @@ pub async fn get_vibix_player(kp_id: u64, host: &str, token: &str) -> Result<Str
         return Err("not_found".to_string());
     }
 
-    let data: VibixResponse = resp
-        .json()
-        .await
-        .map_err(|_| "not_found".to_string())?;
+    let data: VibixResponse = resp.json().await.map_err(|_| "not_found".to_string())?;
 
     if data.id.is_none() {
         return Err("not_found".to_string());
@@ -264,7 +317,10 @@ pub async fn get_hdvb_player(kp_id: u64, token: &str) -> Result<String, String> 
         return Err("not_configured".to_string());
     }
 
-    let url = format!("https://apivb.com/api/videos.json?id_kp={}&token={}", kp_id, token);
+    let url = format!(
+        "https://apivb.com/api/videos.json?id_kp={}&token={}",
+        kp_id, token
+    );
 
     let resp = http_client()
         .get(&url)
@@ -276,10 +332,7 @@ pub async fn get_hdvb_player(kp_id: u64, token: &str) -> Result<String, String> 
         return Err("not_found".to_string());
     }
 
-    let data: Vec<serde_json::Value> = resp
-        .json()
-        .await
-        .map_err(|_| "not_found".to_string())?;
+    let data: Vec<serde_json::Value> = resp.json().await.map_err(|_| "not_found".to_string())?;
 
     let iframe_url = data
         .first()
@@ -359,13 +412,13 @@ pub async fn get_collaps_player(
         return Err("not_found".to_string());
     }
 
-    let data: CollapsListResponse = resp
-        .json()
-        .await
-        .map_err(|_| "not_found".to_string())?;
+    let data: CollapsListResponse = resp.json().await.map_err(|_| "not_found".to_string())?;
 
     let results = data.results.unwrap_or_default();
-    let result = results.into_iter().next().ok_or_else(|| "not_found".to_string())?;
+    let result = results
+        .into_iter()
+        .next()
+        .ok_or_else(|| "not_found".to_string())?;
 
     let iframe_url = if result.result_type.as_deref() == Some("series") {
         match (season, episode) {
@@ -375,12 +428,12 @@ pub async fn get_collaps_player(
                     .seasons
                     .as_deref()
                     .and_then(|seasons| {
-                        seasons.iter().find(|season_obj| season_obj.season == Some(s as i32))
+                        seasons
+                            .iter()
+                            .find(|season_obj| season_obj.season == Some(s as i32))
                     })
                     .and_then(|season_obj| season_obj.episodes.as_deref())
-                    .and_then(|episodes| {
-                        episodes.iter().find(|ep| ep.episode_num() == e as i32)
-                    })
+                    .and_then(|episodes| episodes.iter().find(|ep| ep.episode_num() == e as i32))
                     .and_then(|ep| ep.iframe_url.clone())
                     .ok_or_else(|| "not_found".to_string())?
             }
@@ -390,7 +443,9 @@ pub async fn get_collaps_player(
                     .seasons
                     .as_deref()
                     .and_then(|seasons| {
-                        seasons.iter().find(|season_obj| season_obj.season == Some(s as i32))
+                        seasons
+                            .iter()
+                            .find(|season_obj| season_obj.season == Some(s as i32))
                     })
                     .and_then(|season_obj| season_obj.episodes.as_deref())
                     .and_then(|episodes| episodes.first())
@@ -419,3 +474,5 @@ pub async fn get_collaps_player(
 
     Ok(iframe_html(&iframe_url, "Collaps Player"))
 }
+
+

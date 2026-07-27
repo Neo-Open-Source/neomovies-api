@@ -1,7 +1,7 @@
-use neomovies_api::{json_response, with_cors};
+use neowatch_api::{json_response, with_cors};
 use proptest::prelude::*;
 
-// Feature: neomovies-api-v2, Property 13: CORS headers present on every response
+// Feature: neowatch-api-v2, Property 13: CORS headers present on every response
 // Validates: Requirement 1.5
 proptest! {
     #[test]

@@ -4,9 +4,9 @@ slug: /
 sidebar_position: 1
 ---
 
-# NeoMovies API v2
+# NeoWatch API v2
 
-NeoMovies API v2 is a serverless REST API built in Rust, deployed on Vercel.
+NeoWatch API v2 is a serverless REST API built in Rust, deployed on Vercel.
 
 ## Key Features
 

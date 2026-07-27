@@ -2,8 +2,8 @@ import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
-  title: "NeoMovies API",
-  tagline: "NeoMovies API v2 Documentation",
+  title: "NeoWatch API",
+  tagline: "NeoWatch API v2 Documentation",
   url: "https://docs.neome.uk",
   baseUrl: "/",
   onBrokenLinks: "warn",
@@ -56,7 +56,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/docs",
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://gitlab.com/foxixus/neomovies-api/-/edit/main/docs/",
+          editUrl: "https://gitlab.com/foxixus/neowatch-api/-/edit/main/docs/",
           editLocalizedFiles: true,
         },
         blog: false,
@@ -73,7 +73,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: "NeoMovies API",
+      title: "NeoWatch API",
       items: [
         {
           type: "docSidebar",
@@ -86,7 +86,7 @@ const config: Config = {
           position: "right",
         },
         {
-          href: "https://github.com/Neo-Open-Source/neomovies-api",
+          href: "https://github.com/Neo-Open-Source/neowatch-api",
           label: "GitHub",
           position: "right",
         },
@@ -98,7 +98,7 @@ const config: Config = {
         {
           title: "Resources",
           items: [
-            { label: "NeoMovies", href: "https://w.neome.uk" },
+            { label: "NeoWatch", href: "https://w.neome.uk" },
             { label: "Blog", href: "https://blog.neome.uk" },
             { label: "NeoID", href: "https://id.neome.uk" },
           ],
@@ -106,8 +106,8 @@ const config: Config = {
         {
           title: "Community",
           items: [
-            { label: "Telegram", href: "https://t.me/neomovies_news" },
-            { label: "GitHub", href: "https://github.com/Neo-Open-Source/neomovies-api" },
+            { label: "Telegram", href: "https://t.me/neowatch_news" },
+            { label: "GitHub", href: "https://github.com/Neo-Open-Source/neowatch-api" },
           ],
         },
       ],

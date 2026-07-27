@@ -2,17 +2,17 @@
   <img src=".github/icon.png" width="120" height="120" style="border-radius: 24px;" />
 </p>
 
-<h1 align="center">NeoMovies API v2</h1>
+<h1 align="center">NeoWatch API v2</h1>
 
 <p align="center">
-  Rust REST API for NeoMovies with Neo ID SSO authentication, deployable on Vercel and Netlify
+  Rust REST API for NeoWatch with Neo ID SSO authentication, deployable on Vercel and Netlify
 </p>
 
 <p align="center">
-  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNeo-Open-Source%2Fneomovies-api&project-name=neomovies-api">
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNeo-Open-Source%2Fneowatch-api&project-name=neowatch-api">
     <img src="https://vercel.com/button" alt="Deploy with Vercel" />
   </a>
-  <a href="https://app.netlify.com/start/deploy?repository=https://github.com/Neo-Open-Source/neomovies-api">
+  <a href="https://app.netlify.com/start/deploy?repository=https://github.com/Neo-Open-Source/neowatch-api">
     <img src="https://www.netlify.com/img/deploy/button.svg" alt="Deploy to Netlify" />
   </a>
 </p>
@@ -89,8 +89,8 @@ The Netlify deploy button is docs-only plus API proxying, so it does not require
 ### Hosting routes
 
 - `/` -> API documentation site (Docusaurus build from `docs/build`)
-- `/api/v1/*` -> NeoMovies API v1 endpoints
-- `/api/v2/*` -> NeoMovies API v2 endpoints
+- `/api/v1/*` -> NeoWatch API v1 endpoints
+- `/api/v2/*` -> NeoWatch API v2 endpoints
 - `/openapi.yaml` -> OpenAPI schema used by docs
 
 ## API Overview
@@ -129,7 +129,7 @@ Full spec: [`openapi.yaml`](openapi.yaml)
 
 For mobile clients, backend supports redirect trampoline:
 
-- `POST /api/v1/auth/neo-id/login` with `mobile_redirect_url` (e.g. `neomovies://auth/neo-id/callback`)
+- `POST /api/v1/auth/neo-id/login` with `mobile_redirect_url` (e.g. `neowatch://auth/neo-id/callback`)
 - Neo ID redirects to `/api/v1/auth/neo-id/mobile-callback`
 - API redirects (`302`) to mobile deep link with `access_token` in query
 

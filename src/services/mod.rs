@@ -1,5 +1,6 @@
 pub mod neoid;
 pub mod cdn;
+pub mod email;
 pub mod kinopoisk;
 pub mod players;
 pub mod torrents;

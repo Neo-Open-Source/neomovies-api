@@ -11,6 +11,14 @@ fn client() -> Client {
         .unwrap()
 }
 
+fn api_client() -> Client {
+    Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(5))
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .unwrap()
+}
+
 #[derive(Deserialize)]
 pub struct ContentInfo {
     pub id: u64,
@@ -24,7 +32,7 @@ pub struct ContentInfo {
 #[derive(Deserialize)]
 pub struct Episode {
     pub id: u64,
-    pub title: String,
+    pub title: Option<String>,
     pub order: u32,
     pub season: EpisodeSeason,
     #[serde(rename = "episodeVariants", default)]
@@ -40,14 +48,28 @@ pub struct EpisodeSeason {
 #[derive(Deserialize)]
 pub struct EpisodeVariant {
     pub filepath: String,
+    pub title: Option<String>,
 }
 
-#[derive(Serialize)]
-pub struct EpisodeJs {
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CdnVideoDto {
+    pub id: String,
+    pub title: String,
+    pub is_series: bool,
+    pub m3u8_url: String,
+    pub season: Option<u32>,
+    pub episode: Option<u32>,
+    pub episodes: Vec<CdnEpisodeDto>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CdnEpisodeDto {
     pub season: u32,
     pub episode: u32,
     pub title: String,
-    pub filepath: String,
+    pub m3u8_url: String,
 }
 
 fn cdn_headers() -> reqwest::header::HeaderMap {
@@ -69,68 +91,103 @@ pub async fn get_episodes(cdn_id: u64) -> Result<Vec<Episode>, String> {
     resp.json::<Vec<Episode>>().await.map_err(|e| e.to_string())
 }
 
-pub async fn resolve_m3u8(filepath: &str) -> Result<String, String> {
-    let resp = client().get(filepath).send().await.map_err(|e| e.to_string())?;
-    if resp.status().as_u16() == 307 {
-        return resp.headers().get("location")
-            .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_string())
-            .ok_or_else(|| "no location header".to_string());
-    }
-    Ok(filepath.to_string())
-}
-
 pub async fn resolve_cdn_id_by_kp(kp_id: u64) -> Result<u64, String> {
     let url = format!(
         "https://api.rstprgapipt.com/balancer-api/iframe?kp={}&token={}&disabled_share=1",
         kp_id, CDN_TOKEN
     );
-    let html = Client::new().get(&url).send().await.map_err(|e| e.to_string())?
+    let html = api_client().get(&url).send().await.map_err(|e| e.to_string())?
         .text().await.map_err(|e| e.to_string())?;
 
-    html.split("window.MOVIE_ID=")
-        .nth(1)
-        .and_then(|s| s.split(';').next())
-        .and_then(|s| s.trim().parse::<u64>().ok())
-        .ok_or_else(|| format!("MOVIE_ID not found in iframe HTML (kp={})", kp_id))
-}
-
-pub struct PlayerData {
-    pub title: String,
-    pub initial_m3u8: String,
-    pub initial_season: u32,
-    pub initial_episode: u32,
-    pub episodes: Vec<EpisodeJs>,
-    pub is_series: bool,
-}
-
-pub async fn get_player_data(cdn_id: u64, season: Option<u32>, episode: Option<u32>) -> Result<PlayerData, String> {
-    let info = get_content_info(cdn_id).await?;
-
-    if !info.has_multiple_episodes {
-        let filepath = info.trailer_urls.first().ok_or("no video")?.clone();
-        let m3u8 = resolve_m3u8(&filepath).await?;
-        return Ok(PlayerData { title: info.title, initial_m3u8: m3u8, initial_season: 0, initial_episode: 0, episodes: vec![], is_series: false });
+    let patterns = ["window.MOVIE_ID=", "data-movie-id=\"", "data-id=\""];
+    for pattern in &patterns {
+        if let Some(id) = html.split(pattern)
+            .nth(1)
+            .and_then(|s| s.split(|c| c == ';' || c == '"').next())
+            .and_then(|s| s.trim().parse::<u64>().ok())
+        {
+            return Ok(id);
+        }
     }
 
-    let raw_episodes = get_episodes(cdn_id).await?;
+    Err(format!("CDN id not found in iframe HTML (kp={})", kp_id))
+}
+
+fn proxy_url(filepath: &str) -> String {
+    if filepath.ends_with(".m3u8") {
+        format!("/api/v1/hls/proxy?url={}", urlencoding::encode(filepath))
+    } else {
+        filepath.to_string()
+    }
+}
+
+pub fn variant_title(v: &EpisodeVariant) -> String {
+    v.title.clone().unwrap_or_default()
+}
+
+pub async fn get_player_data(cdn_id: u64, season: Option<u32>, episode: Option<u32>) -> Result<CdnVideoDto, String> {
+    let info = get_content_info(cdn_id).await?;
+    let id = format!("cp_{}", cdn_id);
+
+    let episodes_raw = get_episodes(cdn_id).await.unwrap_or_default();
+
+    if episodes_raw.is_empty() {
+        let filepath = info.trailer_urls.first().ok_or("no video")?.clone();
+        return Ok(CdnVideoDto {
+            id,
+            title: info.title,
+            is_series: false,
+            m3u8_url: proxy_url(&filepath),
+            season: None,
+            episode: None,
+            episodes: vec![],
+        });
+    }
+
+    let is_series = info.has_multiple_episodes;
+
     let target_season = season.unwrap_or(1);
     let target_episode = episode.unwrap_or(1);
 
-    let initial_ep = raw_episodes.iter()
-        .find(|e| e.season.order == target_season && e.order == target_episode)
-        .or_else(|| raw_episodes.first())
-        .ok_or("no episodes")?;
+    let initial_ep = if is_series {
+        episodes_raw.iter()
+            .find(|e| e.season.order == target_season && e.order == target_episode)
+            .or_else(|| episodes_raw.first())
+    } else {
+        episodes_raw.first()
+    }.ok_or("no episodes")?;
 
-    let initial_filepath = initial_ep.episode_variants.first().ok_or("no variants")?.filepath.clone();
-    let initial_m3u8 = resolve_m3u8(&initial_filepath).await?;
+    let initial_variant = initial_ep.episode_variants.first().ok_or("no variants")?;
+    let initial_url = proxy_url(&initial_variant.filepath);
     let actual_season = initial_ep.season.order;
     let actual_episode = initial_ep.order;
 
-    let episodes: Vec<EpisodeJs> = raw_episodes.into_iter().filter_map(|e| {
-        let fp = e.episode_variants.into_iter().next()?.filepath;
-        Some(EpisodeJs { season: e.season.order, episode: e.order, title: e.title, filepath: fp })
-    }).collect();
+    let mut episodes = Vec::new();
+    for e in episodes_raw {
+        if let Some(variant) = e.episode_variants.into_iter().next() {
+            let ep_title = variant.title.as_deref().unwrap_or("").to_string();
+            episodes.push(CdnEpisodeDto {
+                season: e.season.order,
+                episode: e.order,
+                title: ep_title,
+                m3u8_url: proxy_url(&variant.filepath),
+            });
+        }
+    }
 
-    Ok(PlayerData { title: info.title, initial_m3u8, initial_season: actual_season, initial_episode: actual_episode, episodes, is_series: true })
+    let (out_season, out_episode) = if is_series && actual_season > 0 && actual_episode > 0 {
+        (Some(actual_season), Some(actual_episode))
+    } else {
+        (None, None)
+    };
+
+    Ok(CdnVideoDto {
+        id,
+        title: info.title,
+        is_series,
+        m3u8_url: initial_url,
+        season: out_season,
+        episode: out_episode,
+        episodes,
+    })
 }

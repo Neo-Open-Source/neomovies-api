@@ -2,8 +2,8 @@ use crate::with_cors;
 use vercel_runtime::{Response, ResponseBody};
 
 const SUPPORTERS: &str = r#"[
-  {"id":1,"name":"Sophron Ragozin","type":"service","description":"Покупка и продления основного домена neomovies.ru","contributions":["Домен neomovies.ru"],"year":2025,"isActive":true},
-  {"id":2,"name":"Chernuha","type":["service","code"],"description":"Покупка домена, помощь с iOS версией","contributions":["Домен neomovies.run","iOS разработка"],"year":2025,"isActive":true},
+  {"id":1,"name":"Sophron Ragozin","type":"service","description":"Покупка и продления основного домена neowatch.ru","contributions":["Домен neowatch.ru"],"year":2025,"isActive":true},
+  {"id":2,"name":"Chernuha","type":["service","code"],"description":"Покупка домена, помощь с iOS версией","contributions":["Домен neowatch.ru","iOS разработка"],"year":2025,"isActive":true},
   {"id":3,"name":"Iwnuply","type":"code","description":"Создание докер контейнера для API и Frontend","contributions":["Docker"],"year":2025,"isActive":false}
 ]"#;
 

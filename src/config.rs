@@ -8,8 +8,7 @@ pub struct Config {
     pub kpapi_key: String,
     pub kpapi_base_url: String,
     pub neo_id_url: String,
-    pub neo_id_api_key: String,
-    pub neo_id_site_id: String,
+    pub neo_id_client_id: String,
     pub neo_id_client_secret: String,
     pub public_api_url: Option<String>,
     pub hdvb_token: Option<String>,
@@ -20,6 +19,10 @@ pub struct Config {
     pub redapi_base_url: Option<String>,
     pub collaps_api_host: Option<String>,
     pub collaps_token: Option<String>,
+    pub admin_notify_email: Option<String>,
+    pub admin_panel_url: Option<String>,
+    pub resend_api_key: Option<String>,
+    pub email_from: Option<String>,
 }
 
 #[derive(Debug)]
@@ -41,13 +44,12 @@ impl Config {
         Ok(Config {
             mongo_uri,
             jwt_secret,
-            mongo_db_name: env::var("MONGO_DB_NAME").unwrap_or_else(|_| "neomovies".into()),
+            mongo_db_name: env::var("MONGO_DB_NAME").unwrap_or_else(|_| "neowatch".into()),
             kpapi_key: env::var("KPAPI_KEY").unwrap_or_default(),
             kpapi_base_url: env::var("KPAPI_BASE_URL")
                 .unwrap_or_else(|_| "https://kinopoiskapiunofficial.tech/api".into()),
             neo_id_url: env::var("NEO_ID_URL").unwrap_or_default(),
-            neo_id_api_key: env::var("NEO_ID_API_KEY").unwrap_or_default(),
-            neo_id_site_id: env::var("NEO_ID_SITE_ID").unwrap_or_default(),
+            neo_id_client_id: env::var("NEO_ID_CLIENT_ID").unwrap_or_default(),
             neo_id_client_secret: env::var("NEO_ID_CLIENT_SECRET").unwrap_or_default(),
             public_api_url: env::var("PUBLIC_API_URL").ok(),
             hdvb_token: env::var("HDVB_TOKEN").ok(),
@@ -58,6 +60,10 @@ impl Config {
             redapi_base_url: env::var("REDAPI_BASE_URL").ok(),
             collaps_api_host: env::var("COLLAPS_API_HOST").ok(),
             collaps_token: env::var("COLLAPS_TOKEN").ok(),
+            admin_notify_email: env::var("ADMIN_NOTIFY_EMAIL").ok(),
+            admin_panel_url: env::var("ADMIN_PANEL_URL").ok(),
+            resend_api_key: env::var("RESEND_API_KEY").ok(),
+            email_from: env::var("EMAIL_FROM").ok(),
         })
     }
 }

@@ -8,7 +8,7 @@ pub async fn get_db() -> Result<&'static Database, mongodb::error::Error> {
         let uri = std::env::var("MONGO_URI")
             .map_err(|_| mongodb::error::Error::custom("MONGO_URI not set"))?;
         let db_name = std::env::var("MONGO_DB_NAME")
-            .unwrap_or_else(|_| "neomovies".into());
+            .unwrap_or_else(|_| "neowatch".into());
 
         let options = ClientOptions::parse(&uri).await?;
         let client = Client::with_options(options)?;

@@ -12,19 +12,20 @@ use axum::{
     extract::{Path, Query, Request as AxumRequest},
     http::StatusCode,
     response::Response as AxumResponse,
-    routing::{delete, get, post, put},
+    routing::{delete, get, patch, post, put},
 };
 use http_body_util::BodyExt;
 use std::collections::HashMap;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tracing::{error, info};
 use tracing::Level;
 use vercel_runtime::{Response, ResponseBody};
 
-use neomovies_api::{bad_request, with_cors};
-use neomovies_api::handlers::{
-    alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, sync_progress, torrents, watch_later, webhook,
+use neowatch_api::{bad_request, with_cors};
+use neowatch_api::handlers::{
+    admin, alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, recommendations, search, sequels, support, sync_progress, torrents, watch_later, webhook,
 };
 
 fn raw_q(query: &str, key: &str) -> Option<String> {
@@ -417,6 +418,162 @@ async fn route_sync_progress_delete(
     from_vercel(sync_progress::handle_delete(&headers, &media_id, season, episode).await).await
 }
 
+async fn route_recommendations(Path(kp_id): Path<String>) -> AxumResponse {
+    from_vercel(recommendations::handle_recommendations(&kp_id).await).await
+}
+
+async fn route_sequels(Path(kp_id): Path<String>) -> AxumResponse {
+    from_vercel(sequels::handle(&kp_id).await).await
+}
+
+// ── Admin ───────────────────────────────────────────────────────────────────────
+
+async fn route_admin_auth_login(req: AxumRequest) -> AxumResponse {
+    let query = req.uri().query().unwrap_or("");
+    let host = req.headers().get("host").and_then(|v| v.to_str().ok());
+    let scheme = None;
+    from_vercel(admin::handle_admin_auth_login(query, host, scheme).await).await
+}
+
+async fn route_admin_auth_callback(req: AxumRequest) -> AxumResponse {
+    let query = req.uri().query().unwrap_or("");
+    let host = req.headers().get("host").and_then(|v| v.to_str().ok());
+    let scheme = None;
+    from_vercel(admin::handle_admin_auth_callback(query, host, scheme).await).await
+}
+
+async fn route_admin_auth_check(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_admin_check_token(&headers).await).await
+}
+
+async fn route_dmca_submit(req: AxumRequest) -> AxumResponse {
+    let (_, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    from_vercel(admin::handle_dmca_submit(&bytes).await).await
+}
+
+async fn route_admin_dmca_list(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_dmca_list(&headers).await).await
+}
+
+async fn route_admin_dmca_update(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    let path = req.uri().path().to_string();
+    let id = path.rsplit('/').next().unwrap_or("").to_string();
+    let (_, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    from_vercel(admin::handle_dmca_update(&headers, &id, &bytes).await).await
+}
+
+async fn route_admin_block_list(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_block_list(&headers).await).await
+}
+
+async fn route_admin_block_create(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    let (_, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    from_vercel(admin::handle_block_create(&headers, &bytes).await).await
+}
+
+async fn route_admin_block_delete(Path(kp_id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_block_delete(&headers, &kp_id).await).await
+}
+
+async fn route_blocked_check(Path(kp_id): Path<String>) -> AxumResponse {
+    from_vercel(admin::handle_check_blocked(&kp_id).await).await
+}
+
+// ── Categories (admin + public) ────────────────────────────────────────────
+
+async fn route_admin_categories_list(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_category_list(&headers).await).await
+}
+
+async fn route_admin_categories_create(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    let (_, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    from_vercel(admin::handle_category_create(&headers, &bytes).await).await
+}
+
+async fn route_admin_category_get(Path(id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_category_get(&headers, &id).await).await
+}
+
+async fn route_admin_category_update(Path(id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    let (_, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    from_vercel(admin::handle_category_update(&headers, &id, &bytes).await).await
+}
+
+async fn route_admin_category_delete(Path(id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_category_delete(&headers, &id).await).await
+}
+
+async fn route_admin_category_items_list(Path(cat_id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_category_items_list(&headers, &cat_id).await).await
+}
+
+async fn route_admin_category_items_add(Path(cat_id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    let (_, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    from_vercel(admin::handle_category_items_add(&headers, &cat_id, &bytes).await).await
+}
+
+async fn route_admin_category_items_remove(Path(cat_id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    let (_, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    from_vercel(admin::handle_category_items_remove(&headers, &cat_id, &bytes).await).await
+}
+
+async fn route_admin_category_items_move(Path(cat_id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    let (_, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap_or_default();
+    from_vercel(admin::handle_category_items_move(&headers, &cat_id, &bytes).await).await
+}
+
+async fn route_admin_category_parse(Path(cat_id): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_category_parse(&headers, &cat_id).await).await
+}
+
+async fn route_kp_filters(req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_kp_filters(&headers).await).await
+}
+
+async fn route_tmdb_genres(Path(media_type): Path<String>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    from_vercel(admin::handle_tmdb_genres(&headers, &media_type).await).await
+}
+
+async fn route_tmdb_companies(Query(params): Query<std::collections::HashMap<String, String>>, req: AxumRequest) -> AxumResponse {
+    let headers = req.headers().clone();
+    let query = params.get("q").map(|s| s.as_str()).unwrap_or("");
+    from_vercel(admin::handle_tmdb_companies(&headers, query).await).await
+}
+
+async fn route_public_categories() -> AxumResponse {
+    from_vercel(admin::handle_public_categories().await).await
+}
+
+async fn route_public_category(Path(slug): Path<String>) -> AxumResponse {
+    from_vercel(admin::handle_public_category_by_slug(&slug).await).await
+}
+
 async fn route_favorites_check(
     Path(kp_id): Path<String>,
     Query(params): Query<HashMap<String, String>>,
@@ -440,7 +597,7 @@ async fn main() {
 
     let _ = dotenvy::dotenv();
 
-    match neomovies_api::Config::from_env() {
+    match neowatch_api::Config::from_env() {
         Ok(_) => {}
         Err(e) => {
             error!("Config error: {}", e);
@@ -448,7 +605,7 @@ async fn main() {
         }
     }
 
-    match neomovies_api::db::get_db().await {
+    match neowatch_api::db::get_db().await {
         Ok(_) => println!("MongoDB connected"),
         Err(e) => {
             error!("MongoDB: {}", e);
@@ -513,6 +670,28 @@ async fn main() {
         .route("/api/v1/sync/progress", put(route_sync_progress_upsert))
         .route("/api/v1/sync/progress", delete(route_sync_progress_delete))
         .route("/api/v1/sync/progress/batch", post(route_sync_progress_batch))
+        .route("/api/v1/recommendations/{kp_id}", get(route_recommendations))
+        .route("/api/v1/sequels/{kp_id}", get(route_sequels))
+        .nest_service("/admin", ServeDir::new("admin-panel/dist").append_index_html_on_directories(true))
+        .route("/admin/auth/login", get(route_admin_auth_login))
+        .route("/admin/auth/callback", get(route_admin_auth_callback))
+        .route("/api/v1/admin/check", get(route_admin_auth_check))
+        .route("/api/v1/dmca", post(route_dmca_submit))
+        .route("/api/v1/blocked/{kp_id}", get(route_blocked_check))
+        .route("/api/v1/admin/dmca", get(route_admin_dmca_list))
+        .route("/api/v1/admin/dmca/{id}", patch(route_admin_dmca_update))
+        .route("/api/v1/admin/block", get(route_admin_block_list).post(route_admin_block_create))
+        .route("/api/v1/admin/block/{kp_id}", delete(route_admin_block_delete))
+        .route("/api/v1/categories", get(route_public_categories))
+        .route("/api/v1/collection/{slug}", get(route_public_category))
+        .route("/api/v1/admin/categories", get(route_admin_categories_list).post(route_admin_categories_create))
+        .route("/api/v1/admin/categories/{id}", get(route_admin_category_get).put(route_admin_category_update).delete(route_admin_category_delete))
+        .route("/api/v1/admin/categories/{cat_id}/items", get(route_admin_category_items_list).post(route_admin_category_items_add).delete(route_admin_category_items_remove))
+        .route("/api/v1/admin/categories/{cat_id}/items/move", post(route_admin_category_items_move))
+        .route("/api/v1/admin/categories/{cat_id}/parse", post(route_admin_category_parse))
+        .route("/api/v1/admin/kp-filters", get(route_kp_filters))
+        .route("/api/v1/admin/tmdb-genres/{media_type}", get(route_tmdb_genres))
+        .route("/api/v1/admin/tmdb-companies", get(route_tmdb_companies))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
@@ -526,8 +705,8 @@ async fn main() {
         .unwrap_or_else(|_| "3000".to_string());
     let addr = format!("0.0.0.0:{}", port);
 
-    info!("NeoMovies API at http://localhost:{}", port);
-    println!("NeoMovies API at http://localhost:{}", port);
+    info!("NeoWatch API at http://localhost:{}", port);
+    println!("NeoWatch API at http://localhost:{}", port);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

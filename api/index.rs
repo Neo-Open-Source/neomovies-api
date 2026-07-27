@@ -1,7 +1,7 @@
-use neomovies_api::handlers::{
-    alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, search, support, sync_progress, torrents, watch_later, webhook,
+use neowatch_api::handlers::{
+    admin, alloha, auth, cdn_player, favorites, health, hls_proxy, images, media, players, recommendations, search, sequels, support, sync_progress, torrents, watch_later, webhook,
 };
-use neomovies_api::{bad_request, not_found, with_cors};
+use neowatch_api::{bad_request, not_found, with_cors};
 use http_body_util::BodyExt;
 use vercel_runtime::{run, service_fn, Error, Request, Response, ResponseBody};
 
@@ -330,6 +330,170 @@ pub async fn handler(req: Request) -> Result<Response<ResponseBody>, Error> {
                 Err(_) => return Ok(with_cors(bad_request("invalid body"))),
             };
             sync_progress::handle_batch(&headers, body).await
+        }
+
+        "recommendations" => {
+            let kp_id = match q(&params, "kp_id") {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("not found"))),
+            };
+            recommendations::handle_recommendations(kp_id).await
+        }
+
+        "sequels" => {
+            let kp_id = match q(&params, "kp_id") {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("not found"))),
+            };
+            sequels::handle(kp_id).await
+        }
+
+        "admin_spa" => admin::handle_admin_spa().await,
+        "admin_auth_login" => admin::handle_admin_auth_login(
+            req.uri().query().unwrap_or(""),
+            headers.get("host").and_then(|v| v.to_str().ok()),
+            headers.get("x-forwarded-proto").and_then(|v| v.to_str().ok()),
+        ).await,
+        "admin_auth_callback" => admin::handle_admin_auth_callback(
+            req.uri().query().unwrap_or(""),
+            headers.get("host").and_then(|v| v.to_str().ok()),
+            headers.get("x-forwarded-proto").and_then(|v| v.to_str().ok()),
+        ).await,
+        "admin_auth_check" => admin::handle_admin_check_token(&headers).await,
+
+        "dmca_submit" => {
+            let body = req.into_body();
+            let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+            admin::handle_dmca_submit(&bytes).await
+        }
+
+        "admin_dmca" => {
+            if method == "GET" {
+                admin::handle_dmca_list(&headers).await
+            } else {
+                with_cors(not_found("not found"))
+            }
+        }
+
+        "admin_dmca_update" => {
+            let id = match q(&params, "id") {
+                Some(v) => v,
+                None => return Ok(with_cors(bad_request("id required"))),
+            };
+            let body = req.into_body();
+            let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+            admin::handle_dmca_update(&headers, id, &bytes).await
+        }
+
+        "admin_block" => {
+            match method.as_str() {
+                "GET" => admin::handle_block_list(&headers).await,
+                "POST" => {
+                    let body = req.into_body();
+                    let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+                    admin::handle_block_create(&headers, &bytes).await
+                }
+                _ => with_cors(not_found("not found")),
+            }
+        }
+
+        "admin_block_delete" => {
+            let kp_id = match q(&params, "kp_id") {
+                Some(v) => v,
+                None => return Ok(with_cors(bad_request("kp_id required"))),
+            };
+            admin::handle_block_delete(&headers, kp_id).await
+        }
+
+        "blocked_check" => {
+            let kp_id = match q(&params, "kp_id") {
+                Some(v) => v,
+                None => return Ok(with_cors(bad_request("kp_id required"))),
+            };
+            admin::handle_check_blocked(kp_id).await
+        }
+
+        "public_categories" => admin::handle_public_categories().await,
+        "public_category" => {
+            let slug = match q(&params, "slug") {
+                Some(v) => v,
+                None => return Ok(with_cors(not_found("not found"))),
+            };
+            admin::handle_public_category_by_slug(slug).await
+        }
+
+        "admin_categories" => {
+            match method.as_str() {
+                "GET" => admin::handle_category_list(&headers).await,
+                "POST" => {
+                    let body = req.into_body();
+                    let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+                    admin::handle_category_create(&headers, &bytes).await
+                }
+                _ => with_cors(not_found("not found")),
+            }
+        }
+
+        "admin_category" => {
+            let id = match q(&params, "id") {
+                Some(v) => v,
+                None => return Ok(with_cors(bad_request("id required"))),
+            };
+            match method.as_str() {
+                "GET" => admin::handle_category_get(&headers, id).await,
+                "PUT" => {
+                    let body = req.into_body();
+                    let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+                    admin::handle_category_update(&headers, id, &bytes).await
+                }
+                "DELETE" => admin::handle_category_delete(&headers, id).await,
+                _ => with_cors(not_found("not found")),
+            }
+        }
+
+        "admin_category_items" => {
+            let cat_id = match q(&params, "cat_id") {
+                Some(v) => v,
+                None => return Ok(with_cors(bad_request("cat_id required"))),
+            };
+            let body = req.into_body();
+            let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+            match method.as_str() {
+                "GET" => admin::handle_category_items_list(&headers, cat_id).await,
+                "POST" => admin::handle_category_items_add(&headers, cat_id, &bytes).await,
+                "DELETE" => admin::handle_category_items_remove(&headers, cat_id, &bytes).await,
+                _ => with_cors(not_found("not found")),
+            }
+        }
+
+        "admin_category_items_move" => {
+            let cat_id = match q(&params, "cat_id") {
+                Some(v) => v,
+                None => return Ok(with_cors(bad_request("cat_id required"))),
+            };
+            let body = req.into_body();
+            let bytes = body.collect().await.map(|c| c.to_bytes()).unwrap_or_default();
+            admin::handle_category_items_move(&headers, cat_id, &bytes).await
+        }
+
+        "admin_category_parse" => {
+            let cat_id = match q(&params, "cat_id") {
+                Some(v) => v,
+                None => return Ok(with_cors(bad_request("cat_id required"))),
+            };
+            admin::handle_category_parse(&headers, cat_id).await
+        }
+
+        "kp_filters" => admin::handle_kp_filters(&headers).await,
+
+        "tmdb_genres" => {
+            let media_type = q(&params, "media_type").unwrap_or("movie");
+            admin::handle_tmdb_genres(&headers, media_type).await
+        }
+
+        "tmdb_companies" => {
+            let query = q(&params, "q").unwrap_or("");
+            admin::handle_tmdb_companies(&headers, query).await
         }
 
         _ => with_cors(not_found("not found")),

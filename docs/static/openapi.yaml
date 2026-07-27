@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: NeoMovies API v2
+  title: NeoWatch API v2
   version: 2.0.0
   description: |
-    NeoMovies API v2 — Rust serverless API on Vercel.
+    NeoWatch API v2 — Rust serverless API on Vercel.
     Includes Neo ID authentication, Kinopoisk-based media/search, player HTML endpoints,
     favorites, watch later, torrents, image proxy, and genres.
 
@@ -1583,7 +1583,7 @@ paths:
                   format: uri
                 mobile_redirect_url:
                   type: string
-                  description: Optional mobile deep link redirect (for example `neomovies://auth/neo-id/callback`)
+                  description: Optional mobile deep link redirect (for example `neowatch://auth/neo-id/callback`)
                 state:
                   type: string
                 mode:
@@ -1654,7 +1654,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Allowed app deep link, e.g. `neomovies://auth/neo-id/callback`
+          description: Allowed app deep link, e.g. `neowatch://auth/neo-id/callback`
         - in: query
           name: access_token
           required: false

@@ -1,8 +1,8 @@
-# AGENTS.md — NeoMovies API
+# AGENTS.md — NeoWatch API
 
 ## Project
 
-Rust REST API for NeoMovies. Axum 0.8, MongoDB, Neo ID SSO, Kinopoisk API.
+Rust REST API for NeoWatch. Axum 0.8, MongoDB, Neo ID SSO, Kinopoisk API.
 Deployed on Vercel (serverless) and Netlify (docs only).
 
 ## Stack

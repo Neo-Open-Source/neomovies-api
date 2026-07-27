@@ -4,9 +4,9 @@ slug: /
 sidebar_position: 1
 ---
 
-# NeoMovies API v2
+# NeoWatch API v2
 
-NeoMovies API v2 — это serverless REST API на Rust, задеплоенный на Vercel.
+NeoWatch API v2 — это serverless REST API на Rust, задеплоенный на Vercel.
 
 ## Ключевые особенности
 

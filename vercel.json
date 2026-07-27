@@ -190,12 +190,88 @@
       "destination": "/api/index?route=watch_later&kp_id=:kp_id"
     },
     {
+      "source": "/api/v1/recommendations/:kp_id",
+      "destination": "/api/index?route=recommendations&kp_id=:kp_id"
+    },
+    {
+      "source": "/api/v1/sequels/:kp_id",
+      "destination": "/api/index?route=sequels&kp_id=:kp_id"
+    },
+    {
       "source": "/api/v1/sync/progress/batch",
       "destination": "/api/index?route=sync_progress_batch"
     },
     {
       "source": "/api/v1/sync/progress",
       "destination": "/api/index?route=sync_progress"
+    },
+    {
+      "source": "/admin",
+      "destination": "/api/index?route=admin_spa"
+    },
+    {
+      "source": "/admin/auth/login",
+      "destination": "/api/index?route=admin_auth_login"
+    },
+    {
+      "source": "/admin/auth/callback",
+      "destination": "/api/index?route=admin_auth_callback"
+    },
+    {
+      "source": "/admin/auth/check",
+      "destination": "/api/index?route=admin_auth_check"
+    },
+    {
+      "source": "/api/v1/dmca",
+      "destination": "/api/index?route=dmca_submit"
+    },
+    {
+      "source": "/api/v1/blocked/:kp_id",
+      "destination": "/api/index?route=blocked_check&kp_id=:kp_id"
+    },
+    {
+      "source": "/api/v1/admin/dmca/:id",
+      "destination": "/api/index?route=admin_dmca_update&id=:id"
+    },
+    {
+      "source": "/api/v1/admin/dmca",
+      "destination": "/api/index?route=admin_dmca"
+    },
+    {
+      "source": "/api/v1/admin/block/:kp_id",
+      "destination": "/api/index?route=admin_block_delete&kp_id=:kp_id"
+    },
+    {
+      "source": "/api/v1/admin/block",
+      "destination": "/api/index?route=admin_block"
+    },
+    {
+      "source": "/api/v1/categories",
+      "destination": "/api/index?route=public_categories"
+    },
+    {
+      "source": "/api/v1/collection/:slug",
+      "destination": "/api/index?route=public_category&slug=:slug"
+    },
+    {
+      "source": "/api/v1/admin/categories/:id",
+      "destination": "/api/index?route=admin_category&id=:id"
+    },
+    {
+      "source": "/api/v1/admin/categories/:cat_id/items/move",
+      "destination": "/api/index?route=admin_category_items_move&cat_id=:cat_id"
+    },
+    {
+      "source": "/api/v1/admin/categories/:cat_id/items",
+      "destination": "/api/index?route=admin_category_items&cat_id=:cat_id"
+    },
+    {
+      "source": "/api/v1/admin/categories/:cat_id/parse",
+      "destination": "/api/index?route=admin_category_parse&cat_id=:cat_id"
+    },
+    {
+      "source": "/api/v1/admin/categories",
+      "destination": "/api/index?route=admin_categories"
     },
     {
       "source": "/api",

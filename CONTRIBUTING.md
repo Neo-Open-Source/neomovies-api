@@ -1,4 +1,4 @@
-# Contributing to NeoMovies API
+# Contributing to NeoWatch API
 
 ## Project overview
 

@@ -11,10 +11,15 @@ pub struct User {
     pub email: String,
     pub name: String,
     pub avatar: String,
-    pub is_admin: bool,
+    #[serde(default = "default_role")]
+    pub role: String,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub refresh_tokens: Vec<RefreshToken>,
+}
+
+fn default_role() -> String {
+    "user".to_string()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

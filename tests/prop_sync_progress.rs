@@ -1,5 +1,5 @@
 use mongodb::bson::{oid::ObjectId, DateTime};
-use neomovies_api::models::sync_progress::SyncProgress;
+use neowatch_api::models::sync_progress::SyncProgress;
 use proptest::prelude::*;
 
 fn make_progress(
@@ -28,7 +28,7 @@ fn make_progress(
     }
 }
 
-// Feature: neomovies-api-v2, Property 14: Sync progress last-write-wins conflict resolution
+// Feature: neowatch-api-v2, Property 14: Sync progress last-write-wins conflict resolution
 // Validates: Requirement 9.1
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(100))]
@@ -59,7 +59,7 @@ proptest! {
     }
 }
 
-// Feature: neomovies-api-v2, Property 15: Sync progress are user-scoped
+// Feature: neowatch-api-v2, Property 15: Sync progress are user-scoped
 // Validates: Requirement 9.2
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(100))]
@@ -86,7 +86,7 @@ proptest! {
     }
 }
 
-// Feature: neomovies-api-v2, Property 16: TV episode progress has unique per-episode keys
+// Feature: neowatch-api-v2, Property 16: TV episode progress has unique per-episode keys
 // Validates: Requirement 9.3
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(100))]
@@ -120,7 +120,7 @@ proptest! {
     }
 }
 
-// Feature: neomovies-api-v2, Property 17: Sync progress batch preserves all items
+// Feature: neowatch-api-v2, Property 17: Sync progress batch preserves all items
 // Validates: Requirement 9.4
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(50))]
@@ -156,7 +156,7 @@ proptest! {
     }
 }
 
-// Feature: neomovies-api-v2, Property 18: Valid status transitions
+// Feature: neowatch-api-v2, Property 18: Valid status transitions
 // Validates: Requirement 9.5
 proptest! {
     #[test]

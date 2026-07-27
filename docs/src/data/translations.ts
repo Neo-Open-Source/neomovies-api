@@ -14,7 +14,7 @@ export interface HomeTranslations {
 
 export const translations: Record<string, HomeTranslations> = {
   en: {
-    heroTitle: "NeoMovies API",
+    heroTitle: "NeoWatch API",
     heroSubtitle: "Rust · Serverless · Vercel · Kinopoisk · Neo ID SSO",
     btnGetStarted: "Get Started →",
     btnApiRef: "API Reference",
@@ -23,7 +23,7 @@ export const translations: Record<string, HomeTranslations> = {
         title: "Neo ID SSO",
         icon: "lock",
         description:
-          "Single sign-on via Neo ID. One account across all NeoMovies services. JWT access tokens with 15-minute expiry and 30-day refresh tokens.",
+          "Single sign-on via Neo ID. One account across all NeoWatch services. JWT access tokens with 15-minute expiry and 30-day refresh tokens.",
       },
       {
         title: "Kinopoisk API",
@@ -58,7 +58,7 @@ export const translations: Record<string, HomeTranslations> = {
     ],
   },
   ru: {
-    heroTitle: "NeoMovies API",
+    heroTitle: "NeoWatch API",
     heroSubtitle: "Rust · Serverless · Vercel · Кинопоиск · Neo ID SSO",
     btnGetStarted: "Начать →",
     btnApiRef: "API Reference",
@@ -67,7 +67,7 @@ export const translations: Record<string, HomeTranslations> = {
         title: "Neo ID SSO",
         icon: "lock",
         description:
-          "Единый вход через Neo ID. Один аккаунт для всех сервисов NeoMovies. JWT access-токены на 15 минут и refresh-токены на 30 дней.",
+          "Единый вход через Neo ID. Один аккаунт для всех сервисов NeoWatch. JWT access-токены на 15 минут и refresh-токены на 30 дней.",
       },
       {
         title: "Kinopoisk API",
