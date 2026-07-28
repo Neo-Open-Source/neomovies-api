@@ -1,4 +1,5 @@
 import { tmdb } from "../services/tmdb"
+import * as images from "./images"
 import type { TMDBMovie, TMDBTVShow, TMDBMovieDetails, TMDBTVDetails } from "../types/tmdb"
 
 export function mapMovie(m: TMDBMovie | TMDBMovieDetails) {
@@ -10,6 +11,8 @@ export function mapMovie(m: TMDBMovie | TMDBMovieDetails) {
     overview: m.overview,
     poster: tmdb.imageUrl(m.poster_path, "w500"),
     backdrop: tmdb.imageUrl(m.backdrop_path, "w1280"),
+    posters: tmdb.imageSizes(m.poster_path, images.POSTER_SIZES),
+    backdrops: tmdb.imageSizes(m.backdrop_path, images.BACKDROP_SIZES),
     releaseDate: m.release_date || null,
     genres: (m as any).genres?.map((g: any) => ({ id: g.id, name: g.name })) ?? null,
     genreIds: (m as TMDBMovie).genre_ids ?? null,
@@ -28,6 +31,8 @@ export function mapTV(t: TMDBTVShow | TMDBTVDetails) {
     overview: t.overview,
     poster: tmdb.imageUrl(t.poster_path, "w500"),
     backdrop: tmdb.imageUrl(t.backdrop_path, "w1280"),
+    posters: tmdb.imageSizes(t.poster_path, images.POSTER_SIZES),
+    backdrops: tmdb.imageSizes(t.backdrop_path, images.BACKDROP_SIZES),
     releaseDate: t.first_air_date || null,
     genres: (t as any).genres?.map((g: any) => ({ id: g.id, name: g.name })) ?? null,
     genreIds: (t as TMDBTVShow).genre_ids ?? null,
@@ -43,6 +48,7 @@ export function mapCastMember(c: any) {
     name: c.name,
     character: c.character,
     profile: tmdb.imageUrl(c.profile_path, "w185"),
+    profiles: tmdb.imageSizes(c.profile_path, images.PROFILE_SIZES),
     order: c.order,
   }
 }
@@ -54,6 +60,7 @@ export function mapCrewMember(c: any) {
     job: c.job,
     department: c.department,
     profile: tmdb.imageUrl(c.profile_path, "w185"),
+    profiles: tmdb.imageSizes(c.profile_path, images.PROFILE_SIZES),
   }
 }
 
@@ -62,6 +69,7 @@ export function mapCompany(c: any) {
     id: c.id,
     name: c.name,
     logo: tmdb.imageUrl(c.logo_path, "w92"),
+    logos: tmdb.imageSizes(c.logo_path, images.LOGO_SIZES),
   }
 }
 
@@ -73,6 +81,7 @@ export function mapSeason(s: any) {
     episodeCount: s.episode_count,
     overview: s.overview,
     poster: tmdb.imageUrl(s.poster_path, "w342"),
+    posters: tmdb.imageSizes(s.poster_path, images.POSTER_SIZES),
     airDate: s.air_date,
   }
 }
@@ -83,6 +92,7 @@ export function mapEpisode(e: any) {
     name: e.name,
     overview: e.overview,
     still: tmdb.imageUrl(e.still_path, "w300"),
+    stills: tmdb.imageSizes(e.still_path, images.STILL_SIZES),
     airDate: e.air_date,
     episodeNumber: e.episode_number,
     seasonNumber: e.season_number,
@@ -96,6 +106,7 @@ export function mapNetwork(n: any) {
     id: n.id,
     name: n.name,
     logo: tmdb.imageUrl(n.logo_path, "w92"),
+    logos: tmdb.imageSizes(n.logo_path, images.LOGO_SIZES),
   }
 }
 
