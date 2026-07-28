@@ -36,9 +36,9 @@ export const mediaRoutes = new Elysia()
     params: t.Object({ id: t.Numeric(), season: t.Numeric() }),
   })
 
-  .get("/api/v1/tv/:id/season/:season/episode/:ep", async ({ params: { id, season, ep }, query }) =>
-    success(await media.episode(id, season, ep, language(query))), {
-    params: t.Object({ id: t.Numeric(), season: t.Numeric(), ep: t.Numeric() }),
+  .get("/api/v1/tv/:id/season/:season/episode/:episode", async ({ params: { id, season, episode }, query }) =>
+    success(await media.episode(id, season, episode, language(query))), {
+    params: t.Object({ id: t.Numeric(), season: t.Numeric(), episode: t.Numeric() }),
   })
 
   .get("/api/v1/movie/:id/recommendations", async ({ params: { id }, query }) =>
