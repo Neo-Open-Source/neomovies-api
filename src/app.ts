@@ -2,6 +2,7 @@ import { Elysia } from "elysia"
 import { cors } from "@elysiajs/cors"
 import { swagger } from "@elysiajs/swagger"
 import { assertConfig } from "./config"
+import { AppError } from "./lib/errors"
 import { authRoutes } from "./routes/auth"
 import { mediaRoutes } from "./routes/media"
 import { searchRoutes } from "./routes/search"
@@ -22,13 +23,36 @@ import { cronRoutes } from "./routes/cron"
 assertConfig()
 
 export const app = new Elysia()
+  .onError(({ code, error, set }) => {
+    if (error instanceof AppError) {
+      set.status = error.statusCode
+      return { success: false, error: error.message }
+    }
+    if (code === "NOT_FOUND") {
+      set.status = 404
+      return { success: false, error: "Not Found" }
+    }
+    if (code === "VALIDATION") {
+      set.status = 400
+      return { success: false, error: error.message }
+    }
+    if (code === "PARSE") {
+      set.status = 400
+      return { success: false, error: "Invalid request body" }
+    }
+    if (code === "INTERNAL_SERVER_ERROR" || code === "UNKNOWN") {
+      console.error("Unhandled error:", error)
+      set.status = 500
+      return { success: false, error: "Internal server error" }
+    }
+  })
   .use(cors({
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }))
   .use(swagger({
-    path: "/api/docs",
+    path: "/playground",
     documentation: {
       info: {
         title: "NeoWatch API",
@@ -52,10 +76,3 @@ export const app = new Elysia()
   .use(webhookRoutes)
   .use(categoryRoutes)
   .use(cronRoutes)
-  .get("/", () => Response.redirect("/api/docs"))
-  .all("*", () => {
-    return new Response(JSON.stringify({ success: false, error: "Not Found" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    })
-  })

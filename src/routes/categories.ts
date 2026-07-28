@@ -1,7 +1,8 @@
 import { Elysia, t } from "elysia"
 import { tmdb } from "../services/tmdb"
 import { media } from "../services/media"
-import { success, notFound } from "../lib/response"
+import { success } from "../lib/response"
+import { NotFoundError } from "../lib/errors"
 import { page } from "../lib/query"
 import { language, type Language } from "../lib/language"
 import { mapMovie, mapTV, paginate } from "../lib/mappers"
@@ -79,14 +80,14 @@ export const categoryRoutes = new Elysia()
     const genres = await fetchGenreCategories(lang)
     const all = [...listCategories, ...genres, ...studioCategories]
     const cat = all.find(c => c.slug === slug)
-    if (!cat) return notFound("Category")
+    if (!cat) throw new NotFoundError("Category")
 
     let data: any
     const mapper = cat.mediaType === "movie" ? mapMovie : mapTV
 
     if (cat.kind === "list") {
       data = await media.list(cat.mediaType, cat.value, pageNum, lang)
-    } else     if (cat.kind === "genre") {
+    } else if (cat.kind === "genre") {
       const discover = cat.mediaType === "movie"
         ? await tmdb.discoverMovie({ with_genres: cat.value }, lang)
         : await tmdb.discoverTV({ with_genres: cat.value }, lang)
@@ -95,7 +96,7 @@ export const categoryRoutes = new Elysia()
       const discover = await tmdb.discoverMovie({ with_companies: cat.value }, lang)
       data = paginate(discover.results.map(mapper as any), discover.page, discover.total_pages, discover.total_results)
     } else {
-      return notFound("Category")
+      throw new NotFoundError("Category")
     }
 
     return success({ ...data, category: { id: cat.id, name: cat.name, slug: cat.slug } })

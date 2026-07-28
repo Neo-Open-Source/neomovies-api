@@ -1,8 +1,73 @@
 import { tmdb } from "../services/tmdb"
 import * as images from "./images"
-import type { TMDBMovie, TMDBTVShow, TMDBMovieDetails, TMDBTVDetails } from "../types/tmdb"
+import type { TMDBMovie, TMDBTVShow, TMDBGenre } from "../types/tmdb"
 
-export function mapMovie(m: TMDBMovie | TMDBMovieDetails) {
+interface TMDBMovieOrDetails extends TMDBMovie {
+  genres?: TMDBGenre[]
+  imdb_id?: string | null
+}
+
+interface TMDBTVOrDetails extends TMDBTVShow {
+  genres?: TMDBGenre[]
+}
+
+interface TMDBCastMember {
+  id: number
+  name: string
+  character: string
+  profile_path: string | null
+  order: number
+}
+
+interface TMDBCrewMember {
+  id: number
+  name: string
+  job: string
+  department: string
+  profile_path: string | null
+}
+
+interface TMDBCompany {
+  id: number
+  name: string
+  logo_path: string | null
+}
+
+interface TMDBSeason {
+  id: number
+  name: string
+  season_number: number
+  episode_count: number
+  overview: string
+  poster_path: string | null
+  air_date: string | null
+}
+
+interface TMDBEpisode {
+  id: number
+  name: string
+  overview: string
+  still_path: string | null
+  air_date: string | null
+  episode_number: number
+  season_number: number
+  vote_average: number
+  runtime: number | null
+}
+
+interface TMDBNetwork {
+  id: number
+  name: string
+  logo_path: string | null
+}
+
+function parseGenres(m: TMDBMovieOrDetails | TMDBTVOrDetails): { id: number; name: string }[] | null {
+  if (m.genres) return m.genres.map(g => ({ id: g.id, name: g.name }))
+  if ("genre_ids" in m) return null
+  return null
+}
+
+export function mapMovie(m: TMDBMovieOrDetails) {
   return {
     tmdbId: m.id,
     imdbId: "imdb_id" in m ? m.imdb_id ?? null : null,
@@ -14,15 +79,15 @@ export function mapMovie(m: TMDBMovie | TMDBMovieDetails) {
     posters: tmdb.imageSizes(m.poster_path, images.POSTER_SIZES),
     backdrops: tmdb.imageSizes(m.backdrop_path, images.BACKDROP_SIZES),
     releaseDate: m.release_date || null,
-    genres: (m as any).genres?.map((g: any) => ({ id: g.id, name: g.name })) ?? null,
-    genreIds: (m as TMDBMovie).genre_ids ?? null,
+    genres: parseGenres(m),
+    genreIds: "genre_ids" in m ? m.genre_ids : null,
     voteAverage: m.vote_average,
     voteCount: m.vote_count,
     popularity: m.popularity,
   }
 }
 
-export function mapTV(t: TMDBTVShow | TMDBTVDetails) {
+export function mapTV(t: TMDBTVOrDetails) {
   return {
     tmdbId: t.id,
     imdbId: null,
@@ -34,15 +99,15 @@ export function mapTV(t: TMDBTVShow | TMDBTVDetails) {
     posters: tmdb.imageSizes(t.poster_path, images.POSTER_SIZES),
     backdrops: tmdb.imageSizes(t.backdrop_path, images.BACKDROP_SIZES),
     releaseDate: t.first_air_date || null,
-    genres: (t as any).genres?.map((g: any) => ({ id: g.id, name: g.name })) ?? null,
-    genreIds: (t as TMDBTVShow).genre_ids ?? null,
+    genres: parseGenres(t),
+    genreIds: "genre_ids" in t ? t.genre_ids : null,
     voteAverage: t.vote_average,
     voteCount: t.vote_count,
     popularity: t.popularity,
   }
 }
 
-export function mapCastMember(c: any) {
+export function mapCastMember(c: TMDBCastMember) {
   return {
     id: c.id,
     name: c.name,
@@ -53,7 +118,7 @@ export function mapCastMember(c: any) {
   }
 }
 
-export function mapCrewMember(c: any) {
+export function mapCrewMember(c: TMDBCrewMember) {
   return {
     id: c.id,
     name: c.name,
@@ -64,7 +129,7 @@ export function mapCrewMember(c: any) {
   }
 }
 
-export function mapCompany(c: any) {
+export function mapCompany(c: TMDBCompany) {
   return {
     id: c.id,
     name: c.name,
@@ -73,7 +138,7 @@ export function mapCompany(c: any) {
   }
 }
 
-export function mapSeason(s: any) {
+export function mapSeason(s: TMDBSeason) {
   return {
     id: s.id,
     name: s.name,
@@ -86,7 +151,7 @@ export function mapSeason(s: any) {
   }
 }
 
-export function mapEpisode(e: any) {
+export function mapEpisode(e: TMDBEpisode) {
   return {
     id: e.id,
     name: e.name,
@@ -101,7 +166,7 @@ export function mapEpisode(e: any) {
   }
 }
 
-export function mapNetwork(n: any) {
+export function mapNetwork(n: TMDBNetwork) {
   return {
     id: n.id,
     name: n.name,

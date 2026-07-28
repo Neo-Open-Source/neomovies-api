@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import { tmdb } from "../services/tmdb"
-import { success, badRequest, notFound } from "../lib/response"
+import { success } from "../lib/response"
+import { NotFoundError, BadRequestError } from "../lib/errors"
 import { BACKDROP_SIZES, STILL_SIZES } from "../lib/images"
 import { language } from "../lib/language"
 import { config } from "../config"
@@ -11,12 +12,12 @@ export const imageRoutes = new Elysia()
     const url = new URL(request.url)
     const imagePath = url.pathname.replace("/image/", "")
 
-    if (!imagePath) return badRequest("Missing image path")
+    if (!imagePath) throw new BadRequestError("Missing image path")
 
     const tmdbUrl = `${config.tmdb.imageBaseUrl}/original/${imagePath}`
 
     const res = await fetch(tmdbUrl)
-    if (!res.ok) return badRequest("Image not found")
+    if (!res.ok) throw new BadRequestError("Image not found")
 
     const contentType = res.headers.get("content-type") || "image/jpeg"
     const buffer = await res.arrayBuffer()
@@ -32,7 +33,7 @@ export const imageRoutes = new Elysia()
 
   .get("/api/v1/movie/:id/backdrops", async ({ params: { id }, query }) => {
     const movie = await tmdb.movie(id, language(query))
-    if (!movie.backdrop_path) return notFound("No backdrops")
+    if (!movie.backdrop_path) throw new NotFoundError("No backdrops")
 
     const size = (query as any)?.size
     if (size && BACKDROP_SIZES.includes(size as any)) {
@@ -52,7 +53,7 @@ export const imageRoutes = new Elysia()
       tmdb.tvShow(id, lang),
       tmdb.tvExternalIds(id).catch(() => null),
     ])
-    if (!show.backdrop_path) return notFound("No backdrops")
+    if (!show.backdrop_path) throw new NotFoundError("No backdrops")
 
     const size = (query as any)?.size
     if (size && BACKDROP_SIZES.includes(size as any)) {
@@ -69,7 +70,7 @@ export const imageRoutes = new Elysia()
 
   .get("/api/v1/tv/:id/season/:season/episode/:episode/stills", async ({ params: { id, season, episode }, query }) => {
     const ep = await tmdb.tvEpisode(id, season, episode, language(query))
-    if (!ep.still_path) return notFound("No stills")
+    if (!ep.still_path) throw new NotFoundError("No stills")
 
     const size = (query as any)?.size
     if (size && STILL_SIZES.includes(size as any)) {

@@ -3,3 +3,18 @@ dist/
 .env
 *.log
 .prisma/
+
+# Docusaurus build output
+docs/build/
+docs/.docusaurus/
+docs/.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

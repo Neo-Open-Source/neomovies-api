@@ -1,5 +1,6 @@
-import { Elysia } from "elysia"
-import { success, badRequest } from "../lib/response"
+import { Elysia, t } from "elysia"
+import { success } from "../lib/response"
+import { BadRequestError } from "../lib/errors"
 import { config } from "../config"
 
 interface RedAPITorrent {
@@ -15,19 +16,20 @@ interface RedAPITorrent {
 export const torrentRoutes = new Elysia()
 
   .get("/api/v1/torrents/search", async ({ query }) => {
-    const { q, imdb_id } = query as { q?: string; imdb_id?: string }
-    if (!q && !imdb_id) return badRequest("Missing search query (q or imdb_id)")
+    const q = query?.q
+    const imdbId = query?.imdb_id
+    if (!q && !imdbId) throw new BadRequestError("Missing search query (q or imdb_id)")
 
     const params = new URLSearchParams()
     if (q) params.set("query", q)
-    if (imdb_id) params.set("imdb_id", imdb_id)
+    if (imdbId) params.set("imdb_id", imdbId)
 
     const res = await fetch(`${config.redapi.baseUrl}/torrents/search?${params.toString()}`, {
       headers: { "Content-Type": "application/json" },
     })
 
     if (!res.ok) {
-      return badRequest("Torrent search failed")
+      throw new BadRequestError("Torrent search failed")
     }
 
     const data = await res.json() as { results: RedAPITorrent[] }
@@ -40,4 +42,9 @@ export const torrentRoutes = new Elysia()
       quality: t.quality,
       type: t.type,
     })))
+  }, {
+    query: t.Object({
+      q: t.Optional(t.String()),
+      imdb_id: t.Optional(t.String()),
+    }),
   })

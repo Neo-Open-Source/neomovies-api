@@ -2,7 +2,28 @@ import { tmdb } from "./tmdb"
 import { db } from "../db"
 import { resolveIds } from "./alloha"
 import { DEFAULT_LANGUAGE, type Language } from "../lib/language"
-import { mapMovie, mapTV, mapCastMember, mapCrewMember, mapCompany, mapSeason, mapNetwork, mapEpisode, paginate } from "../lib/mappers"
+import {
+  mapMovie, mapTV, mapCastMember, mapCrewMember, mapCompany,
+  mapSeason, mapNetwork, mapEpisode, paginate,
+} from "../lib/mappers"
+import type {
+  TMDBMultiResult, TMDBDiscoverParams, TMDBMovie,
+} from "../types/tmdb"
+
+interface TmdbCreditsResponse {
+  cast: Array<{
+    id: number; name: string; character: string;
+    profile_path: string | null; order: number
+  }>
+  crew: Array<{
+    id: number; name: string; job: string;
+    department: string; profile_path: string | null
+  }>
+}
+
+interface TmdbExternalIdsResponse {
+  imdb_id: string | null
+}
 
 async function imdbRating(imdbId: string | null) {
   if (!imdbId) return { imdbRating: null, imdbVotes: null }
@@ -13,14 +34,16 @@ async function imdbRating(imdbId: string | null) {
   }
 }
 
-async function resolveImdbId(tmdbId: number, mediaType: "movie" | "tv", tmdbImdbId: string | null): Promise<{ imdbId: string | null; imdbRating: number | null; imdbVotes: number | null }> {
+async function resolveImdbId(
+  tmdbId: number, mediaType: "movie" | "tv", tmdbImdbId: string | null,
+): Promise<{ imdbId: string | null; imdbRating: number | null; imdbVotes: number | null }> {
   const imdbId = tmdbImdbId || (await resolveIds(tmdbId, mediaType)).imdbId
   if (!imdbId) return { imdbId: null, imdbRating: null, imdbVotes: null }
   const rating = await imdbRating(imdbId)
   return { imdbId, ...rating }
 }
 
-function credits(c: { cast: any[]; crew: any[] }) {
+function credits(c: TmdbCreditsResponse) {
   return {
     cast: (c.cast || []).slice(0, 20).map(mapCastMember),
     crew: (c.crew || []).slice(0, 20).map(mapCrewMember),
@@ -52,7 +75,7 @@ export const media = {
             poster: tmdb.imageUrl(movie.belongs_to_collection.poster_path, "w300"),
           }
         : null,
-      credits: credits(c),
+      credits: credits(c as unknown as TmdbCreditsResponse),
     }
   },
 
@@ -62,7 +85,7 @@ export const media = {
       tmdb.tvCredits(id, lang),
     ])
     const externalIds = await tmdb.tvExternalIds(id).catch(() => null)
-    const tmdbImdbId = externalIds?.imdb_id ?? null
+    const tmdbImdbId = (externalIds as TmdbExternalIdsResponse | null)?.imdb_id ?? null
     const resolved = await resolveImdbId(id, "tv", tmdbImdbId)
     return {
       ...mapTV(show),
@@ -76,16 +99,16 @@ export const media = {
       tagline: show.tagline,
       networks: (show.networks || []).map(mapNetwork),
       productionCompanies: (show.production_companies || []).map(mapCompany),
-      credits: credits(c),
+      credits: credits(c as unknown as TmdbCreditsResponse),
     }
   },
 
   async movieCredits(id: number, lang = DEFAULT_LANGUAGE) {
-    return credits(await tmdb.movieCredits(id, lang))
+    return credits(await tmdb.movieCredits(id, lang) as unknown as TmdbCreditsResponse)
   },
 
   async tvCredits(id: number, lang = DEFAULT_LANGUAGE) {
-    return credits(await tmdb.tvCredits(id, lang))
+    return credits(await tmdb.tvCredits(id, lang) as unknown as TmdbCreditsResponse)
   },
 
   async episode(id: number, seasonNumber: number, episodeNumber: number, lang = DEFAULT_LANGUAGE) {
@@ -109,10 +132,14 @@ export const media = {
     const movie = await tmdb.movie(id, lang)
     if (!movie.belongs_to_collection) return null
 
-    const coll = await tmdb.collection(movie.belongs_to_collection.id, lang)
+    const coll = await tmdb.collection(movie.belongs_to_collection.id, lang) as {
+      id: number; name: string; overview: string;
+      poster_path: string | null; backdrop_path: string | null;
+      parts: TMDBMovie[]
+    }
     const parts = (coll.parts || [])
-      .filter((p: any) => p.id !== id)
-      .sort((a: any, b: any) => (a.release_date || "").localeCompare(b.release_date || ""))
+      .filter((p) => p.id !== id)
+      .sort((a, b) => (a.release_date || "").localeCompare(b.release_date || ""))
       .map(mapMovie)
 
     return {
@@ -126,14 +153,15 @@ export const media = {
   },
 
   async list(type: "movie" | "tv", method: string, pageNum: number, lang = DEFAULT_LANGUAGE) {
-    const fetchers: Record<string, (page: number, lang: Language) => any> = {
-      "movie:popular": tmdb.popularMovies.bind(tmdb),
-      "movie:top-rated": tmdb.topRatedMovies.bind(tmdb),
-      "movie:upcoming": tmdb.upcomingMovies.bind(tmdb),
-      "tv:popular": tmdb.popularTV.bind(tmdb),
-      "tv:top-rated": tmdb.topRatedTV.bind(tmdb),
+    type Fetcher = (page: number, lang: Language) => Promise<{ results: any[]; page: number; total_pages: number; total_results: number }>
+    const fetchers: Record<string, Fetcher> = {
+      "movie:popular": tmdb.popularMovies.bind(tmdb) as Fetcher,
+      "movie:top-rated": tmdb.topRatedMovies.bind(tmdb) as Fetcher,
+      "movie:upcoming": tmdb.upcomingMovies.bind(tmdb) as Fetcher,
+      "tv:popular": tmdb.popularTV.bind(tmdb) as Fetcher,
+      "tv:top-rated": tmdb.topRatedTV.bind(tmdb) as Fetcher,
     }
-    const mapper = type === "movie" ? mapMovie : mapTV
+    const mapper: (item: any) => any = type === "movie" ? mapMovie : mapTV
     const fetcher = fetchers[`${type}:${method}`]
     if (!fetcher) throw new Error(`Unknown list: ${type}/${method}`)
 
@@ -143,14 +171,14 @@ export const media = {
 
   async similar(type: "movie" | "tv", id: number, pageNum: number, lang = DEFAULT_LANGUAGE) {
     const data = await tmdb.similar(type, id, pageNum, lang)
-    const mapper = type === "movie" ? mapMovie : mapTV
-    return paginate(data.results.map(mapper as any), data.page, data.total_pages, data.total_results)
+    const mapper: (item: any) => any = type === "movie" ? mapMovie : mapTV
+    return paginate(data.results.map(mapper), data.page, data.total_pages, data.total_results)
   },
 
   async recommendations(type: "movie" | "tv", id: number, pageNum: number, lang = DEFAULT_LANGUAGE) {
     const data = await tmdb.recommendations(type, id, pageNum, lang)
-    const mapper = type === "movie" ? mapMovie : mapTV
-    return paginate(data.results.map(mapper as any), data.page, data.total_pages, data.total_results)
+    const mapper: (item: any) => any = type === "movie" ? mapMovie : mapTV
+    return paginate(data.results.map(mapper), data.page, data.total_pages, data.total_results)
   },
 
   async search(p: Record<string, string | undefined>, lang = DEFAULT_LANGUAGE) {
@@ -169,7 +197,7 @@ export const media = {
       }
       const data = await tmdb.searchMulti(q, pageNum, lang)
       return paginate(
-        data.results.map((item: any) => {
+        data.results.map((item: TMDBMultiResult) => {
           if (item.media_type === "movie") return { ...mapMovie(item), mediaType: "movie" }
           if (item.media_type === "tv") return { ...mapTV(item), mediaType: "tv" }
           return {
@@ -195,12 +223,12 @@ export const media = {
     if (pageStr) discover.page = pageStr
     discover.sort_by = sort_by || "popularity.desc"
 
-    const mediaType = type || "movie"
-    if (mediaType === "tv") {
-      const data = await tmdb.discoverTV(discover as any, lang)
+    const searchMediaType = type || "movie"
+    if (searchMediaType === "tv") {
+      const data = await tmdb.discoverTV(discover as TMDBDiscoverParams, lang)
       return paginate(data.results.map(mapTV), data.page, data.total_pages, data.total_results)
     }
-    const data = await tmdb.discoverMovie(discover as any, lang)
+    const data = await tmdb.discoverMovie(discover as TMDBDiscoverParams, lang)
     return paginate(data.results.map(mapMovie), data.page, data.total_pages, data.total_results)
   },
 }

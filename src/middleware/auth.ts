@@ -3,7 +3,7 @@ import { verifyAccessToken } from "../lib/jwt"
 import { db } from "../db"
 
 export const authMiddleware = new Elysia()
-  .derive({ as: "global" }, async ({ headers }: { headers: Record<string, string | undefined> }) => {
+  .derive({ as: "global" }, async ({ headers }) => {
     const authHeader = headers.authorization
     if (!authHeader?.startsWith("Bearer ")) {
       return { userId: null as string | null, userEmail: null as string | null, userRole: null as string | null }
@@ -13,11 +13,15 @@ export const authMiddleware = new Elysia()
       const token = authHeader.slice(7)
       const payload = await verifyAccessToken(token)
 
-      void db.user.upsert({
-        where: { id: payload.sub },
-        update: { email: payload.email, role: payload.role },
-        create: { id: payload.sub, email: payload.email, role: payload.role },
-      }).catch(() => {})
+      try {
+        await db.user.upsert({
+          where: { id: payload.sub },
+          update: { email: payload.email, role: payload.role },
+          create: { id: payload.sub, email: payload.email, role: payload.role },
+        })
+      } catch (e) {
+        console.error("Failed to upsert user:", e)
+      }
 
       return {
         userId: payload.sub,

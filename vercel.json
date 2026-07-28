@@ -1,5 +1,6 @@
 {
   "bunVersion": "1.x",
+  "outputDirectory": "docs/build",
   "crons": [
     {
       "path": "/api/v1/cron/imdb-ratings",
@@ -7,7 +8,9 @@
     }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/playground", "destination": "/api/index" },
+    { "source": "/openapi.json", "destination": "/api/index" }
   ],
   "headers": [
     {

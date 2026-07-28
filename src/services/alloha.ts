@@ -34,7 +34,7 @@ export async function resolveIds(tmdbId: number, mediaType: "movie" | "tv" = "mo
       where: { tmdbId },
       update: { imdbId, kpId, mediaType },
       create: { tmdbId, mediaType, imdbId, kpId },
-    }).catch(() => {})
+    }).catch(e => console.error("Failed to cache external ID:", e))
 
     return { imdbId, kpId }
   } catch {
