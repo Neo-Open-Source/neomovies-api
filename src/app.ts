@@ -16,6 +16,8 @@ import { supportRoutes } from "./routes/support"
 import { torrentRoutes } from "./routes/torrents"
 import { webhookRoutes } from "./routes/webhooks"
 import { healthRoutes } from "./routes/health"
+import { categoryRoutes } from "./routes/categories"
+import { contentRoutes } from "./routes/content"
 import { cronRoutes } from "./routes/cron"
 
 assertConfig()
@@ -49,6 +51,8 @@ export const app = new Elysia()
   .use(imageRoutes)
   .use(torrentRoutes)
   .use(webhookRoutes)
+  .use(categoryRoutes)
+  .use(contentRoutes)
   .use(cronRoutes)
   .get("/", () => Response.redirect("/api/docs"))
   .all("*", () => {

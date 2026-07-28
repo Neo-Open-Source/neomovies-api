@@ -1,59 +1,31 @@
 import { Elysia, t } from "elysia"
-import { db } from "../db"
+import { userData } from "../services/user-data"
 import { success, unauthorized } from "../lib/response"
+import { page } from "../lib/query"
 import { authMiddleware } from "../middleware/auth"
 
-export const favoriteRoutes = new Elysia({ prefix: "/api/v1/favorites" })
+export const favoriteRoutes = new Elysia()
   .use(authMiddleware)
 
-  .get("/", async ({ userId, query }) => {
+  .get("/api/v1/favorites", async ({ userId, query }) => {
     if (!userId) return unauthorized()
-    const page = parseInt((query as any)?.page || "1")
-    const limit = 20
-    const [items, total] = await Promise.all([
-      db.favorite.findMany({
-        where: { userId },
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-      }),
-      db.favorite.count({ where: { userId } }),
-    ])
-    return success({
-      items: items.map((f) => ({ mediaId: f.mediaId, mediaType: f.mediaType, createdAt: f.createdAt })),
-      page, totalPages: Math.ceil(total / limit), totalResults: total,
-    })
+    return success(await userData.listFavorites(userId, page(query)))
   })
 
-  .post("/:mediaId", async ({ userId, params: { mediaId }, body }) => {
+  .post("/api/v1/favorites/:mediaId", async ({ userId, params: { mediaId } }) => {
     if (!userId) return unauthorized()
-    const mediaType = ((body as any)?.mediaType as string) || "movie"
-    const fav = await db.favorite.upsert({
-      where: { userId_mediaId_mediaType: { userId, mediaId, mediaType } },
-      update: {},
-      create: { userId, mediaId, mediaType },
-    })
-    return success({ id: fav.id, mediaId: fav.mediaId, mediaType: fav.mediaType })
-  }, {
-    params: t.Object({ mediaId: t.Numeric() }),
-  })
+    return success(await userData.addFavorite(userId, mediaId, "movie"))
+  }, { params: t.Object({ mediaId: t.Numeric() }) })
 
-  .delete("/:mediaId", async ({ userId, params: { mediaId }, query }) => {
+  .delete("/api/v1/favorites/:mediaId", async ({ userId, params: { mediaId }, query }) => {
     if (!userId) return unauthorized()
-    const mediaType = (query as any)?.mediaType as string || "movie"
-    await db.favorite.deleteMany({ where: { userId, mediaId, mediaType } })
+    const mediaType = (query as Record<string, string>)?.mediaType || "movie"
+    await userData.removeFavorite(userId, Number(mediaId), mediaType)
     return success({ deleted: true })
-  }, {
-    params: t.Object({ mediaId: t.Numeric() }),
   })
 
-  .get("/:mediaId/check", async ({ userId, params: { mediaId }, query }) => {
+  .get("/api/v1/favorites/:mediaId/check", async ({ userId, params: { mediaId }, query }) => {
     if (!userId) return unauthorized()
-    const mediaType = (query as any)?.mediaType as string || "movie"
-    const fav = await db.favorite.findUnique({
-      where: { userId_mediaId_mediaType: { userId, mediaId, mediaType } },
-    })
-    return success({ isFavorite: !!fav })
-  }, {
-    params: t.Object({ mediaId: t.Numeric() }),
+    const mediaType = (query as Record<string, string>)?.mediaType || "movie"
+    return success({ isFavorite: await userData.checkFavorite(userId, Number(mediaId), mediaType) })
   })

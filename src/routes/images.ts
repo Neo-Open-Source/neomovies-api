@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia"
 import { tmdb } from "../services/tmdb"
 import { success, badRequest, notFound } from "../lib/response"
 import { BACKDROP_SIZES, STILL_SIZES } from "../lib/images"
+import { language } from "../lib/language"
 import { config } from "../config"
 
 export const imageRoutes = new Elysia()
@@ -30,7 +31,7 @@ export const imageRoutes = new Elysia()
   })
 
   .get("/api/v1/movie/:id/backdrops", async ({ params: { id }, query }) => {
-    const movie = await tmdb.movie(id)
+    const movie = await tmdb.movie(id, language(query))
     if (!movie.backdrop_path) return notFound("No backdrops")
 
     const size = (query as any)?.size
@@ -46,8 +47,9 @@ export const imageRoutes = new Elysia()
   })
 
   .get("/api/v1/tv/:id/backdrops", async ({ params: { id }, query }) => {
+    const lang = language(query)
     const [show, externalIds] = await Promise.all([
-      tmdb.tvShow(id),
+      tmdb.tvShow(id, lang),
       tmdb.tvExternalIds(id).catch(() => null),
     ])
     if (!show.backdrop_path) return notFound("No backdrops")
@@ -66,7 +68,7 @@ export const imageRoutes = new Elysia()
   })
 
   .get("/api/v1/tv/:id/season/:season/episode/:episode/stills", async ({ params: { id, season, episode }, query }) => {
-    const ep = await tmdb.tvEpisode(id, season, episode)
+    const ep = await tmdb.tvEpisode(id, season, episode, language(query))
     if (!ep.still_path) return notFound("No stills")
 
     const size = (query as any)?.size

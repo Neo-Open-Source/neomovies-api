@@ -67,17 +67,58 @@ export const playerRoutes = new Elysia()
     params: t.Object({ cdnId: t.String() }),
   })
 
-  .get("/api/v1/player/hls/proxy", async ({ query }) => {
+  .get("/api/v1/player/cdn/tmdb/:tmdbId", async ({ params: { tmdbId } }) => {
+    return success({
+      provider: "CDN",
+      url: `https://neome.uk/api/v1/players/cdn/tmdb/${tmdbId}`,
+      type: "hls",
+    })
+  }, {
+    params: t.Object({ tmdbId: t.Numeric() }),
+  })
+
+  .get("/api/v1/player/hls/proxy", async ({ query, request }) => {
     const { url } = query as { url?: string }
     if (!url) return badRequest("Missing url parameter")
 
-    const res = await fetch(url)
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+    })
     if (!res.ok) return badRequest("Failed to fetch HLS stream")
 
-    return new Response(res.body, {
+    const contentType = res.headers.get("content-type") || ""
+    const text = await res.text()
+
+    if (!contentType.includes("mpegurl") && !text.startsWith("#EXTM3U")) {
+      // binary segment — return as-is
+      return new Response(await res.arrayBuffer(), {
+        headers: {
+          "Content-Type": contentType || "video/MP2T",
+          "Access-Control-Allow-Origin": "*",
+          "Cache-Control": "public, max-age=604800",
+        },
+      })
+    }
+
+    const baseUrl = new URL(url)
+    const proxyBase = `${request.url.split("?")[0]}?url=`
+    const encode = (u: string) => encodeURIComponent(u)
+
+    const rewritten = text.split("\n").map((line) => {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("http")) return line
+      if (trimmed.startsWith("//")) return line // protocol-relative
+
+      // relative path → absolute proxy URL
+      const absolute = new URL(trimmed, baseUrl.origin + baseUrl.pathname).href
+      return `${proxyBase}${encode(absolute)}`
+    }).join("\n")
+
+    return new Response(rewritten, {
       headers: {
         "Content-Type": "application/vnd.apple.mpegurl",
         "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-cache",
       },
     })
   })
