@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  neoId     String   @unique
+  email     String?
+  username  String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  favorites     Favorite[]
+  watchLater    WatchLater[]
+  syncProgress  SyncProgress[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([userId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId   Int
+  mediaType String   @default("movie")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mediaId, mediaType])
+  @@index([userId])
+}
+
+model WatchLater {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId   Int
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mediaId])
+  @@index([userId])
+}
+
+model SyncProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId   Int
+  mediaType String   @default("movie")
+  season    Int?
+  episode   Int?
+  progress  Float
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, mediaId, mediaType, season, episode])
+  @@index([userId])
+}
