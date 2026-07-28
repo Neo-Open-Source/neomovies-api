@@ -9,21 +9,22 @@ export const config = {
     imageBaseUrl: "https://image.tmdb.org/t/p",
   },
 
-  jwt: {
-    secret: process.env.JWT_SECRET!,
-    refreshSecret: process.env.JWT_REFRESH_SECRET!,
-    accessExpiresIn: "15m",
-    refreshExpiresIn: "30d",
-  },
-
   neoId: {
     clientId: process.env.NEO_ID_CLIENT_ID!,
     clientSecret: process.env.NEO_ID_CLIENT_SECRET!,
     redirectUri: process.env.NEO_ID_REDIRECT_URI!,
     mobileRedirectUri: process.env.NEO_ID_MOBILE_REDIRECT_URI!,
-    authUrl: "https://id.neome.uk/auth",
-    tokenUrl: "https://id.neome.uk/api/token",
-    userUrl: "https://id.neome.uk/api/user",
+    issuer: "https://id.neome.uk",
+    authorizeUrl: "https://id.neome.uk/api/v1/oauth2/authorize",
+    tokenUrl: "https://id.neome.uk/api/v1/oauth2/token",
+    jwksUrl: "https://id.neome.uk/.well-known/jwks.json",
+    userInfoUrl: "https://id.neome.uk/api/v1/user/profile",
+    scope: "openid profile email",
+  },
+
+  omdb: {
+    apiKey: process.env.OMDB_API_KEY || "",
+    baseUrl: "https://www.omdbapi.com",
   },
 
   redapi: {
@@ -37,8 +38,6 @@ export function assertConfig(): void {
     ["DATABASE_URL", config.databaseUrl],
     ["TMDB_API_KEY", config.tmdb.apiKey],
     ["TMDB_ACCESS_TOKEN", config.tmdb.accessToken],
-    ["JWT_SECRET", config.jwt.secret],
-    ["JWT_REFRESH_SECRET", config.jwt.refreshSecret],
     ["NEO_ID_CLIENT_ID", config.neoId.clientId],
     ["NEO_ID_CLIENT_SECRET", config.neoId.clientSecret],
     ["NEO_ID_REDIRECT_URI", config.neoId.redirectUri],

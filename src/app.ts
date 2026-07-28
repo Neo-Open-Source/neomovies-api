@@ -5,7 +5,7 @@ import { assertConfig } from "./config"
 import { authRoutes } from "./routes/auth"
 import { mediaRoutes } from "./routes/media"
 import { searchRoutes } from "./routes/search"
-import { discoverRoutes } from "./routes/discover"
+
 import { genreRoutes } from "./routes/genres"
 import { favoriteRoutes } from "./routes/favorites"
 import { watchLaterRoutes } from "./routes/watch-later"
@@ -38,7 +38,6 @@ export const app = new Elysia()
   .use(authRoutes)
   .use(mediaRoutes)
   .use(searchRoutes)
-  .use(discoverRoutes)
   .use(genreRoutes)
   .use(favoriteRoutes)
   .use(watchLaterRoutes)
