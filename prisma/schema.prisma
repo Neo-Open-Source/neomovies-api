@@ -8,30 +8,13 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  neoId     String   @unique
-  email     String?
-  username  String?
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id    String @id
+  email String?
+  role  String @default("user")
 
-  refreshTokens RefreshToken[]
-  favorites     Favorite[]
-  watchLater    WatchLater[]
-  syncProgress  SyncProgress[]
-}
-
-model RefreshToken {
-  id        String    @id @default(cuid())
-  token     String    @unique
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
-  revokedAt DateTime?
-
-  @@index([userId])
+  favorites    Favorite[]
+  watchLater   WatchLater[]
+  syncProgress SyncProgress[]
 }
 
 model Favorite {

@@ -18,6 +18,7 @@
     "@elysiajs/swagger": "^1.2.0",
     "@prisma/client": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
+    "jose": "^6.0.0",
     "vercel": "^54.5.0"
   },
   "devDependencies": {
