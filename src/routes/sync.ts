@@ -1,85 +1,39 @@
 import { Elysia } from "elysia"
-import { db } from "../db"
+import { userData } from "../services/user-data"
 import { success, unauthorized, badRequest } from "../lib/response"
 import { authMiddleware } from "../middleware/auth"
 
-export const syncRoutes = new Elysia({ prefix: "/api/v1/sync" })
+export const syncRoutes = new Elysia()
   .use(authMiddleware)
 
-  .get("/progress", async ({ userId }) => {
+  .get("/api/v1/sync/progress", async ({ userId }) => {
     if (!userId) return unauthorized()
-    const items = await db.syncProgress.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } })
-    return success(items.map((s) => ({
-      mediaId: s.mediaId, mediaType: s.mediaType,
-      season: s.season, episode: s.episode,
-      progress: s.progress, updatedAt: s.updatedAt,
-    })))
+    return success(await userData.getSyncProgress(userId))
   })
 
-  .put("/progress", async ({ userId, body }) => {
+  .put("/api/v1/sync/progress", async ({ userId, body }) => {
     if (!userId) return unauthorized()
-    const { mediaId, mediaType, season, episode, progress } = body as any
-    if (!mediaId || progress === undefined) return badRequest("Missing required fields: mediaId, progress")
-
-    const record = await db.syncProgress.upsert({
-      where: {
-        userId_mediaId_mediaType_season_episode: {
-          userId, mediaId, mediaType: mediaType || "movie",
-          season: season ?? null, episode: episode ?? null,
-        },
-      },
-      update: { progress },
-      create: {
-        userId, mediaId, mediaType: mediaType || "movie",
-        season: season ?? null, episode: episode ?? null, progress,
-      },
-    })
-    return success({
-      mediaId: record.mediaId, mediaType: record.mediaType,
-      season: record.season, episode: record.episode,
-      progress: record.progress, updatedAt: record.updatedAt,
-    })
+    const data = body as { mediaId?: number; mediaType?: string; season?: number; episode?: number; progress?: number }
+    if (!data.mediaId || data.progress === undefined) return badRequest("Missing required fields: mediaId, progress")
+    return success(await userData.upsertProgress(userId, {
+      mediaId: data.mediaId, mediaType: data.mediaType,
+      season: data.season, episode: data.episode, progress: data.progress,
+    }))
   })
 
-  .delete("/progress", async ({ userId, body }) => {
+  .delete("/api/v1/sync/progress", async ({ userId, body }) => {
     if (!userId) return unauthorized()
-    const { mediaId, mediaType, season, episode } = body as any
-    await db.syncProgress.deleteMany({
-      where: { userId, mediaId, mediaType: mediaType || "movie", season: season ?? null, episode: episode ?? null },
+    const data = body as { mediaId?: number; mediaType?: string; season?: number; episode?: number }
+    await userData.deleteProgress(userId, {
+      mediaId: data.mediaId!, mediaType: data.mediaType,
+      season: data.season, episode: data.episode,
     })
     return success({ deleted: true })
   })
 
-  .post("/progress/batch", async ({ userId, body }) => {
+  .post("/api/v1/sync/progress/batch", async ({ userId, body }) => {
     if (!userId) return unauthorized()
-    const items = (body as any)?.items || []
+    const { items } = body as { items?: any[] }
     if (!Array.isArray(items) || items.length === 0) return badRequest("Missing items array")
-
-    const results = []
-    for (const item of items) {
-      const { mediaId, mediaType, season, episode, progress } = item
-      if (!mediaId || progress === undefined) continue
-
-      const record = await db.syncProgress.upsert({
-        where: {
-          userId_mediaId_mediaType_season_episode: {
-            userId, mediaId, mediaType: mediaType || "movie",
-            season: season ?? null, episode: episode ?? null,
-          },
-        },
-        update: { progress: Math.max(progress, 0) },
-        create: {
-          userId, mediaId, mediaType: mediaType || "movie",
-          season: season ?? null, episode: episode ?? null,
-          progress: Math.max(progress, 0),
-        },
-      })
-      results.push({
-        mediaId: record.mediaId, mediaType: record.mediaType,
-        season: record.season, episode: record.episode,
-        progress: record.progress, updatedAt: record.updatedAt,
-      })
-    }
-
-    return success({ items: results, count: results.length })
+    return success(await userData.batchUpsertProgress(userId, items))
   })

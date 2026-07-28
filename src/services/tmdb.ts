@@ -1,20 +1,13 @@
 import { config } from "../config"
+import { DEFAULT_LANGUAGE } from "../lib/language"
 import type {
-  TMDBPageResult,
-  TMDBMovie,
-  TMDBTVShow,
-  TMDBMultiResult,
-  TMDBMovieDetails,
-  TMDBTVDetails,
-  TMDBSeasonDetails,
-  TMDBEpisode,
-  TMDBGenre,
-  TMDBVideo,
-  TMDBDiscoverParams,
+  TMDBPageResult, TMDBMovie, TMDBTVShow, TMDBMultiResult,
+  TMDBMovieDetails, TMDBTVDetails, TMDBSeasonDetails,
+  TMDBEpisode, TMDBGenre, TMDBVideo, TMDBDiscoverParams,
 } from "../types/tmdb"
 
-function baseParams(extra?: Record<string, string>): Record<string, string> {
-  return { language: "ru-RU", include_adult: "false", ...extra }
+function params(lang: string, extra?: Record<string, string>): Record<string, string> {
+  return { language: lang, include_adult: "false", ...extra }
 }
 
 function validMovie(m: TMDBMovie): boolean {
@@ -89,21 +82,16 @@ export class TMDBClient {
     return `${path}?${sorted}`
   }
 
-  async get<T>(path: string, params?: Record<string, string>): Promise<T> {
-    const key = this.cacheKey(path, params)
-
+  async get<T>(path: string, p?: Record<string, string>): Promise<T> {
+    const key = this.cacheKey(path, p)
     const cached = this.cache.get<T>(key)
     if (cached) return cached
 
     const url = new URL(`${this.baseUrl}${path}`)
-    if (params) {
-      Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-    }
+    if (p) Object.entries(p).forEach(([k, v]) => url.searchParams.set(k, v))
 
     const res = await fetch(url.toString(), { headers: this.headers })
-    if (!res.ok) {
-      throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
-    }
+    if (!res.ok) throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
 
     const data = await res.json() as T
     this.cache.set(key, data)
@@ -117,130 +105,116 @@ export class TMDBClient {
 
   imageSizes(path: string | null, sizes: readonly string[]): Record<string, string | null> {
     const result: Record<string, string | null> = {}
-    if (!path) {
-      for (const s of sizes) result[s] = null
-      return result
-    }
+    if (!path) { for (const s of sizes) result[s] = null; return result }
     for (const s of sizes) result[s] = `${config.tmdb.imageBaseUrl}/${s}${path}`
     return result
   }
 
-  async movie(id: number): Promise<TMDBMovieDetails> {
-    return this.get<TMDBMovieDetails>(`/movie/${id}`, baseParams())
+  async movie(id: number, lang = DEFAULT_LANGUAGE): Promise<TMDBMovieDetails> {
+    return this.get<TMDBMovieDetails>(`/movie/${id}`, params(lang))
   }
 
-  async movieCredits(id: number) {
-    return this.get<{ cast: unknown[]; crew: unknown[] }>(`/movie/${id}/credits`, { language: "ru-RU" })
+  async movieCredits(id: number, lang = DEFAULT_LANGUAGE) {
+    return this.get<{ cast: unknown[]; crew: unknown[] }>(`/movie/${id}/credits`, { language: lang })
   }
 
-  async movieVideos(id: number): Promise<{ results: TMDBVideo[] }> {
-    return this.get<{ results: TMDBVideo[] }>(`/movie/${id}/videos`, { language: "ru-RU" })
+  async movieVideos(id: number, lang = DEFAULT_LANGUAGE): Promise<{ results: TMDBVideo[] }> {
+    return this.get<{ results: TMDBVideo[] }>(`/movie/${id}/videos`, { language: lang })
   }
 
-  async tvShow(id: number): Promise<TMDBTVDetails> {
-    return this.get<TMDBTVDetails>(`/tv/${id}`, baseParams())
+  async tvShow(id: number, lang = DEFAULT_LANGUAGE): Promise<TMDBTVDetails> {
+    return this.get<TMDBTVDetails>(`/tv/${id}`, params(lang))
   }
 
-  async tvSeason(id: number, season: number): Promise<TMDBSeasonDetails> {
-    return this.get<TMDBSeasonDetails>(`/tv/${id}/season/${season}`, { language: "ru-RU" })
+  async tvSeason(id: number, season: number, lang = DEFAULT_LANGUAGE): Promise<TMDBSeasonDetails> {
+    return this.get<TMDBSeasonDetails>(`/tv/${id}/season/${season}`, { language: lang })
   }
 
-  async tvEpisode(id: number, season: number, episode: number): Promise<TMDBEpisode> {
-    return this.get<TMDBEpisode>(`/tv/${id}/season/${season}/episode/${episode}`, { language: "ru-RU" })
+  async tvEpisode(id: number, season: number, episode: number, lang = DEFAULT_LANGUAGE): Promise<TMDBEpisode> {
+    return this.get<TMDBEpisode>(`/tv/${id}/season/${season}/episode/${episode}`, { language: lang })
   }
 
-  async tvCredits(id: number) {
-    return this.get<{ cast: unknown[]; crew: unknown[] }>(`/tv/${id}/credits`, { language: "ru-RU" })
+  async tvCredits(id: number, lang = DEFAULT_LANGUAGE) {
+    return this.get<{ cast: unknown[]; crew: unknown[] }>(`/tv/${id}/credits`, { language: lang })
   }
 
-  async tvVideos(id: number): Promise<{ results: TMDBVideo[] }> {
-    return this.get<{ results: TMDBVideo[] }>(`/tv/${id}/videos`, { language: "ru-RU" })
+  async tvVideos(id: number, lang = DEFAULT_LANGUAGE): Promise<{ results: TMDBVideo[] }> {
+    return this.get<{ results: TMDBVideo[] }>(`/tv/${id}/videos`, { language: lang })
   }
 
   async tvExternalIds(id: number): Promise<{ imdb_id: string | null; tvdb_id: number | null }> {
     return this.get<{ imdb_id: string | null; tvdb_id: number | null }>(`/tv/${id}/external_ids`)
   }
 
-  async searchMulti(query: string, page: number = 1): Promise<TMDBPageResult<TMDBMultiResult>> {
-    const data = await this.get<TMDBPageResult<TMDBMultiResult>>("/search/multi", baseParams({ query, page: String(page) }))
+  async searchMulti(query: string, page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBMultiResult>> {
+    const data = await this.get<TMDBPageResult<TMDBMultiResult>>("/search/multi", params(lang, { query, page: String(page) }))
     return filterMulti(data)
   }
 
-  async searchMovie(query: string, page: number = 1): Promise<TMDBPageResult<TMDBMovie>> {
-    const data = await this.get<TMDBPageResult<TMDBMovie>>("/search/movie", baseParams({ query, page: String(page) }))
+  async searchMovie(query: string, page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBMovie>> {
+    const data = await this.get<TMDBPageResult<TMDBMovie>>("/search/movie", params(lang, { query, page: String(page) }))
     return filterMovies(data)
   }
 
-  async searchTV(query: string, page: number = 1): Promise<TMDBPageResult<TMDBTVShow>> {
-    const data = await this.get<TMDBPageResult<TMDBTVShow>>("/search/tv", baseParams({ query, page: String(page) }))
+  async searchTV(query: string, page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBTVShow>> {
+    const data = await this.get<TMDBPageResult<TMDBTVShow>>("/search/tv", params(lang, { query, page: String(page) }))
     return filterTV(data)
   }
 
-  async discoverMovie(params: TMDBDiscoverParams): Promise<TMDBPageResult<TMDBMovie>> {
-    const strParams: Record<string, string> = { ...baseParams(), "vote_count.gte": "10" }
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined) strParams[k] = String(v)
-    }
-    const data = await this.get<TMDBPageResult<TMDBMovie>>("/discover/movie", strParams)
-    return filterMovies(data)
+  async discoverMovie(p: TMDBDiscoverParams, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBMovie>> {
+    const strParams: Record<string, string> = { ...params(lang), "vote_count.gte": "10" }
+    for (const [k, v] of Object.entries(p)) if (v !== undefined) strParams[k] = String(v)
+    return filterMovies(await this.get<TMDBPageResult<TMDBMovie>>("/discover/movie", strParams))
   }
 
-  async discoverTV(params: TMDBDiscoverParams): Promise<TMDBPageResult<TMDBTVShow>> {
-    const strParams: Record<string, string> = { ...baseParams(), "vote_count.gte": "10" }
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined) strParams[k] = String(v)
-    }
-    const data = await this.get<TMDBPageResult<TMDBTVShow>>("/discover/tv", strParams)
-    return filterTV(data)
+  async discoverTV(p: TMDBDiscoverParams, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBTVShow>> {
+    const strParams: Record<string, string> = { ...params(lang), "vote_count.gte": "10" }
+    for (const [k, v] of Object.entries(p)) if (v !== undefined) strParams[k] = String(v)
+    return filterTV(await this.get<TMDBPageResult<TMDBTVShow>>("/discover/tv", strParams))
   }
 
-  async popularMovies(page: number = 1): Promise<TMDBPageResult<TMDBMovie>> {
-    const data = await this.get<TMDBPageResult<TMDBMovie>>("/movie/popular", baseParams({ page: String(page), "vote_count.gte": "50" }))
-    return filterMovies(data)
+  async popularMovies(page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBMovie>> {
+    return filterMovies(await this.get<TMDBPageResult<TMDBMovie>>("/movie/popular", params(lang, { page: String(page), "vote_count.gte": "50" })))
   }
 
-  async topRatedMovies(page: number = 1): Promise<TMDBPageResult<TMDBMovie>> {
-    const data = await this.get<TMDBPageResult<TMDBMovie>>("/movie/top_rated", baseParams({ page: String(page), "vote_count.gte": "50" }))
-    return filterMovies(data)
+  async topRatedMovies(page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBMovie>> {
+    return filterMovies(await this.get<TMDBPageResult<TMDBMovie>>("/movie/top_rated", params(lang, { page: String(page), "vote_count.gte": "50" })))
   }
 
-  async upcomingMovies(page: number = 1): Promise<TMDBPageResult<TMDBMovie>> {
-    const data = await this.get<TMDBPageResult<TMDBMovie>>("/movie/upcoming", baseParams({ page: String(page) }))
-    return filterMovies(data)
+  async upcomingMovies(page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBMovie>> {
+    return filterMovies(await this.get<TMDBPageResult<TMDBMovie>>("/movie/upcoming", params(lang, { page: String(page) })))
   }
 
-  async popularTV(page: number = 1): Promise<TMDBPageResult<TMDBTVShow>> {
-    const data = await this.get<TMDBPageResult<TMDBTVShow>>("/tv/popular", baseParams({ page: String(page), "vote_count.gte": "10" }))
-    return filterTV(data)
+  async popularTV(page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBTVShow>> {
+    return filterTV(await this.get<TMDBPageResult<TMDBTVShow>>("/tv/popular", params(lang, { page: String(page), "vote_count.gte": "10" })))
   }
 
-  async topRatedTV(page: number = 1): Promise<TMDBPageResult<TMDBTVShow>> {
-    const data = await this.get<TMDBPageResult<TMDBTVShow>>("/tv/top_rated", baseParams({ page: String(page), "vote_count.gte": "10" }))
-    return filterTV(data)
+  async topRatedTV(page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBTVShow>> {
+    return filterTV(await this.get<TMDBPageResult<TMDBTVShow>>("/tv/top_rated", params(lang, { page: String(page), "vote_count.gte": "10" })))
   }
 
-  async movieGenres(): Promise<{ genres: TMDBGenre[] }> {
-    return this.get<{ genres: TMDBGenre[] }>("/genre/movie/list", { language: "ru-RU" })
+  async movieGenres(lang = DEFAULT_LANGUAGE): Promise<{ genres: TMDBGenre[] }> {
+    return this.get<{ genres: TMDBGenre[] }>("/genre/movie/list", { language: lang })
   }
 
-  async tvGenres(): Promise<{ genres: TMDBGenre[] }> {
-    return this.get<{ genres: TMDBGenre[] }>("/genre/tv/list", { language: "ru-RU" })
+  async tvGenres(lang = DEFAULT_LANGUAGE): Promise<{ genres: TMDBGenre[] }> {
+    return this.get<{ genres: TMDBGenre[] }>("/genre/tv/list", { language: lang })
   }
 
-  async recommendations(type: "movie" | "tv", id: number, page: number = 1): Promise<TMDBPageResult<TMDBMovie | TMDBTVShow>> {
-    const data = await this.get<TMDBPageResult<TMDBMovie | TMDBTVShow>>(`/${type}/${id}/recommendations`, baseParams({ page: String(page) }))
-    if (type === "movie") return filterMovies(data as TMDBPageResult<TMDBMovie>) as TMDBPageResult<TMDBMovie | TMDBTVShow>
-    return filterTV(data as TMDBPageResult<TMDBTVShow>) as TMDBPageResult<TMDBMovie | TMDBTVShow>
+  async recommendations(type: "movie" | "tv", id: number, page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBMovie | TMDBTVShow>> {
+    const data = await this.get<TMDBPageResult<TMDBMovie | TMDBTVShow>>(`/${type}/${id}/recommendations`, params(lang, { page: String(page) }))
+    if (type === "movie") return filterMovies(data as any) as any
+    return filterTV(data as any) as any
   }
 
-  async similar(type: "movie" | "tv", id: number, page: number = 1): Promise<TMDBPageResult<TMDBMovie | TMDBTVShow>> {
-    const data = await this.get<TMDBPageResult<TMDBMovie | TMDBTVShow>>(`/${type}/${id}/similar`, baseParams({ page: String(page) }))
-    if (type === "movie") return filterMovies(data as TMDBPageResult<TMDBMovie>) as TMDBPageResult<TMDBMovie | TMDBTVShow>
-    return filterTV(data as TMDBPageResult<TMDBTVShow>) as TMDBPageResult<TMDBMovie | TMDBTVShow>
+  async similar(type: "movie" | "tv", id: number, page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBMovie | TMDBTVShow>> {
+    const data = await this.get<TMDBPageResult<TMDBMovie | TMDBTVShow>>(`/${type}/${id}/similar`, params(lang, { page: String(page) }))
+    if (type === "movie") return filterMovies(data as any) as any
+    return filterTV(data as any) as any
   }
 
-  async collection(id: number): Promise<{ id: number; name: string; overview: string; poster_path: string | null; backdrop_path: string | null; parts: TMDBMovie[] }> {
-    return this.get(`/collection/${id}`, { language: "ru-RU" })
+  async collection(id: number, lang = DEFAULT_LANGUAGE): Promise<{ id: number; name: string; overview: string; poster_path: string | null; backdrop_path: string | null; parts: TMDBMovie[] }> {
+    return this.get(`/collection/${id}`, { language: lang })
   }
 }
 

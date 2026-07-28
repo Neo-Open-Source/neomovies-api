@@ -98,6 +98,29 @@ class NeoIdClient {
 
     return res.json() as Promise<NeoIdUserResponse>
   }
+
+  async listRefreshTokens(authHeader: string): Promise<{ id: string; deviceName?: string; createdAt: string }[]> {
+    const res = await fetch(`${config.neoId.issuer}/api/v1/oauth2/tokens`, {
+      headers: { Authorization: authHeader },
+    })
+    if (!res.ok) return []
+    return (await res.json()) as any
+  }
+
+  async revokeRefreshToken(refreshToken: string): Promise<void> {
+    await fetch(`${config.neoId.issuer}/api/v1/oauth2/revoke`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+  }
+
+  async revokeAllRefreshTokens(authHeader: string): Promise<void> {
+    await fetch(`${config.neoId.issuer}/api/v1/oauth2/revoke-all`, {
+      method: "POST",
+      headers: { Authorization: authHeader, "Content-Type": "application/json" },
+    })
+  }
 }
 
 export const neoid = new NeoIdClient()
