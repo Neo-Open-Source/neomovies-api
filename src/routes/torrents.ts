@@ -23,10 +23,7 @@ export const torrentRoutes = new Elysia()
     if (imdb_id) params.set("imdb_id", imdb_id)
 
     const res = await fetch(`${config.redapi.baseUrl}/torrents/search?${params.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${config.redapi.token}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     })
 
     if (!res.ok) {

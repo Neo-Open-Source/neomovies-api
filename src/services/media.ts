@@ -1,5 +1,6 @@
 import { tmdb } from "./tmdb"
 import { db } from "../db"
+import { resolveIds } from "./alloha"
 import { DEFAULT_LANGUAGE, type Language } from "../lib/language"
 import { mapMovie, mapTV, mapCastMember, mapCrewMember, mapCompany, mapSeason, mapNetwork, mapEpisode, paginate } from "../lib/mappers"
 
@@ -10,6 +11,13 @@ async function imdbRating(imdbId: string | null) {
     imdbRating: rating ? Number(rating.imdbRating) : null,
     imdbVotes: rating?.imdbVotes ?? null,
   }
+}
+
+async function resolveImdbId(tmdbId: number, mediaType: "movie" | "tv", tmdbImdbId: string | null): Promise<{ imdbId: string | null; imdbRating: number | null; imdbVotes: number | null }> {
+  const imdbId = tmdbImdbId || (await resolveIds(tmdbId, mediaType)).imdbId
+  if (!imdbId) return { imdbId: null, imdbRating: null, imdbVotes: null }
+  const rating = await imdbRating(imdbId)
+  return { imdbId, ...rating }
 }
 
 function credits(c: { cast: any[]; crew: any[] }) {
@@ -25,10 +33,12 @@ export const media = {
       tmdb.movie(id, lang),
       tmdb.movieCredits(id, lang),
     ])
-    const rating = await imdbRating(movie.imdb_id)
+    const resolved = await resolveImdbId(id, "movie", movie.imdb_id)
     return {
       ...mapMovie(movie),
-      ...rating,
+      imdbId: resolved.imdbId,
+      imdbRating: resolved.imdbRating,
+      imdbVotes: resolved.imdbVotes,
       runtime: movie.runtime,
       budget: movie.budget,
       revenue: movie.revenue,
@@ -52,12 +62,13 @@ export const media = {
       tmdb.tvCredits(id, lang),
     ])
     const externalIds = await tmdb.tvExternalIds(id).catch(() => null)
-    const imdbId = externalIds?.imdb_id ?? null
-    const rating = await imdbRating(imdbId)
+    const tmdbImdbId = externalIds?.imdb_id ?? null
+    const resolved = await resolveImdbId(id, "tv", tmdbImdbId)
     return {
       ...mapTV(show),
-      imdbId,
-      ...rating,
+      imdbId: resolved.imdbId,
+      imdbRating: resolved.imdbRating,
+      imdbVotes: resolved.imdbVotes,
       seasons: (show.seasons || []).map(mapSeason),
       numberOfSeasons: show.number_of_seasons,
       numberOfEpisodes: show.number_of_episodes,
@@ -143,7 +154,7 @@ export const media = {
   },
 
   async search(p: Record<string, string | undefined>, lang = DEFAULT_LANGUAGE) {
-    const { q, type, genre, year, rating, keyword, country, sort_by, page: pageStr } = p
+    const { q, type, genre, year, yearFrom, yearTo, rating, ratingFrom, ratingTo, keyword, country, sort_by, page: pageStr } = p
     const pageNum = parseInt(pageStr || "1")
 
     if (q) {
@@ -174,7 +185,11 @@ export const media = {
     const discover: Record<string, string> = {}
     if (genre) discover.with_genres = genre
     if (year) { discover["primary_release_date.gte"] = `${year}-01-01`; discover["primary_release_date.lte"] = `${year}-12-31` }
+    if (yearFrom) discover["primary_release_date.gte"] = `${yearFrom}-01-01`
+    if (yearTo) discover["primary_release_date.lte"] = `${yearTo}-12-31`
     if (rating) discover["vote_average.gte"] = rating
+    if (ratingFrom) discover["vote_average.gte"] = ratingFrom
+    if (ratingTo) discover["vote_average.lte"] = ratingTo
     if (keyword) discover.with_keywords = keyword
     if (country) discover.with_original_language = country
     if (pageStr) discover.page = pageStr
