@@ -40,6 +40,14 @@ model WatchLater {
   @@index([userId])
 }
 
+model ExternalId {
+  tmdbId    Int      @id
+  mediaType String   @default("movie")
+  imdbId    String?
+  kpId      Int?
+  updatedAt DateTime @updatedAt
+}
+
 model MediaRating {
   imdbId     String   @id
   imdbRating Decimal?

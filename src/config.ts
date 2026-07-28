@@ -1,5 +1,6 @@
 export const config = {
   port: parseInt(process.env.PORT || "3000"),
+  publicUrl: process.env.PUBLIC_API_URL || "http://localhost:3000",
   databaseUrl: process.env.DATABASE_URL!,
 
   tmdb: {
@@ -13,7 +14,6 @@ export const config = {
     clientId: process.env.NEO_ID_CLIENT_ID!,
     clientSecret: process.env.NEO_ID_CLIENT_SECRET!,
     redirectUri: process.env.NEO_ID_REDIRECT_URI!,
-    mobileRedirectUri: process.env.NEO_ID_MOBILE_REDIRECT_URI!,
     issuer: "https://id.neome.uk",
     authorizeUrl: "https://id.neome.uk/api/v1/oauth2/authorize",
     tokenUrl: "https://id.neome.uk/api/v1/oauth2/token",
@@ -23,8 +23,23 @@ export const config = {
   },
 
   redapi: {
-    token: process.env.REDAPI_TOKEN!,
-    baseUrl: "https://redapi.com/api",
+    baseUrl: process.env.REDAPI_URL || "https://redapi.com/api",
+  },
+
+  alloha: {
+    token: process.env.ALLOHA_TOKEN || "",
+  },
+
+  collaps: {
+    host: process.env.COLLAPS_API_HOST || "",
+    token: process.env.COLLAPS_TOKEN || "",
+  },
+
+  cdn: {
+    baseUrl: "https://api.rstprgapipt.com/balancer-api/proxy/playlists/catalog-api",
+    iframeUrl: "https://api.rstprgapipt.com/balancer-api/iframe",
+    token: process.env.CDN_TOKEN || "",
+    pl: process.env.CDN_PL || "",
   },
 
   cronSecret: process.env.CRON_SECRET || "",

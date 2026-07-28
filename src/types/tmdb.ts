@@ -163,7 +163,8 @@ export interface TMDBDiscoverParams {
   with_genres?: string
   with_original_language?: string
   "vote_count.gte"?: number
-  "vote_average.gte"?: number
+  "vote_average.gte"?: number | string
+  "vote_average.lte"?: number | string
   "primary_release_date.gte"?: string
   "primary_release_date.lte"?: string
   "first_air_date_year"?: number
