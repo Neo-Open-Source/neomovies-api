@@ -4,7 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOCS_DIR="$ROOT_DIR/docs"
 
-# Reuse caches across CI providers when available.
 CACHE_ROOT="${DOCS_CACHE_DIR:-${VERCEL_CACHE_DIR:-$ROOT_DIR/.cache/docs}}"
 NPM_CACHE_DIR="$CACHE_ROOT/npm"
 DOCUSAURUS_CACHE_DIR="$CACHE_ROOT/docusaurus"

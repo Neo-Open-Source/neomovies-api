@@ -1,6 +1,5 @@
 export interface FeatureItem {
   title: string;
-  icon: string;
   description: string;
 }
 
@@ -15,89 +14,77 @@ export interface HomeTranslations {
 export const translations: Record<string, HomeTranslations> = {
   en: {
     heroTitle: "NeoWatch API",
-    heroSubtitle: "Rust · Serverless · Vercel · Kinopoisk · Neo ID SSO",
+    heroSubtitle: "TypeScript · Bun · Elysia · TMDB · Neo ID SSO",
     btnGetStarted: "Get Started →",
     btnApiRef: "API Reference",
     features: [
       {
         title: "Neo ID SSO",
-        icon: "lock",
         description:
-          "Single sign-on via Neo ID. One account across all NeoWatch services. JWT access tokens with 15-minute expiry and 30-day refresh tokens.",
+          "Single sign-on via Neo ID with OAuth 2.0 and OpenID Connect. JWT access tokens with 15-minute expiry and 30-day refresh tokens.",
       },
       {
-        title: "Kinopoisk API",
-        icon: "film",
+        title: "TMDB Integration",
         description:
-          "Search, popular, top-rated, and full film details — all powered by Kinopoisk. Russian-language results out of the box.",
+          "Full movie and TV show metadata from The Movie Database. Search, popular, top-rated, genres, and collections.",
       },
       {
         title: "Video Players",
-        icon: "play",
         description:
-          "Embeddable iframes for Alloha, Lumex, Vibix, HDVB, and Collaps. Season and episode support for TV shows.",
+          "Multiple streaming providers: Alloha, Collaps, CDN, and HLS proxy. Season and episode support for TV shows.",
       },
       {
-        title: "Favorites",
-        icon: "star",
+        title: "Favorites & Watch Later",
         description:
-          "Per-user favorites list with idempotent add/remove and media-type aware checks.",
+          "Per-user favorites and watch later lists with idempotent add/remove. Cross-device sync via Neo ID account.",
       },
       {
         title: "Torrent Search",
-        icon: "magnet",
         description:
-          "Search torrents by Kinopoisk ID via RedAPI. Optional season and episode filtering. Sorted by seeders.",
+          "Search torrents via RedAPI integration. Optional season and episode filtering for TV shows. Sorted by seeders.",
       },
       {
         title: "Serverless on Vercel",
-        icon: "zap",
         description:
-          "Each endpoint is a standalone Rust serverless function. Zero cold-start overhead, automatic scaling, CORS on every response.",
+          "Deployed as serverless functions on Vercel Edge Network. Automatic scaling, CORS on every response.",
       },
     ],
   },
   ru: {
     heroTitle: "NeoWatch API",
-    heroSubtitle: "Rust · Serverless · Vercel · Кинопоиск · Neo ID SSO",
+    heroSubtitle: "TypeScript · Bun · Elysia · TMDB · Neo ID SSO",
     btnGetStarted: "Начать →",
     btnApiRef: "API Reference",
     features: [
       {
         title: "Neo ID SSO",
-        icon: "lock",
         description:
-          "Единый вход через Neo ID. Один аккаунт для всех сервисов NeoWatch. JWT access-токены на 15 минут и refresh-токены на 30 дней.",
+          "Единый вход через Neo ID с OAuth 2.0 и OpenID Connect. JWT access-токены на 15 минут и refresh-токены на 30 дней.",
       },
       {
-        title: "Kinopoisk API",
-        icon: "film",
+        title: "Интеграция с TMDB",
         description:
-          "Поиск, популярное, топ по рейтингу и полные данные о фильмах — всё через Кинопоиск. Результаты на русском языке.",
+          "Полные данные о фильмах и сериалах из The Movie Database. Поиск, популярное, топ по рейтингу, жанры и коллекции.",
       },
       {
         title: "Видеоплееры",
-        icon: "play",
         description:
-          "Встраиваемые iframe для Alloha, Lumex, Vibix, HDVB и Collaps. Поддержка сезонов и эпизодов для сериалов.",
+          "Множество провайдеров: Alloha, Collaps, CDN и HLS proxy. Поддержка сезонов и эпизодов для сериалов.",
       },
       {
-        title: "Избранное",
-        icon: "star",
+        title: "Избранное и Watch Later",
         description:
-          "Персональный список избранного с идемпотентным добавлением/удалением и проверкой по типу медиа.",
+          "Персональные списки избранного и отложенного с идемпотентным добавлением/удалением. Синхронизация между устройствами через Neo ID.",
       },
       {
         title: "Поиск торрентов",
-        icon: "magnet",
         description:
-          "Поиск торрентов по ID Кинопоиска через RedAPI. Фильтрация по сезону и эпизоду. Сортировка по сидам.",
+          "Поиск торрентов через RedAPI. Фильтрация по сезону и эпизоду для сериалов. Сортировка по сидам.",
       },
       {
         title: "Serverless на Vercel",
-        icon: "zap",
         description:
-          "Каждый эндпоинт — отдельная Rust serverless-функция. Автоматическое масштабирование, CORS на каждый ответ.",
+          "Развёрнуто как serverless-функции на Vercel Edge Network. Автоматическое масштабирование, CORS на каждый ответ.",
       },
     ],
   },

@@ -1,19 +1,16 @@
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
+const isDev = process.env.NODE_ENV === "development";
+
 const config: Config = {
   title: "NeoWatch API",
-  tagline: "NeoWatch API v2 Documentation",
+  tagline: "REST API for NeoWatch - movies and TV shows streaming platform",
   url: "https://docs.neome.uk",
   baseUrl: "/",
-  onBrokenLinks: "warn",
-  favicon: "img/favicon.png",
-
-  markdown: {
-    hooks: {
-      onBrokenMarkdownLinks: "warn",
-    },
-  },
+  onBrokenLinks: isDev ? "throw" : "warn",
+  onBrokenMarkdownLinks: "warn",
+  favicon: "img/favicon.ico",
 
   i18n: {
     defaultLocale: "en",
@@ -31,20 +28,10 @@ const config: Config = {
         label: "API Reference",
         route: "/api",
         configuration: {
-          spec: { url: "/openapi.yaml" },
+          spec: { url: "/openapi.json" },
           hideModels: false,
           hideDownloadButton: false,
         },
-      },
-    ],
-    [
-      require.resolve("@easyops-cn/docusaurus-search-local"),
-      {
-        hashed: true,
-        language: ["en", "ru"],
-        indexDocs: true,
-        indexPages: false,
-        docsRouteBasePath: "/docs",
       },
     ],
   ],
@@ -56,8 +43,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/docs",
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://gitlab.com/foxixus/neowatch-api/-/edit/main/docs/",
-          editLocalizedFiles: true,
+          showLastUpdateTime: true,
         },
         blog: false,
         theme: {
@@ -74,10 +60,14 @@ const config: Config = {
     },
     navbar: {
       title: "NeoWatch API",
+      logo: {
+        alt: "NeoWatch Logo",
+        src: "img/logo.svg",
+      },
       items: [
         {
           type: "docSidebar",
-          sidebarId: "docs",
+          sidebarId: "tutorialSidebar",
           position: "left",
           label: "Docs",
         },
@@ -86,7 +76,7 @@ const config: Config = {
           position: "right",
         },
         {
-          href: "https://github.com/Neo-Open-Source/neowatch-api",
+          href: "https://github.com/anomalyco/neowatch-api-ts",
           label: "GitHub",
           position: "right",
         },
@@ -107,14 +97,11 @@ const config: Config = {
           title: "Community",
           items: [
             { label: "Telegram", href: "https://t.me/neowatch_news" },
-            { label: "GitHub", href: "https://github.com/Neo-Open-Source/neowatch-api" },
+            { label: "GitHub", href: "https://github.com/anomalyco/neowatch-api-ts" },
           ],
         },
       ],
       copyright: `© 2024-${new Date().getFullYear()} Neo-Open-Source`,
-    },
-    prism: {
-      additionalLanguages: ["rust", "bash", "json"],
     },
   } satisfies Preset.ThemeConfig,
 };

@@ -4,10 +4,9 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 import clsx from "clsx";
-import { translations, type FeatureItem } from "../data/translations";
+import { translations } from "../data/translations";
 import styles from "./index.module.css";
 
-// SVG icons — inline, no external deps, theme-aware via currentColor
 const Icons: Record<string, React.FC<{ className?: string }>> = {
   lock: ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -52,7 +51,7 @@ const Icons: Record<string, React.FC<{ className?: string }>> = {
 
 const iconKeys = ["lock", "film", "play", "star", "magnet", "zap"];
 
-function Feature({ icon, title, description }: FeatureItem) {
+function Feature({ icon, title, description }: { icon: string; title: string; description: string }) {
   const Icon = Icons[icon];
   return (
     <div className={clsx("col col--4", styles.featureCard)}>
@@ -74,11 +73,11 @@ export default function Home(): React.JSX.Element {
       <header className={styles.heroBanner}>
         <div className="container">
           <Heading as="h1" className={styles.heroTitle}>
-            {t.heroTitle} <span className={styles.highlight}>v2</span>
+            {t.heroTitle} <span className={styles.highlight}>v3</span>
           </Heading>
           <p className={styles.heroSubtitle}>{t.heroSubtitle}</p>
           <div className={styles.buttons}>
-            <Link className="button button--secondary button--lg" to="/docs">
+            <Link className="button button--secondary button--lg" to="/docs/intro">
               {t.btnGetStarted}
             </Link>
             <Link className={clsx("button button--lg", styles.btnOutline)} to="/api">
@@ -90,7 +89,6 @@ export default function Home(): React.JSX.Element {
           </div>
         </div>
       </header>
-
       <main>
         <section className={styles.features}>
           <div className="container">

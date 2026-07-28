@@ -1,63 +1,65 @@
 ---
-id: players
-sidebar_position: 2
+sidebar_position: 7
 ---
 
-# Video Players
+# Players
 
-The API provides HTML pages with iframes for embedding video players.
+Streaming video from multiple providers.
 
-## Available Players
+## Alloha Player
 
-| Player | Endpoint |
-|--------|----------|
-| Alloha | `GET /api/v1/players/alloha/kp/{kp_id}` |
-| Lumex | `GET /api/v1/players/lumex/kp/{kp_id}` |
-| Vibix | `GET /api/v1/players/vibix/kp/{kp_id}` |
-| HDVB | `GET /api/v1/players/hdvb/kp/{kp_id}` |
-| Collaps | `GET /api/v1/players/collaps/kp/{kp_id}` |
+Returns a proxy URL for embedding in an iframe:
 
-## Example
-
-```bash
-GET /api/v1/players/alloha/kp/326
+```http
+GET /api/v1/player/alloha/tmdb/550
 ```
 
-Response — an HTML page with `Content-Type: text/html`:
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "provider": "Alloha",
+    "url": "/api/v1/player/alloha/proxy?tmdb=550",
+    "type": "iframe"
+  }
+}
+```
+
+For TV shows, add season and episode:
+
+```http
+GET /api/v1/player/alloha/tmdb/1396?season=1&episode=1
+```
+
+The `url` can be used as an iframe `src`:
 
 ```html
-<!DOCTYPE html>
-<html>
-  <body style="margin:0">
-    <iframe src="https://alloha.tv/..." width="100%" height="100%" ...></iframe>
-  </body>
-</html>
+<iframe src="/api/v1/player/alloha/proxy?tmdb=550" allowfullscreen></iframe>
 ```
 
-## TV Shows (Collaps)
+## Collaps Player
 
-For TV shows you can specify season and episode:
-
-```bash
-GET /api/v1/players/collaps/kp/77044?season=1&episode=3
+```http
+GET /api/v1/player/collaps/kp/263531
 ```
 
-## Response Codes
+## CDN Player
 
-| Code | Reason |
-|------|--------|
-| 200 | HTML iframe |
-| 404 | Video not found at the player |
-| 500 | Player not configured (missing env variable) |
+```http
+GET /api/v1/player/cdn/12345
+```
 
-## Embedding in Your App
+By IMDb ID:
 
-```html
-<iframe
-  src="https://api.neome.uk/api/v1/players/alloha/kp/326"
-  width="100%"
-  height="500"
-  frameborder="0"
-  allowfullscreen
-></iframe>
+```http
+GET /api/v1/player/cdn/imdb/tt0137523
+```
+
+## HLS Proxy
+
+Proxy HLS streams with URL rewriting:
+
+```http
+GET /api/v1/player/hls/proxy?url=https://example.com/stream.m3u8
 ```

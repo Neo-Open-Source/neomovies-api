@@ -1,48 +1,85 @@
 import { Elysia, t } from "elysia"
 import { config } from "../config"
-import { success, badRequest, notFound } from "../lib/response"
+import { success } from "../lib/response"
+import { NotFoundError, BadRequestError } from "../lib/errors"
 import { getPlayerData, resolveCdnId } from "../services/cdn"
 
 export const playerRoutes = new Elysia()
 
   .get("/api/v1/player/alloha/tmdb/:tmdbId", async ({ params: { tmdbId }, query }) => {
-    const q = query as Record<string, string | undefined>
-    const season = q.season ? parseInt(q.season) : undefined
-    const episode = q.episode ? parseInt(q.episode) : undefined
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
 
-    let url = `https://api.alloha.tv/?token=${config.alloha.token}&tmdb=${tmdbId}`
-    if (season) url += `&season=${season}`
-    if (episode) url += `&episode=${episode}`
+    const proxyParams = new URLSearchParams({ tmdb: String(tmdbId) })
+    if (season) proxyParams.set("season", String(season))
+    if (episode) proxyParams.set("episode", String(episode))
 
-    return success({ provider: "Alloha", url, type: "iframe" })
-  }, { params: t.Object({ tmdbId: t.Numeric() }) })
+    return success({
+      provider: "Alloha",
+      url: `/api/v1/player/alloha/proxy?${proxyParams.toString()}`,
+      type: "iframe",
+    })
+  }, { params: t.Object({ tmdbId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/alloha/kp/:kpId", async ({ params: { kpId }, query }) => {
-    const q = query as Record<string, string | undefined>
-    const season = q.season ? parseInt(q.season) : undefined
-    const episode = q.episode ? parseInt(q.episode) : undefined
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
 
-    let url = `https://api.alloha.tv/?token=${config.alloha.token}&kp=${kpId}`
-    if (season) url += `&season=${season}`
-    if (episode) url += `&episode=${episode}`
+    const proxyParams = new URLSearchParams({ kp: String(kpId) })
+    if (season) proxyParams.set("season", String(season))
+    if (episode) proxyParams.set("episode", String(episode))
 
-    return success({ provider: "Alloha", url, type: "iframe" })
-  }, { params: t.Object({ kpId: t.Numeric() }) })
+    return success({
+      provider: "Alloha",
+      url: `/api/v1/player/alloha/proxy?${proxyParams.toString()}`,
+      type: "iframe",
+    })
+  }, { params: t.Object({ kpId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+
+  .get("/api/v1/player/alloha/proxy", async ({ query }) => {
+    const tmdb = query.tmdb
+    const kp = query.kp
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
+
+    let allohaUrl: string
+    if (tmdb) {
+      allohaUrl = `https://api.alloha.tv/?token=${config.alloha.token}&tmdb=${tmdb}`
+    } else if (kp) {
+      allohaUrl = `https://api.alloha.tv/?token=${config.alloha.token}&kp=${kp}`
+    } else {
+      throw new BadRequestError("Missing tmdb or kp parameter")
+    }
+    if (season) allohaUrl += `&season=${season}`
+    if (episode) allohaUrl += `&episode=${episode}`
+
+    const res = await fetch(allohaUrl)
+    if (!res.ok) throw new NotFoundError("Video not found on Alloha")
+
+    const contentType = res.headers.get("content-type") || "text/html"
+    const body = await res.text()
+
+    return new Response(body, {
+      headers: {
+        "Content-Type": contentType,
+        "Access-Control-Allow-Origin": "*",
+      },
+    })
+  }, { query: t.Object({ tmdb: t.Optional(t.String()), kp: t.Optional(t.String()), season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/collaps/kp/:kpId", async ({ params: { kpId }, query }) => {
-    if (!config.collaps.host || !config.collaps.token) return badRequest("Collaps not configured")
+    if (!config.collaps.host || !config.collaps.token) throw new BadRequestError("Collaps not configured")
 
-    const q = query as Record<string, string | undefined>
-    const season = q.season ? parseInt(q.season) : undefined
-    const episode = q.episode ? parseInt(q.episode) : undefined
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
 
     const listUrl = `${config.collaps.host.replace(/\/$/, "")}/list?token=${config.collaps.token}&kinopoisk_id=${kpId}`
     const res = await fetch(listUrl)
-    if (!res.ok) return badRequest("Video not found on Collaps")
+    if (!res.ok) throw new BadRequestError("Video not found on Collaps")
 
     const data = await res.json() as any
     const result = data?.results?.[0]
-    if (!result) return badRequest("No results from Collaps")
+    if (!result) throw new BadRequestError("No results from Collaps")
 
     let iframeUrl: string | null = null
 
@@ -64,58 +101,56 @@ export const playerRoutes = new Elysia()
       iframeUrl = result.iframe_url ?? null
     }
 
-    if (!iframeUrl) return badRequest("No iframe URL found")
+    if (!iframeUrl) throw new BadRequestError("No iframe URL found")
 
     return success({ provider: "Collaps", url: iframeUrl, type: "iframe" })
-  }, { params: t.Object({ kpId: t.Numeric() }) })
+  }, { params: t.Object({ kpId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/cdn/:cdnId", async ({ params: { cdnId }, query }) => {
-    const q = query as Record<string, string | undefined>
-    const season = q.season ? parseInt(q.season) : undefined
-    const episode = q.episode ? parseInt(q.episode) : undefined
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
 
     try {
       const data = await getPlayerData(cdnId, season, episode)
       return success({ provider: "CDN", ...data, type: "hls" })
-    } catch (e: any) {
+    } catch (e) {
       const msg = (e as Error).message
       if (msg.includes("not found") || msg.includes("no episodes") || msg.includes("no video")) {
-        return notFound("video not found")
+        throw new NotFoundError("video not found")
       }
       throw e
     }
-  }, { params: t.Object({ cdnId: t.Numeric() }) })
+  }, { params: t.Object({ cdnId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/cdn/imdb/:imdbId", async ({ params: { imdbId }, query }) => {
-    const q = query as Record<string, string | undefined>
-    const season = q.season ? parseInt(q.season) : undefined
-    const episode = q.episode ? parseInt(q.episode) : undefined
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
 
     let cdnId: number
     try {
       cdnId = await resolveCdnId(imdbId)
     } catch {
-      return notFound("video not found")
+      throw new NotFoundError("video not found")
     }
 
     try {
       const data = await getPlayerData(cdnId, season, episode)
       return success({ provider: "CDN", ...data, type: "hls" })
-    } catch (e: any) {
+    } catch (e) {
       const msg = (e as Error).message
       if (msg.includes("not found") || msg.includes("no episodes") || msg.includes("no video")) {
-        return notFound("video not found")
+        throw new NotFoundError("video not found")
       }
       throw e
     }
-  }, { params: t.Object({ imdbId: t.String() }) })
+  }, { params: t.Object({ imdbId: t.String() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/hls/proxy", async ({ query, request }) => {
-    const { url } = query as { url?: string }
-    if (!url) return badRequest("Missing url parameter")
+    const url = query.url
+    if (!url) throw new BadRequestError("Missing url parameter")
 
     const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } })
-    if (!res.ok) return badRequest("Failed to fetch HLS stream")
+    if (!res.ok) throw new BadRequestError("Failed to fetch HLS stream")
 
     const contentType = res.headers.get("content-type") || ""
     const text = await res.text()
@@ -140,4 +175,4 @@ export const playerRoutes = new Elysia()
     return new Response(rewritten, {
       headers: { "Content-Type": "application/vnd.apple.mpegurl", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" },
     })
-  })
+  }, { query: t.Object({ url: t.String() }) })

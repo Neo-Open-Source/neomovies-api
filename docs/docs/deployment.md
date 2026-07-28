@@ -1,89 +1,132 @@
 ---
-id: deployment
-sidebar_position: 4
+sidebar_position: 3
 ---
 
 # Deployment
 
-NeoWatch API v2 is deployed on Vercel as Rust serverless functions (`api/*.rs`) and builds Docusaurus docs from `docs/`.
+## Local Development
 
-## Prerequisites
+### Prerequisites
 
-- [Rust](https://rustup.rs) (stable)
-- [Node.js](https://nodejs.org/) 18+
-- [Vercel CLI](https://vercel.com/docs/cli): `npm i -g vercel`
-- MongoDB Atlas
-- Kinopoisk API key
+- [Bun](https://bun.sh) v1.x
+- PostgreSQL
 
-## 1. Local Validation
+### Setup
 
 ```bash
+bun install
 cp .env.example .env
-cargo check
-cargo test --lib
+# Fill in DATABASE_URL, TMDB_*, NEO_ID_*
+
+bun run db:generate
+bun run db:migrate
+bun run dev
 ```
 
-## 2. Run API Locally
+API: `http://localhost:3000`
+
+### Tests
 
 ```bash
-cargo run --bin server
+bun test
 ```
 
-Default local API URL: `http://localhost:3000/api/v1`.
-
-Port can be set via:
-
-- `LOCAL_SERVER_PORT` (priority)
-- `PORT`
-
-Example:
+### Documentation
 
 ```bash
-LOCAL_SERVER_PORT=3001 cargo run --bin server
+bun run docs:dev    # development
+bun run docs:build  # build
 ```
 
-For local docs preview, run Docusaurus separately:
+## Vercel
 
-```bash
-npm --prefix docs ci
-npm --prefix docs run start
+Simply push to GitHub and import in Vercel. Configuration is already in `vercel.json`.
+
+Add environment variables from `.env.example` in Vercel dashboard.
+
+### Cron
+
+Vercel Cron runs daily at 4:00 AM:
+
 ```
-
-Default local docs URL: `http://localhost:3000/docs`.
-
-## 3. Deploy to Vercel
-
-```bash
-vercel deploy --prod
+GET /api/v1/cron/imdb-ratings
+Authorization: Bearer <CRON_SECRET>
 ```
-
-`vercel.json` defines:
-
-- `buildCommand`: `npm --prefix docs ci && npm --prefix docs run build`
-- rewrites for docs (`/`) and API (`/api/v1/*`)
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `MONGO_URI` | ✅ | MongoDB connection string |
-| `JWT_SECRET` | ✅ | JWT signing secret |
-| `MONGO_DB_NAME` | — | DB name (default: `neowatch`) |
-| `KPAPI_KEY` | ✅ | Kinopoisk API key |
-| `KPAPI_BASE_URL` | — | KP API base URL |
-| `NEO_ID_URL` | ✅ | Neo ID base URL |
-| `NEO_ID_API_KEY` | ✅ | Neo ID API key |
-| `NEO_ID_SITE_ID` | ✅ | Neo ID site ID |
-| `ALLOHA_TOKEN` | — | Alloha token |
-| `LUMEX_URL` | — | Lumex embed base URL |
-| `VIBIX_HOST` | — | Vibix host |
-| `VIBIX_TOKEN` | — | Vibix token |
-| `HDVB_TOKEN` | — | HDVB token |
-| `COLLAPS_API_HOST` | — | Collaps API host |
-| `COLLAPS_TOKEN` | — | Collaps token |
-| `REDAPI_BASE_URL` | — | Torrent API base URL |
+Required for all platforms:
 
-## Routes After Vercel Deploy
+```bash
+DATABASE_URL=
+TMDB_API_KEY=
+TMDB_ACCESS_TOKEN=
+NEO_ID_CLIENT_ID=
+NEO_ID_CLIENT_SECRET=
+NEO_ID_REDIRECT_URI=
+PUBLIC_API_URL=
+CRON_SECRET=
+```
 
-- `/` — docs site (Vercel-only route)
-- `/api/v1/*` — REST API
+Optional:
+
+```bash
+ALLOHA_TOKEN=
+COLLAPS_TOKEN=
+CDN_TOKEN=
+CDN_PL=
+REDAPI_URL=
+```
+
+## Docker
+
+```dockerfile
+FROM oven/bun:1
+WORKDIR /app
+COPY . .
+RUN bun install && bun run db:generate
+EXPOSE 3000
+CMD ["bun", "run", "src/index.ts"]
+```
+
+```bash
+docker build -t neowatch-api .
+docker run -p 3000:3000 --env-file .env neowatch-api
+```
+
+## Railway
+
+1. Create project on Railway
+2. Connect GitHub repository
+3. Add PostgreSQL from Marketplace
+4. Set environment variables
+5. Deploy
+
+Railway automatically detects Bun.
+
+## Fly.io
+
+`fly.toml`:
+
+```toml
+app = "neowatch-api"
+
+[build]
+
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+```
+
+```bash
+fly launch
+fly deploy
+```

@@ -3,16 +3,16 @@
     "message": "NeoWatch API",
     "description": "The title in the navbar"
   },
-  "item.label.Docs": {
-    "message": "Docs",
-    "description": "Navbar item: Docs"
+  "logo.alt": {
+    "message": "NeoWatch Logo",
+    "description": "The alt text of navbar logo"
   },
-  "item.label.API Reference": {
-    "message": "API Reference",
-    "description": "Navbar item: API Reference"
+  "item.label.Docs": {
+    "message": "Документация",
+    "description": "Navbar item with label Docs"
   },
   "item.label.GitHub": {
     "message": "GitHub",
-    "description": "Navbar item: GitHub"
+    "description": "Navbar item with label GitHub"
   }
 }

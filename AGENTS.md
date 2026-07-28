@@ -1,132 +1,129 @@
-# AGENTS.md — NeoWatch API
+# NeoWatch API v3 — LLM Context
 
 ## Project
 
-Rust REST API for NeoWatch. Axum 0.8, MongoDB, Neo ID SSO, Kinopoisk API.
-Deployed on Vercel (serverless) and Netlify (docs only).
+NeoWatch API v3 is a REST API for streaming movies and TV shows. It replaces the Rust-based v2 with a TypeScript stack for faster iteration.
 
 ## Stack
 
-| Layer | Choice |
-|-------|--------|
-| Language | Rust (edition 2024) |
-| Web framework | Axum 0.8 |
-| Serverless | `vercel_runtime` (dual-path: axum for local, `api/index.rs` for Vercel) |
-| Database | MongoDB via `mongodb` crate |
-| Auth | Neo ID SSO, JWT HS256 with refresh rotation |
-| External APIs | Kinopoisk Unofficial (media data), TMDB (episode descriptions, ratings) |
-| Image proxy | Kinopoisk CDN → local cache path |
-| Video players | Alloha, Lumex, Vibix, HDVB, Collaps |
-| Torrents | RedAPI |
-| Testing | `proptest` (property-based) |
-
-## Domain
-
-- `https://api.neome.uk` — production API
-- `https://neome.uk` — main site
-- `https://id.neome.uk` — Neo ID SSO
+| Category | Technology |
+|----------|-----------|
+| Runtime | Bun 1.x |
+| Framework | Elysia 1.x |
+| Database | PostgreSQL 16 (Neon) |
+| ORM | Prisma 6 |
+| Auth | Neo ID (SSO, OAuth 2.0, OIDC) |
+| Metadata | TMDB API v3 |
+| Deployment | Vercel (serverless) |
 
 ## Architecture
 
-### Route registration (dual-path)
+### Route → Service → External API
 
-**Local dev** (`cargo run --bin server`):
-- Axum `Router` in `src/server.rs` with `route()` calls
-- Handlers called via `from_vercel(handler(...).await).await`
+```
+Elysia Router (routes/)
+  → Business Logic (services/)
+    → External APIs (TMDB, Neo ID, etc.)
+    → Database (Prisma)
+  → Response (lib/response.ts)
+```
 
-**Vercel production** (`api/index.rs`):
-- Single serverless function, `?route=` param dispatches to handler
-- Rewrites in `vercel.json` map paths to `api/index?route=...`
+### Error Handling
 
-Both paths call the same `handle_*` functions.
+Custom error classes in `lib/errors.ts` are thrown by handlers/services and caught by the `onError` handler in `app.ts`. This ensures consistent error responses with correct HTTP status codes.
 
-### Response helpers (`src/response.rs`)
+- `AppError(statusCode, message)` — base class
+- `UnauthorizedError` → 401
+- `NotFoundError` → 404
+- `BadRequestError` → 400
+- `ForbiddenError` → 403
 
-- `success(data)` → `{ success: true, data: ... }`
-- `error_response(...)` → `{ error: "..." }`
-- `with_cors(resp)` — adds CORS headers
-- Always wrap in `with_cors()`
+### Response Format
 
-### MongoDB models
+All endpoints return:
+```json
+{ "success": true, "data": ... }
+{ "success": false, "error": "message" }
+```
 
-Each model has:
-- Struct with `#[serde(rename_all = "camelCase")]` + `_id` field
-- `fn collection(db) -> Collection<T>`
-- `async fn ensure_indexes(db)` — unique compound indexes
+Pagination:
+```json
+{ "success": true, "data": { "items": [...], "page": 1, "totalPages": 5, "totalResults": 100 } }
+```
 
-Current models:
-- `user` — `User`, `RefreshToken`
-- `favorite` — `{ user_id, media_id, media_type }` unique
-- `watch_later` — same shape, separate collection
-- `sync_progress` — `{ user_id, media_id, season, episode }` unique
+### Auth Flow
 
-### API versioning
+1. Client calls `GET /api/v1/auth/login` → receives Neo ID authorize URL
+2. User authorizes in browser → redirected to `/api/v1/auth/callback`
+3. Server exchanges code for tokens, sets cookies, redirects to frontend
+4. Auth middleware verifies JWT from `Authorization: Bearer <token>` header
+5. Decoded user info attached to request context (`userId`, `userEmail`, `userRole`)
 
-| Path | Purpose |
-|------|---------|
-| `/api/v1/*` | Legacy, backward-compatible |
-| `/api/v2/*` | Cleaner responses, new features |
+### Key Design Decisions
 
-### Key differences v1 → v2
+- **Dual deployment**: Local dev via `Bun.serve()`, production via Vercel serverless (`api/index.ts`)
+- **Validation**: Elysia's `t.Object()` for request validation; avoid raw `as` casts
+- **No `any` types**: All mapper functions use proper TypeScript interfaces
+- **No silent error swallowing**: `.catch(() => {})` is replaced with proper error handling
+- **Token safety**: API tokens are never exposed to clients; player URLs are server-side proxied
 
-- `MediaDetailsV2Dto` vs `MediaDetailsDto`:
-  - v2 has no `sourceId` dup, no separate `rating` field
-  - v2 `genres` is `String[]`, not `[{id, name}]`
-  - v2 `countries` is `String[]` (all), v1 `country` is first only
-  - v2 `ids` consolidates external IDs, v1 splits across `externalIds`
-  - v2 uses `poster`/`backdrop` (shorter), v1 uses `posterUrl`/`backdropUrl`
-
-## File structure
+## File Structure
 
 ```
 src/
-  handlers/         — one file per domain (auth, media, search, ...)
-  models/           — MongoDB document structs
-  services/         — external API clients (kinopoisk, tmdb, neoid, ...)
-  server.rs         — axum router + route functions
-  response.rs       — response helpers
-  lib.rs            — crate root
-  db.rs             — MongoDB connection
+  index.ts              # Bun.serve entrypoint
+  app.ts                # Elysia app, route mounting, onError handler
+  config.ts             # Config from env
+  db.ts                 # Prisma singleton
+  types/
+    api.ts              # API response DTOs
+    tmdb.ts             # TMDB API types
+  lib/
+    errors.ts           # AppError classes
+    response.ts         # success() helper
+    jwt.ts              # JWKS-based JWT verification
+    mappers.ts          # TMDB → API response mappers
+    query.ts            # Page param helper
+    language.ts         # Language param helper
+    images.ts           # Image size constants
+  middleware/
+    auth.ts             # JWT auth middleware
+  routes/               # One file per domain
+    auth.ts, media.ts, search.ts, genres.ts,
+    categories.ts, favorites.ts, watch-later.ts,
+    sync.ts, players.ts, images.ts, torrents.ts,
+    support.ts, health.ts, cron.ts, webhooks.ts
+  services/             # Business logic / API clients
+    tmdb.ts, media.ts, neoid.ts, user-data.ts,
+    alloha.ts, cdn.ts, imdb-ratings.ts
+  __tests__/            # Tests
+prisma/
+  schema.prisma         # DB schema
 api/
-  index.rs          — Vercel serverless entrypoint
-tests/
-  prop_*.rs         — proptest-based tests
-docs/               — Docusaurus docs site (not maintained by agent)
+  index.ts              # Vercel serverless entrypoint
+docs/                   # Docusaurus site
 ```
 
-## Vercel deployment
+## Vercel Deployment
 
-- Each deploy compiles `api/index.rs` as a single serverless function
-- `vercel.json` has all rewrite rules mapping paths to `?route=`
-- Environment variables set in Vercel dashboard (not committed)
-- `Cargo.toml` configures `lambda` feature for `vercel_runtime`
+`api/index.ts` exports `app.fetch` as the serverless handler. `vercel.json` rewrites all routes to this handler.
 
-## Design decisions
+## Design Decisions
 
-- **Conflict resolution (sync progress)**: Last write wins by `updated_at` timestamp
-- **Idempotent add**: Upsert with `$setOnInsert` for favorites/watch_later
-- **Image proxy**: Rewrite Kinopoisk CDN URLs to local `/api/v1/images/...` paths
-- **CORS**: Allow all origins (`*`)
-- **Auth**: Neo ID SSO only, no email/password. JWT with refresh rotation.
+| Decision | Rationale |
+|----------|-----------|
+| TypeScript over Rust | Faster iteration, easier maintenance, same team tools |
+| Elysia over Express | Built-in validation, TypeScript-first, lightweight |
+| Prisma over Drizzle | Mature, excellent migrations, type-safe queries |
+| PostgreSQL over MongoDB | Relational data (users, favorites, sync) benefits from ACID |
+| Neo ID SSO | Centralized auth across Neo Team services |
 
 ## Testing
 
-- `cargo test` runs all proptest suites
-- Tests verify model invariants, not HTTP
-- Use `proptest!` macro with `ProptestConfig::with_cases(N)`
+- **Framework**: Bun built-in test runner
+- **Pattern**: Integration tests for routes, unit tests for mappers/utils
+- **No mocking**: Tests run against real endpoints with controlled inputs
 
-## Session log
+## Session Log
 
-### 2026-07-13: v2 API features + docs + sync progress
-
-- Added `GET /api/v2/search` — filtered search (genre, year, rating, keyword, type, country, order)
-- Added `GET /api/v2/movie/{kp_id}` — clean detail response (no duplicate fields)
-- Added `GET /api/v1/genres` — list all genres from Kinopoisk
-- Added `GET /api/v1/category/{genre_id}` — films/TV by genre with `?films`/`?tv` filters
-- Added `GET/POST/DELETE /api/v1/watch-later/{kp_id}` + check — watch later CRUD with MongoDB
-- Added `GET/PUT/DELETE /api/v1/sync/progress` + `POST /api/v1/sync/progress/batch` — cross-device watch tracking with last-write-wins conflict resolution
-- Created `MediaDetailsV2Dto` — cleaner struct without `sourceId`/`rating` duplicates
-- Migrated all domains from `neomovies.ru`/`neomovies.run` → `neome.uk`
-- Updated `openapi.yaml`, `README.md`, `docs/static/openapi.yaml`
-- Created `CONTRIBUTING.md`, `AGENTS.md`
-- 5 property-based tests for sync progress
+*2026-07-29*: Initial cleanup — documentation, code style, error handling fixes.

@@ -1,95 +1,45 @@
 ---
-id: favorites
-sidebar_position: 3
+sidebar_position: 5
 ---
 
 # Избранное
 
-Управление списком избранных фильмов и сериалов. Все эндпоинты требуют авторизации.
+Управление избранным пользователя. Требуется аутентификация.
 
-## Получить список
+## Список избранного
 
-```bash
+```http
 GET /api/v1/favorites
 Authorization: Bearer <token>
 ```
 
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "...",
-      "media_id": "kp_326",
-      "media_type": "movie",
-      "title": "Матрица",
-      "poster_url": "https://...",
-      "rating": 8.5,
-      "year": 1999,
-      "created_at": "2024-01-01T00:00:00Z"
-    }
-  ]
-}
-```
-
 ## Добавить в избранное
 
-Операция идемпотентна — повторный вызов не создаёт дубликат.
-
-```bash
-POST /api/v1/favorites/326?type=movie
+```http
+POST /api/v1/favorites/550
 Authorization: Bearer <token>
 ```
-
-Параметр `type` — `movie` или `tv` (по умолчанию `movie`).
 
 ## Удалить из избранного
 
-```bash
-DELETE /api/v1/favorites/326?type=movie
+```http
+DELETE /api/v1/favorites/550?mediaType=movie
 Authorization: Bearer <token>
 ```
 
-## Проверить наличие
+## Проверить избранное
 
-```bash
-GET /api/v1/favorites/326/check?type=movie
+```http
+GET /api/v1/favorites/550/check?mediaType=movie
 Authorization: Bearer <token>
 ```
 
+Ответ:
 ```json
 {
   "success": true,
-  "data": { "isFavorite": true }
+  "data": {
+    "isFavorite": true
+  }
 }
-```
-
-## Ошибки
-
-```bash
-# Неверный тип
-POST /api/v1/favorites/326?type=anime
-# { "error": "type must be movie or tv" }
-```
-
-## Watch Later («Смотреть позже»)
-
-Работает по тому же принципу, что и избранное, но в отдельной коллекции.
-
-```bash
-# Список
-GET /api/v1/watch-later
-Authorization: Bearer <token>
-
-# Добавить (идемпотентно)
-POST /api/v1/watch-later/326?type=movie
-Authorization: Bearer <token>
-
-# Удалить
-DELETE /api/v1/watch-later/326?type=movie
-Authorization: Bearer <token>
-
-# Проверить
-GET /api/v1/watch-later/326/check?type=movie
-Authorization: Bearer <token>
 ```

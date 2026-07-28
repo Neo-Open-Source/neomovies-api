@@ -1,66 +1,136 @@
 ---
-id: authentication
-sidebar_position: 3
+sidebar_position: 2
 ---
 
 # Аутентификация
 
-NeoWatch API использует **Neo ID SSO** как единственный способ входа. Email/пароль и OAuth (Google и др.) не поддерживаются.
+NeoWatch API использует Neo ID SSO для аутентификации через OAuth 2.0 + OpenID Connect.
 
-## Схема
+## OAuth Flow
 
+### 1. Получить URL авторизации
+
+```http
+GET /api/v1/auth/login?redirect_uri=https://neome.uk/auth/callback
 ```
-Client → POST /auth/neo-id/login → получить login_url
-Client → Редирект на Neo ID → пользователь входит
-Neo ID → Редирект обратно с access_token
-Client → POST /auth/neo-id/callback → получить JWT + refresh token
-```
 
-## JWT Access Token
-
-- Алгоритм: **HS256**
-- Время жизни: **15 минут**
-- Передаётся в заголовке: `Authorization: Bearer <token>`
-
-Payload токена:
-
+Ответ:
 ```json
 {
-  "sub": "507f1f77bcf86cd799439011",
-  "neo_id": "neo_abc123",
-  "email": "user@example.com",
-  "is_admin": false,
-  "iat": 1700000000,
-  "exp": 1700000900
+  "success": true,
+  "data": {
+    "url": "https://id.neome.uk/api/v1/oauth2/authorize?..."
+  }
 }
 ```
 
-## Refresh Token
+Перенаправьте пользователя по этому URL.
 
-- Время жизни: **30 дней**
-- Хранится в MongoDB
-- При обновлении старый токен удаляется (rotation)
+### 2. Callback
 
-## Защищённые эндпоинты
+После авторизации Neo ID перенаправляет на ваш `redirect_uri` с параметром `code`:
 
-Все эндпоинты, требующие авторизации, возвращают `401` если:
+```
+https://neome.uk/auth/callback?code=...
+```
 
-- Заголовок `Authorization` отсутствует или некорректен
-- JWT истёк или подпись невалидна
-- Пользователь удалён из базы
+### 3. Обменять код на токены
 
-```bash
-# Пример ошибки
+```http
+GET /api/v1/auth/callback?code=...&redirect_uri=https://neome.uk/auth/callback
+```
+
+Устанавливает куки `neo_id_access` и `neo_id_refresh` и перенаправляет на фронтенд.
+
+### 4. Mobile Callback
+
+Для мобильных приложений:
+
+```http
+GET /api/v1/auth/mobile-callback?code=...
+```
+
+Возвращает токены в JSON вместо кук.
+
+## Использование токенов
+
+Укажите токен доступа в заголовке:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+## Обновление токена
+
+```http
+POST /api/v1/auth/refresh
+Content-Type: application/json
+
 {
-  "error": "unauthorized"
+  "refreshToken": "..."
 }
 ```
 
-## Управление сессиями
+## Профиль
 
-| Эндпоинт | Описание |
-|----------|----------|
-| `POST /auth/refresh` | Обновить токены |
-| `POST /auth/refresh-tokens/revoke` | Отозвать конкретный refresh token |
-| `POST /auth/refresh-tokens/revoke-all` | Отозвать все refresh tokens |
-| `DELETE /auth/delete-account` | Удалить аккаунт и все данные |
+### Получить профиль
+
+```http
+GET /api/v1/auth/profile
+Authorization: Bearer <token>
+```
+
+### Обновить профиль
+
+```http
+PUT /api/v1/auth/profile
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "Новое имя",
+  "avatar": "https://..."
+}
+```
+
+## Управление токенами
+
+### Список активных токенов
+
+```http
+GET /api/v1/auth/refresh-tokens
+Authorization: Bearer <token>
+```
+
+### Отозвать токен
+
+```http
+POST /api/v1/auth/refresh-tokens/revoke
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "refreshToken": "..."
+}
+```
+
+### Отозвать все токены
+
+```http
+POST /api/v1/auth/refresh-tokens/revoke-all
+Authorization: Bearer <token>
+```
+
+## Выход
+
+```http
+POST /api/v1/auth/logout
+Authorization: Bearer <token>
+```
+
+## Удаление аккаунта
+
+```http
+DELETE /api/v1/auth/account
+Authorization: Bearer <token>
+```

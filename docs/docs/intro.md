@@ -1,32 +1,32 @@
 ---
-id: intro
-slug: /
 sidebar_position: 1
 ---
 
-# NeoWatch API v2
+# Introduction
 
-NeoWatch API v2 is a serverless REST API built in Rust, deployed on Vercel.
+Welcome to the **NeoWatch API** documentation.
 
-## Key Features
+NeoWatch API provides movie and TV show data, streaming players, user features like favorites and watch tracking.
 
-- **Authentication** — via [Neo ID SSO](https://id.neome.uk) only
-- **Media data** — Kinopoisk API and TMDB
-- **Database** — MongoDB (users, favorites, watch later, sync progress, refresh tokens)
-- **Deployment** — Vercel Serverless Functions (Rust)
-- **CORS** — allowed for all origins (`*`)
-- **v2** — cleaner media details, filtered search
-
-## Base URLs
+## Base URL
 
 ```
-https://api.neome.uk/api/v1   (legacy, backward-compatible)
-https://api.neome.uk/api/v2   (new, cleaner responses)
+https://api.neome.uk
 ```
+
+## Features
+
+- 🎬 **Movies & TV Shows** - Full metadata from TMDB
+- 🔍 **Search** - Text search and advanced filtering
+- 📺 **Players** - Multiple streaming providers (Alloha, Collaps, CDN)
+- ⭐ **Favorites** - User favorites management
+- 📌 **Watch Later** - Watch later list
+- 🔄 **Sync** - Cross-device watch progress sync
+- 🔐 **Authentication** - Neo ID SSO (OAuth 2.0 + OIDC)
 
 ## Response Format
 
-All endpoints return JSON. Successful responses are wrapped in an envelope:
+All responses follow a standard envelope:
 
 ```json
 {
@@ -39,17 +39,36 @@ Errors:
 
 ```json
 {
-  "error": "error description"
+  "success": false,
+  "error": "error message"
 }
 ```
 
-## HTTP Status Codes
+## Language Support
 
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 400 | Bad request |
-| 401 | Unauthorized |
-| 404 | Not found |
-| 500 | Internal server error |
-| 502 | Upstream service error |
+All content endpoints accept `?language=` parameter:
+
+| Code | Language |
+|------|----------|
+| `ru-RU` | Russian (default) |
+| `en-US` | English |
+| `uk-UA` | Ukrainian |
+| `ro-RO` | Romanian |
+| `be-BY` | Belarusian |
+
+## Pagination
+
+List endpoints accept `?page=` and return:
+
+```json
+{
+  "items": [],
+  "page": 1,
+  "totalPages": 10,
+  "totalResults": 200
+}
+```
+
+## Quick Start
+
+Check out the [Authentication](/docs/authentication) guide to get started.

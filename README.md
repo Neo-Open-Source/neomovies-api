@@ -1,140 +1,257 @@
 <p align="center">
-  <img src=".github/icon.png" width="120" height="120" style="border-radius: 24px;" />
-</p>
-
-<h1 align="center">NeoWatch API v2</h1>
-
-<p align="center">
-  Rust REST API for NeoWatch with Neo ID SSO authentication, deployable on Vercel and Netlify
+  <picture>
+    <img alt="NeoWatch" src=".github/icon.png" width="240">
+  </picture>
 </p>
 
 <p align="center">
-  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNeo-Open-Source%2Fneowatch-api&project-name=neowatch-api">
-    <img src="https://vercel.com/button" alt="Deploy with Vercel" />
-  </a>
-  <a href="https://app.netlify.com/start/deploy?repository=https://github.com/Neo-Open-Source/neowatch-api">
-    <img src="https://www.netlify.com/img/deploy/button.svg" alt="Deploy to Netlify" />
-  </a>
+  <strong>NeoWatch API v3</strong> — REST API for streaming movies and TV shows.
 </p>
+
+<div align="center">
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Bun](https://img.shields.io/badge/Bun-1.x-000?logo=bun&logoColor=white)](https://bun.sh/)
+[![Elysia](https://img.shields.io/badge/Elysia-1.x-6B4CE6)](https://elysiajs.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+
+</div>
+
+---
 
 ## Features
 
-- Serverless Rust functions on Vercel and Netlify-ready docs hosting
-- Authentication via Neo ID SSO only (no email/password)
-- Media data from Kinopoisk API
-- Favorites management (idempotent add/remove)
-- Watch later management (idempotent add/remove)
-- Watch progress sync (cross-device, last-write-wins conflict resolution)
-- Genre categories with film/tv filtering
-- Video player iframe endpoints (Alloha, Lumex, Vibix, HDVB, Collaps)
-- Full-text search via Kinopoisk (v1)
-- Filtered search via Kinopoisk v2.2 API (v2) — genre, year, rating, keyword, type, country
-- Clean media details response (v2)
-- JWT (HS256) with refresh token rotation
-- MongoDB for users, favorites, watch later, and refresh tokens
-- CORS allowed for all origins
+- **Movies & TV** — Details, credits, recommendations, similar, collections
+- **Search** — Multi-source search with TMDB integration
+- **User Data** — Favorites, watch later, cross-device sync
+- **Video Players** — Alloha, Collaps, CDN, HLS proxy
+- **Authentication** — Neo ID SSO (OAuth 2.0 + OpenID Connect)
+- **Images** — TMDB image proxy with caching
+- **Torrents** — Search via RedAPI
+- **Admin** — Cron-based IMDb ratings sync
+- **API Versioning** — v1 with consistent JSON envelope
 
 ## Stack
 
-- Backend: Rust + Axum 0.8 (serverless via `vercel_runtime`)
-- Database: MongoDB
-- Auth: Neo ID SSO (JWT HS256)
-- Deployment: Vercel Serverless Functions or Netlify static hosting with API proxying
-- Docs: Docusaurus + Scalar API Reference
+| Category | Technology |
+|----------|-----------|
+| Runtime | [Bun](https://bun.sh/) 1.x |
+| Framework | [Elysia](https://elysiajs.com/) 1.x |
+| Database | [PostgreSQL](https://www.postgresql.org/) 16 (Neon) |
+| ORM | [Prisma](https://www.prisma.io/) 6 |
+| Auth | [Neo ID](https://id.neo-team.dev) (SSO, OAuth 2.0, OIDC) |
+| Metadata | [TMDB](https://www.themoviedb.org/) API v3 |
+| Images | TMDB image proxy with CDN caching |
+| Deployment | [Vercel](https://vercel.com/) (serverless functions) |
+| Docs | [Docusaurus](https://docusaurus.io/) 3 + [Scalar](https://scalar.com/) API Reference |
 
-## Environment
+## Getting Started
 
-Copy `.env.example` and fill in the values:
+### Prerequisites
 
-```env
-MONGODB_URI=mongodb+srv://...
-JWT_SECRET=your-secret
-NEO_ID_URL=https://id.neome.uk
-NEO_ID_API_KEY=...
-NEO_ID_SITE_ID=...
-PUBLIC_API_URL=https://api.neome.uk
-KPAPI_KEY=...
+- [Bun](https://bun.sh/) 1.x
+- PostgreSQL 16 (local or [Neon](https://neon.tech/))
 
-# Video players (optional, enable as needed)
-ALLOHA_TOKEN=...
-LUMEX_TOKEN=...
-VIBIX_TOKEN=...
-HDVB_TOKEN=...
-COLLAPS_TOKEN=...
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/neo-team/neowatch-api-ts.git
+cd neowatch-api-ts
+
+# Copy environment variables
+cp .env.example .env
+# Edit .env with your configuration
+
+# Install dependencies
+bun install
+
+# Generate Prisma client and run migrations
+bun run db:generate
+bun run db:migrate
+
+# Start development server
+bun run dev
 ```
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `TMDB_API_KEY` | Yes | TMDB API v3 key |
+| `TMDB_ACCESS_TOKEN` | Yes | TMDB API v4 access token |
+| `NEO_ID_CLIENT_ID` | Yes | Neo ID OAuth client ID |
+| `NEO_ID_CLIENT_SECRET` | Yes | Neo ID OAuth client secret |
+| `NEO_ID_REDIRECT_URI` | Yes | OAuth callback URL |
+| `PUBLIC_API_URL` | No | Public API base URL |
+| `REDAPI_URL` | No | Torrent search API URL |
+| `ALLOHA_TOKEN` | No | Alloha player token |
+| `COLLAPS_TOKEN` | No | Collaps player token |
+| `CDN_TOKEN` | No | CDN player token |
+| `CDN_PL` | No | CDN player license key |
+| `CRON_SECRET` | No | Cron job authentication secret |
+
+## API Overview
+
+Base URL: `https://neowatch-api.vercel.app/api/v1`
+
+All responses use a consistent JSON envelope:
+
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+Error responses:
+
+```json
+{
+  "success": false,
+  "error": "Description of what went wrong"
+}
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| **Auth** | | |
+| GET | `/auth/login` | Get Neo ID authorization URL |
+| GET | `/auth/callback` | OAuth callback handler |
+| GET | `/auth/mobile-callback` | Mobile OAuth callback |
+| POST | `/auth/refresh` | Refresh access token |
+| GET | `/auth/profile` | Get current user profile |
+| PUT | `/auth/profile` | Update user profile |
+| GET | `/auth/refresh-tokens` | List active refresh tokens |
+| POST | `/auth/refresh-tokens/revoke` | Revoke a refresh token |
+| POST | `/auth/refresh-tokens/revoke-all` | Revoke all refresh tokens |
+| POST | `/auth/logout` | Logout |
+| DELETE | `/auth/account` | Delete account |
+| **Movies** | | |
+| GET | `/movie/:id` | Movie details |
+| GET | `/movie/:id/credits` | Movie credits |
+| GET | `/movie/:id/collection` | Movie collection |
+| GET | `/movie/:id/recommendations` | Movie recommendations |
+| GET | `/movie/:id/similar` | Similar movies |
+| GET | `/movie/popular` | Popular movies |
+| GET | `/movie/top-rated` | Top rated movies |
+| GET | `/movie/upcoming` | Upcoming movies |
+| **TV** | | |
+| GET | `/tv/:id` | TV show details |
+| GET | `/tv/:id/credits` | TV show credits |
+| GET | `/tv/:id/season/:season` | Season details |
+| GET | `/tv/:id/season/:season/episode/:episode` | Episode details |
+| GET | `/tv/:id/recommendations` | TV recommendations |
+| GET | `/tv/:id/similar` | Similar TV shows |
+| GET | `/tv/popular` | Popular TV shows |
+| GET | `/tv/top-rated` | Top rated TV shows |
+| **Search** | | |
+| GET | `/search` | Multi-source search |
+| **Categories** | | |
+| GET | `/categories` | Browse categories |
+| GET | `/collection/:slug` | Category collection |
+| **Genres** | | |
+| GET | `/genre/movies` | Movie genres |
+| GET | `/genre/tv` | TV genres |
+| **Players** | | |
+| GET | `/player/alloha/tmdb/:tmdbId` | Alloha player by TMDB ID |
+| GET | `/player/alloha/kp/:kpId` | Alloha player by KP ID |
+| GET | `/player/collaps/kp/:kpId` | Collaps player by KP ID |
+| GET | `/player/cdn/:cdnId` | CDN player |
+| GET | `/player/cdn/imdb/:imdbId` | CDN player by IMDb ID |
+| GET | `/player/hls/proxy` | HLS proxy |
+| **User Data** | | |
+| GET | `/favorites` | List favorites |
+| POST | `/favorites/:mediaId` | Add favorite |
+| DELETE | `/favorites/:mediaId` | Remove favorite |
+| GET | `/favorites/:mediaId/check` | Check if favorited |
+| GET | `/watch-later` | List watch later |
+| POST | `/watch-later/:mediaId` | Add to watch later |
+| DELETE | `/watch-later/:mediaId` | Remove from watch later |
+| GET | `/watch-later/:mediaId/check` | Check if in watch later |
+| GET | `/sync/progress` | Get sync progress |
+| PUT | `/sync/progress` | Upsert sync progress |
+| DELETE | `/sync/progress` | Delete sync progress |
+| POST | `/sync/progress/batch` | Batch upsert progress |
+| **Other** | | |
+| GET | `/images/tmdb` | TMDB image proxy |
+| GET | `/images/backdrop` | Backdrop images |
+| GET | `/images/still` | Still images |
+| GET | `/support` | Supporters list |
+| GET | `/torrents/search` | Torrent search |
+| GET | `/health` | Health check |
 
 ## Development
 
 ```bash
-cargo run --bin server
+# Start dev server with hot reload
+bun run dev
+
+# Run tests
+bun test
+
+# Type check
+bun run typecheck
+
+# Format code
+bunx biome check --write src/
+
+# Lint
+bunx biome lint src/
+
+# Build for production
+bun run build
 ```
 
 ## Deployment
 
-Deploy to Vercel:
+### Vercel
+
+The project is configured for Vercel deployment via `vercel.json`. All routes are rewritten to the serverless entrypoint at `api/index.ts`.
 
 ```bash
 vercel deploy
 ```
 
-Deploy to Netlify:
+See [docs/deployment.md](docs/docs/deployment.md) for detailed deployment instructions.
 
-```bash
-netlify deploy --build --prod
+## Project Structure
+
 ```
-
-Each file in `api/` becomes a serverless function on Vercel. On Netlify, the repository builds and publishes `docs/build`, while `/api/v1/*` is proxied to `https://api.neome.uk/api/v1/*` via `netlify.toml`.
-The Netlify deploy button is docs-only plus API proxying, so it does not require the backend secrets used by Vercel.
-
-### Hosting routes
-
-- `/` -> API documentation site (Docusaurus build from `docs/build`)
-- `/api/v1/*` -> NeoWatch API v1 endpoints
-- `/api/v2/*` -> NeoWatch API v2 endpoints
-- `/openapi.yaml` -> OpenAPI schema used by docs
-
-## API Overview
-
-### v1 Endpoints
-
-| Group | Prefix | Description |
-|-------|--------|-------------|
-| Auth | `/api/v1/auth/*` | Login, callback, refresh, revoke, profile, delete |
-| Search | `/api/v1/search` | Search by keyword (Kinopoisk v1) |
-| Media | `/api/v1/movie/{id}` | Film details by Kinopoisk ID |
-| | `/api/v1/movies/popular` | Popular films |
-| | `/api/v1/movies/top-rated` | Top 250 films |
-| | `/api/v1/tv/top-rated` | Top 250 TV series |
-| | `/api/v1/genres` | List of all genres |
-| | `/api/v1/category/{id}` | Films/TV by genre |
-| Images | `/api/v1/images/*` | Poster, screens, backdrops, page backdrops, logos |
-| Players | `/api/v1/players/*` | Video player iframes |
-| Torrents | `/api/v1/torrents/search` | Torrent search |
-| Favorites | `/api/v1/favorites/*` | Add, remove, list, check |
-| Watch Later | `/api/v1/watch-later/*` | Add, remove, list, check |
-| Sync Progress | `/api/v1/sync/progress` | Upsert, batch sync, get, delete watch progress |
-| Support | `/api/v1/support/list` | List supporters |
-| Health | `/api/v1/health` | Health check |
-
-### v2 Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/v2/search` | Filtered search (genre, year, rating, keyword, type, country, order) |
-| `GET /api/v2/movie/{id}` | Clean media details (no duplicate fields) |
-
-Full spec: [`openapi.yaml`](openapi.yaml)
-
-### Mobile Neo ID callback
-
-For mobile clients, backend supports redirect trampoline:
-
-- `POST /api/v1/auth/neo-id/login` with `mobile_redirect_url` (e.g. `neowatch://auth/neo-id/callback`)
-- Neo ID redirects to `/api/v1/auth/neo-id/mobile-callback`
-- API redirects (`302`) to mobile deep link with `access_token` in query
-
-Important: set `PUBLIC_API_URL` in Vercel env (example: `https://api.neome.uk`).
+src/
+  index.ts              # Server entrypoint (Bun.serve)
+  app.ts                # Elysia app setup + route mounting
+  config.ts             # Environment config
+  db.ts                 # Prisma client singleton
+  types/                # TypeScript type definitions
+    api.ts              #   API response DTOs
+    tmdb.ts             #   TMDB API types
+  lib/                  # Utilities
+    errors.ts           #   Error classes
+    response.ts         #   Response helpers
+    jwt.ts              #   JWT verification
+    mappers.ts          #   TMDB → API mappers
+    query.ts            #   Query param helpers
+    language.ts         #   Language handling
+    images.ts           #   Image size constants
+  middleware/
+    auth.ts             # Auth middleware
+  routes/               # Route handlers (one per domain)
+  services/             # Business logic / external API clients
+  __tests__/            # Tests
+prisma/
+  schema.prisma         # Database schema
+  migrations/           # Database migrations
+docs/                   # Docusaurus documentation site
+api/
+  index.ts              # Vercel serverless entrypoint
+```
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) © Neo Team

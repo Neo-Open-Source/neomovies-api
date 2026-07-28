@@ -1,63 +1,65 @@
 ---
-id: players
-sidebar_position: 2
+sidebar_position: 7
 ---
 
-# Видеоплееры
+# Плееры
 
-API предоставляет HTML-страницы с iframe для встраивания видеоплееров.
+Стриминг видео от различных провайдеров.
 
-## Доступные плееры
+## Alloha Player
 
-| Плеер | Эндпоинт |
-|-------|----------|
-| Alloha | `GET /api/v1/players/alloha/kp/{kp_id}` |
-| Lumex | `GET /api/v1/players/lumex/kp/{kp_id}` |
-| Vibix | `GET /api/v1/players/vibix/kp/{kp_id}` |
-| HDVB | `GET /api/v1/players/hdvb/kp/{kp_id}` |
-| Collaps | `GET /api/v1/players/collaps/kp/{kp_id}` |
+Возвращает URL для встраивания в iframe:
 
-## Пример
-
-```bash
-GET /api/v1/players/alloha/kp/326
+```http
+GET /api/v1/player/alloha/tmdb/550
 ```
 
-Ответ — HTML-страница с `Content-Type: text/html`:
+Ответ:
+```json
+{
+  "success": true,
+  "data": {
+    "provider": "Alloha",
+    "url": "/api/v1/player/alloha/proxy?tmdb=550",
+    "type": "iframe"
+  }
+}
+```
+
+Для сериалов добавьте season и episode:
+
+```http
+GET /api/v1/player/alloha/tmdb/1396?season=1&episode=1
+```
+
+URL можно использовать как src для iframe:
 
 ```html
-<!DOCTYPE html>
-<html>
-  <body style="margin:0">
-    <iframe src="https://alloha.tv/..." width="100%" height="100%" ...></iframe>
-  </body>
-</html>
+<iframe src="/api/v1/player/alloha/proxy?tmdb=550" allowfullscreen></iframe>
 ```
 
-## Сериалы (Collaps)
+## Collaps Player
 
-Для сериалов можно указать сезон и эпизод:
-
-```bash
-GET /api/v1/players/collaps/kp/77044?season=1&episode=3
+```http
+GET /api/v1/player/collaps/kp/263531
 ```
 
-## Коды ответов
+## CDN Player
 
-| Код | Причина |
-|-----|---------|
-| 200 | HTML iframe |
-| 404 | Видео не найдено у плеера |
-| 500 | Плеер не настроен (отсутствует env-переменная) |
+```http
+GET /api/v1/player/cdn/12345
+```
 
-## Встраивание в приложение
+По IMDb ID:
 
-```html
-<iframe
-  src="https://api.neome.uk/api/v1/players/alloha/kp/326"
-  width="100%"
-  height="500"
-  frameborder="0"
-  allowfullscreen
-></iframe>
+```http
+GET /api/v1/player/cdn/imdb/tt0137523
+```
+
+## HLS Proxy
+
+Прокси для HLS-потоков с перезаписью URL:
+
+```http
+GET /api/v1/player/hls/proxy?url=https://example.com/stream.m3u8
 ```

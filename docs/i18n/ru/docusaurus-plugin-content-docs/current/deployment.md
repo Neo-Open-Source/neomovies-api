@@ -1,89 +1,63 @@
 ---
-id: deployment
-sidebar_position: 4
+sidebar_position: 3
 ---
 
-# Deployment
+# Развёртывание
 
-NeoWatch API v2 деплоится на Vercel как набор Rust serverless-функций (`api/*.rs`) и одновременно собирает документацию Docusaurus из `docs/`.
-
-## Требования
-
-- [Rust](https://rustup.rs) (stable)
-- [Node.js](https://nodejs.org/) 18+
-- [Vercel CLI](https://vercel.com/docs/cli): `npm i -g vercel`
-- MongoDB Atlas
-- Kinopoisk API key
-
-## 1. Локальная проверка
+## Локальная разработка
 
 ```bash
+git clone https://github.com/anomalyco/neowatch-api-ts.git
+cd neowatch-api-ts
 cp .env.example .env
-cargo check
-cargo test --lib
+bun install
+bun run db:generate
+bun run db:migrate
+bun run dev
 ```
 
-## 2. Локальный запуск API
+Сервер будет доступен на `http://localhost:3000`.
+
+### Документация
 
 ```bash
-cargo run --bin server
+# Local docs dev server
+cd docs && bun start
+
+# Build docs
+cd docs && bun run build
 ```
 
-Локальный API по умолчанию: `http://localhost:3000/api/v1`.
+## Vercel
 
-Порт можно задать через:
+Проект настроен для деплоя на Vercel через `vercel.json`.
 
-- `LOCAL_SERVER_PORT` (приоритетный)
-- `PORT`
+1. Подключите репозиторий к [Vercel](https://vercel.com)
+2. Установите переменные окружения (см. `.env.example`)
+3. Настройте команду сборки: `bun run build`
+4. Настройте выходную директорию: `docs/build`
 
-Пример:
+### Переменные окружения Vercel
+
+| Переменная | Описание |
+|-----------|----------|
+| `DATABASE_URL` | Строка подключения к PostgreSQL |
+| `TMDB_API_KEY` | TMDB API v3 ключ |
+| `TMDB_ACCESS_TOKEN` | TMDB API v4 токен доступа |
+| `NEO_ID_CLIENT_ID` | Neo ID OAuth client ID |
+| `NEO_ID_CLIENT_SECRET` | Neo ID OAuth client secret |
+| `NEO_ID_REDIRECT_URI` | OAuth callback URL |
+
+## Railway
 
 ```bash
-LOCAL_SERVER_PORT=3001 cargo run --bin server
+railway login
+railway up
 ```
 
-Для локального просмотра документации запустите Docusaurus отдельно:
+## Fly.io
 
 ```bash
-npm --prefix docs ci
-npm --prefix docs run start
+flyctl launch
+flyctl deploy
 ```
-
-Локальный адрес docs по умолчанию: `http://localhost:3000/docs`.
-
-## 3. Деплой на Vercel
-
-```bash
-vercel deploy --prod
-```
-
-`vercel.json` содержит:
-
-- `buildCommand`: `npm --prefix docs ci && npm --prefix docs run build`
-- rewrites для docs (`/`) и API (`/api/v1/*`)
-
-## Переменные окружения
-
-| Переменная | Обязательная | Описание |
-|----------|----------|-------------|
-| `MONGO_URI` | ✅ | MongoDB connection string |
-| `JWT_SECRET` | ✅ | JWT signing secret |
-| `MONGO_DB_NAME` | — | DB name (default: `neowatch`) |
-| `KPAPI_KEY` | ✅ | Kinopoisk API key |
-| `KPAPI_BASE_URL` | — | KP API base URL |
-| `NEO_ID_URL` | ✅ | Neo ID base URL |
-| `NEO_ID_API_KEY` | ✅ | Neo ID API key |
-| `NEO_ID_SITE_ID` | ✅ | Neo ID site ID |
-| `ALLOHA_TOKEN` | — | Alloha token |
-| `LUMEX_URL` | — | Lumex embed base URL |
-| `VIBIX_HOST` | — | Vibix host |
-| `VIBIX_TOKEN` | — | Vibix token |
-| `HDVB_TOKEN` | — | HDVB token |
-| `COLLAPS_API_HOST` | — | Collaps API host |
-| `COLLAPS_TOKEN` | — | Collaps token |
-| `REDAPI_BASE_URL` | — | Torrent API base URL |
-
-## Маршруты после деплоя на Vercel
-
-- `/` — сайт документации (только на Vercel)
-- `/api/v1/*` — REST API
