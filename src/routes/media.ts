@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia"
 import { tmdb } from "../services/tmdb"
-import { omdb } from "../services/omdb"
+import { db } from "../db"
 import { success } from "../lib/response"
 import { mapMovie, mapTV, mapCastMember, mapCrewMember, mapCompany, mapSeason, mapEpisode, mapNetwork, paginate } from "../lib/mappers"
 import { authMiddleware } from "../middleware/auth"
@@ -13,7 +13,9 @@ export const mediaRoutes = new Elysia()
       tmdb.movie(id),
       tmdb.movieCredits(id),
     ])
-    const imdbRating = movie.imdb_id ? await omdb.getRating(movie.imdb_id) : null
+    const imdbRating = movie.imdb_id
+      ? await db.mediaRating.findUnique({ where: { imdbId: movie.imdb_id } })
+      : null
     return success({
       ...mapMovie(movie),
       runtime: movie.runtime,
@@ -21,7 +23,8 @@ export const mediaRoutes = new Elysia()
       revenue: movie.revenue,
       status: movie.status,
       tagline: movie.tagline,
-      imdbRating: imdbRating?.imdbRating ?? null,
+      imdbId: movie.imdb_id ?? null,
+      imdbRating: imdbRating ? Number(imdbRating.imdbRating) : null,
       imdbVotes: imdbRating?.imdbVotes ?? null,
       productionCompanies: (movie.production_companies || []).map(mapCompany),
       collection: movie.belongs_to_collection
@@ -43,11 +46,13 @@ export const mediaRoutes = new Elysia()
     ])
     const externalIds = await tmdb.tvExternalIds(id).catch(() => null)
     const imdbId = externalIds?.imdb_id ?? null
-    const imdbRating = imdbId ? await omdb.getRating(imdbId) : null
+    const imdbRating = imdbId
+      ? await db.mediaRating.findUnique({ where: { imdbId } })
+      : null
     return success({
       ...mapTV(show),
       imdbId,
-      imdbRating: imdbRating?.imdbRating ?? null,
+      imdbRating: imdbRating ? Number(imdbRating.imdbRating) : null,
       imdbVotes: imdbRating?.imdbVotes ?? null,
       seasons: (show.seasons || []).map(mapSeason),
       numberOfSeasons: show.number_of_seasons,
@@ -60,6 +65,28 @@ export const mediaRoutes = new Elysia()
         cast: (credits.cast || []).slice(0, 20).map(mapCastMember),
         crew: (credits.crew || []).slice(0, 20).map(mapCrewMember),
       },
+    })
+  }, {
+    params: t.Object({ id: t.Numeric() }),
+  })
+
+  .get("/api/v1/movie/:id/collection", async ({ params: { id } }) => {
+    const movie = await tmdb.movie(id)
+    if (!movie.belongs_to_collection) return success(null)
+
+    const coll = await tmdb.collection(movie.belongs_to_collection.id)
+    const parts = (coll.parts || [])
+      .filter((p: any) => p.id !== id)
+      .sort((a: any, b: any) => (a.release_date || "").localeCompare(b.release_date || ""))
+      .map(mapMovie)
+
+    return success({
+      id: coll.id,
+      name: coll.name,
+      overview: coll.overview,
+      poster: tmdb.imageUrl(coll.poster_path, "w300"),
+      backdrop: tmdb.imageUrl(coll.backdrop_path, "w1280"),
+      parts,
     })
   }, {
     params: t.Object({ id: t.Numeric() }),

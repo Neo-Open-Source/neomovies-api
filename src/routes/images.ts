@@ -1,5 +1,7 @@
-import { Elysia } from "elysia"
-import { badRequest } from "../lib/response"
+import { Elysia, t } from "elysia"
+import { tmdb } from "../services/tmdb"
+import { success, badRequest, notFound } from "../lib/response"
+import { BACKDROP_SIZES, STILL_SIZES } from "../lib/images"
 import { config } from "../config"
 
 export const imageRoutes = new Elysia()
@@ -25,4 +27,56 @@ export const imageRoutes = new Elysia()
         "Access-Control-Allow-Origin": "*",
       },
     })
+  })
+
+  .get("/api/v1/movie/:id/backdrops", async ({ params: { id }, query }) => {
+    const movie = await tmdb.movie(id)
+    if (!movie.backdrop_path) return notFound("No backdrops")
+
+    const size = (query as any)?.size
+    if (size && BACKDROP_SIZES.includes(size as any)) {
+      return success({ backdrop: tmdb.imageUrl(movie.backdrop_path, size) })
+    }
+
+    return success({
+      backdrops: tmdb.imageSizes(movie.backdrop_path, BACKDROP_SIZES),
+    })
+  }, {
+    params: t.Object({ id: t.Numeric() }),
+  })
+
+  .get("/api/v1/tv/:id/backdrops", async ({ params: { id }, query }) => {
+    const [show, externalIds] = await Promise.all([
+      tmdb.tvShow(id),
+      tmdb.tvExternalIds(id).catch(() => null),
+    ])
+    if (!show.backdrop_path) return notFound("No backdrops")
+
+    const size = (query as any)?.size
+    if (size && BACKDROP_SIZES.includes(size as any)) {
+      return success({ backdrop: tmdb.imageUrl(show.backdrop_path, size) })
+    }
+
+    return success({
+      backdrops: tmdb.imageSizes(show.backdrop_path, BACKDROP_SIZES),
+      imdbId: externalIds?.imdb_id ?? null,
+    })
+  }, {
+    params: t.Object({ id: t.Numeric() }),
+  })
+
+  .get("/api/v1/tv/:id/season/:season/episode/:episode/stills", async ({ params: { id, season, episode }, query }) => {
+    const ep = await tmdb.tvEpisode(id, season, episode)
+    if (!ep.still_path) return notFound("No stills")
+
+    const size = (query as any)?.size
+    if (size && STILL_SIZES.includes(size as any)) {
+      return success({ still: tmdb.imageUrl(ep.still_path, size) })
+    }
+
+    return success({
+      stills: tmdb.imageSizes(ep.still_path, STILL_SIZES),
+    })
+  }, {
+    params: t.Object({ id: t.Numeric(), season: t.Numeric(), episode: t.Numeric() }),
   })

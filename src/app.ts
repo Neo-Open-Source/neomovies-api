@@ -12,9 +12,11 @@ import { watchLaterRoutes } from "./routes/watch-later"
 import { syncRoutes } from "./routes/sync"
 import { playerRoutes } from "./routes/players"
 import { imageRoutes } from "./routes/images"
+import { supportRoutes } from "./routes/support"
 import { torrentRoutes } from "./routes/torrents"
 import { webhookRoutes } from "./routes/webhooks"
 import { healthRoutes } from "./routes/health"
+import { cronRoutes } from "./routes/cron"
 
 assertConfig()
 
@@ -38,6 +40,7 @@ export const app = new Elysia()
   .use(authRoutes)
   .use(mediaRoutes)
   .use(searchRoutes)
+  .use(supportRoutes)
   .use(genreRoutes)
   .use(favoriteRoutes)
   .use(watchLaterRoutes)
@@ -46,6 +49,7 @@ export const app = new Elysia()
   .use(imageRoutes)
   .use(torrentRoutes)
   .use(webhookRoutes)
+  .use(cronRoutes)
   .get("/", () => Response.redirect("/api/docs"))
   .all("*", () => {
     return new Response(JSON.stringify({ success: false, error: "Not Found" }), {

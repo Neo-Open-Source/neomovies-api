@@ -22,15 +22,12 @@ export const config = {
     scope: "openid profile email",
   },
 
-  omdb: {
-    apiKey: process.env.OMDB_API_KEY || "",
-    baseUrl: "https://www.omdbapi.com",
-  },
-
   redapi: {
     token: process.env.REDAPI_TOKEN!,
     baseUrl: "https://redapi.com/api",
   },
+
+  cronSecret: process.env.CRON_SECRET || "",
 } as const
 
 export function assertConfig(): void {

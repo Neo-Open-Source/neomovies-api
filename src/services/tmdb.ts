@@ -115,6 +115,16 @@ export class TMDBClient {
     return `${config.tmdb.imageBaseUrl}/${size}${path}`
   }
 
+  imageSizes(path: string | null, sizes: readonly string[]): Record<string, string | null> {
+    const result: Record<string, string | null> = {}
+    if (!path) {
+      for (const s of sizes) result[s] = null
+      return result
+    }
+    for (const s of sizes) result[s] = `${config.tmdb.imageBaseUrl}/${s}${path}`
+    return result
+  }
+
   async movie(id: number): Promise<TMDBMovieDetails> {
     return this.get<TMDBMovieDetails>(`/movie/${id}`, baseParams())
   }
@@ -227,6 +237,10 @@ export class TMDBClient {
     const data = await this.get<TMDBPageResult<TMDBMovie | TMDBTVShow>>(`/${type}/${id}/similar`, baseParams({ page: String(page) }))
     if (type === "movie") return filterMovies(data as TMDBPageResult<TMDBMovie>) as TMDBPageResult<TMDBMovie | TMDBTVShow>
     return filterTV(data as TMDBPageResult<TMDBTVShow>) as TMDBPageResult<TMDBMovie | TMDBTVShow>
+  }
+
+  async collection(id: number): Promise<{ id: number; name: string; overview: string; poster_path: string | null; backdrop_path: string | null; parts: TMDBMovie[] }> {
+    return this.get(`/collection/${id}`, { language: "ru-RU" })
   }
 }
 

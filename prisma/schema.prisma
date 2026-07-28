@@ -40,6 +40,13 @@ model WatchLater {
   @@index([userId])
 }
 
+model MediaRating {
+  imdbId     String   @id
+  imdbRating Decimal?
+  imdbVotes  Int?
+  updatedAt  DateTime @updatedAt
+}
+
 model SyncProgress {
   id        String   @id @default(cuid())
   userId    String
