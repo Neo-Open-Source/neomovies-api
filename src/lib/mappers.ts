@@ -67,10 +67,14 @@ function parseGenres(m: TMDBMovieOrDetails | TMDBTVOrDetails): { id: number; nam
   return null
 }
 
+function baseItem() {
+  return { certification: null as string | null }
+}
+
 export function mapMovie(m: TMDBMovieOrDetails) {
   return {
+    ...baseItem(),
     tmdbId: m.id,
-    imdbId: "imdb_id" in m ? m.imdb_id ?? null : null,
     title: m.title,
     originalTitle: m.original_title,
     overview: m.overview,
@@ -80,7 +84,6 @@ export function mapMovie(m: TMDBMovieOrDetails) {
     backdrops: tmdb.imageSizes(m.backdrop_path, images.BACKDROP_SIZES),
     releaseDate: m.release_date || null,
     genres: parseGenres(m),
-    genreIds: "genre_ids" in m ? m.genre_ids : null,
     voteAverage: m.vote_average,
     voteCount: m.vote_count,
     popularity: m.popularity,
@@ -89,8 +92,8 @@ export function mapMovie(m: TMDBMovieOrDetails) {
 
 export function mapTV(t: TMDBTVOrDetails) {
   return {
+    ...baseItem(),
     tmdbId: t.id,
-    imdbId: null,
     title: t.name,
     originalTitle: t.original_name,
     overview: t.overview,
@@ -100,7 +103,6 @@ export function mapTV(t: TMDBTVOrDetails) {
     backdrops: tmdb.imageSizes(t.backdrop_path, images.BACKDROP_SIZES),
     releaseDate: t.first_air_date || null,
     genres: parseGenres(t),
-    genreIds: "genre_ids" in t ? t.genre_ids : null,
     voteAverage: t.vote_average,
     voteCount: t.vote_count,
     popularity: t.popularity,

@@ -22,7 +22,7 @@ describe("mapMovie", () => {
     expect(result.tmdbId).toBe(245891)
     expect(result.title).toBe("John Wick")
     expect(result.overview).toBe("An ex-hit-man comes out of retirement.")
-    expect(result.genreIds).toEqual([28, 53])
+    expect(result.genres).toBeNull()
   })
 
   it("includes poster and backdrop URLs", () => {

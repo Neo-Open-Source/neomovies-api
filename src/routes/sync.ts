@@ -11,7 +11,7 @@ export const syncRoutes = new Elysia()
     if (!userId) throw new UnauthorizedError()
     return success(await userData.getSyncProgress(userId))
   }, {
-    detail: { tags: ["Sync"] },
+    detail: { tags: ["Sync"], summary: "Get Sync Progress" },
   })
 
   .put("/api/v1/sync/progress", async ({ userId, body }) => {
@@ -23,7 +23,7 @@ export const syncRoutes = new Elysia()
       season: data.season, episode: data.episode, progress: data.progress,
     }))
   }, {
-    detail: { tags: ["Sync"] },
+    detail: { tags: ["Sync"], summary: "Upsert Sync Progress" },
     body: t.Optional(t.Object({
       mediaId: t.Number(),
       mediaType: t.Optional(t.String()),
@@ -43,7 +43,7 @@ export const syncRoutes = new Elysia()
     })
     return success({ deleted: true })
   }, {
-    detail: { tags: ["Sync"] },
+    detail: { tags: ["Sync"], summary: "Delete Sync Progress" },
   })
 
   .post("/api/v1/sync/progress/batch", async ({ userId, body }) => {
@@ -52,5 +52,5 @@ export const syncRoutes = new Elysia()
     if (!Array.isArray(items) || items.length === 0) throw new BadRequestError("Missing items array")
     return success(await userData.batchUpsertProgress(userId, items))
   }, {
-    detail: { tags: ["Sync"] },
+    detail: { tags: ["Sync"], summary: "Batch Sync Progress" },
   })

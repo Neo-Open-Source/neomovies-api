@@ -12,7 +12,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     const { redirect_uri } = query
     return success({ url: neoid.getAuthorizeUrl(redirect_uri) })
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Neo ID Login" },
     query: t.Object({ redirect_uri: t.Optional(t.String()) }),
   })
 
@@ -35,7 +35,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       },
     })
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Auth Callback" },
   })
 
   .get("/mobile-callback", async ({ query }) => {
@@ -53,7 +53,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       user: user ? { id: user.id, email: user.email, displayName: user.displayName, avatar: user.avatar } : undefined,
     })
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Mobile Auth Callback" },
   })
 
   .post("/refresh", async ({ body }) => {
@@ -72,14 +72,14 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       throw new UnauthorizedError("Invalid refresh token")
     }
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Refresh Tokens" },
   })
 
   .get("/profile", async ({ userId, userEmail, userRole }) => {
     if (!userId) throw new UnauthorizedError()
     return success({ id: userId, email: userEmail, role: userRole })
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Get User Profile" },
   })
 
   .put("/profile", async ({ userId, headers, body }) => {
@@ -100,14 +100,14 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     const updated = await res.json()
     return success(updated)
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Update User Profile" },
   })
 
   .get("/refresh-tokens", async ({ userId, headers }) => {
     if (!userId) throw new UnauthorizedError()
     return success(await neoid.listRefreshTokens(headers.authorization || ""))
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "List Refresh Tokens" },
     headers: t.Object({ authorization: t.String() }),
   })
 
@@ -118,7 +118,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     await neoid.revokeRefreshToken(refreshToken)
     return success({ revoked: true })
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Revoke Refresh Token" },
   })
 
   .post("/refresh-tokens/revoke-all", async ({ userId, headers }) => {
@@ -126,7 +126,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     await neoid.revokeAllRefreshTokens(headers.authorization || "")
     return success({ revoked: true })
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Revoke All Refresh Tokens" },
   })
 
   .post("/logout", async ({ headers }) => {
@@ -139,7 +139,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     }
     return success({ ok: true })
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Logout" },
   })
 
   .delete("/account", async ({ userId, headers }) => {
@@ -153,5 +153,5 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     if (!res.ok) throw new UnauthorizedError("Failed to delete account")
     return success({ deleted: true })
   }, {
-    detail: { tags: ["Auth"] },
+    detail: { tags: ["Auth"], summary: "Delete Account" },
   })

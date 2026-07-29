@@ -9,5 +9,5 @@ const supporters = [
 
 export const supportRoutes = new Elysia()
   .get("/api/v1/support/list", () => success(supporters), {
-    detail: { tags: ["Support"] },
+    detail: { tags: ["Support"], summary: "Supporters List" },
   })

@@ -43,7 +43,7 @@ export const torrentRoutes = new Elysia()
       type: t.type,
     })))
   }, {
-    detail: { tags: ["Torrents"] },
+    detail: { tags: ["Torrents"], summary: "Search Torrents" },
     query: t.Object({
       q: t.Optional(t.String()),
       imdb_id: t.Optional(t.String()),
