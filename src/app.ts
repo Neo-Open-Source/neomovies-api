@@ -59,6 +59,22 @@ export const app = new Elysia()
         version: "3.0.0",
         description: "REST API for NeoWatch - movies and TV shows streaming platform",
       },
+      tags: [
+        { name: "Auth", description: "Authentication and authorization" },
+        { name: "Categories", description: "Browse categories and collections" },
+        { name: "Favorites", description: "User favorites management" },
+        { name: "Genres", description: "Movie and TV show genres" },
+        { name: "Health", description: "Health check endpoint" },
+        { name: "Images", description: "Image proxy and backdrops" },
+        { name: "Media", description: "Movie and TV show details" },
+        { name: "Players", description: "Video streaming players" },
+        { name: "Search", description: "Multi-type search" },
+        { name: "Support", description: "Supporters list" },
+        { name: "Sync", description: "Cross-device sync progress" },
+        { name: "Torrents", description: "Torrent search" },
+        { name: "Watch Later", description: "Watch later management" },
+        { name: "Webhooks", description: "External webhook handlers" },
+      ],
     },
   }))
   .use(healthRoutes)

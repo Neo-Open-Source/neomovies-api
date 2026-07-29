@@ -44,6 +44,7 @@ export const imageRoutes = new Elysia()
       backdrops: tmdb.imageSizes(movie.backdrop_path, BACKDROP_SIZES),
     })
   }, {
+    detail: { tags: ["Images"] },
     params: t.Object({ id: t.Numeric() }),
   })
 
@@ -65,6 +66,7 @@ export const imageRoutes = new Elysia()
       imdbId: externalIds?.imdb_id ?? null,
     })
   }, {
+    detail: { tags: ["Images"] },
     params: t.Object({ id: t.Numeric() }),
   })
 
@@ -81,5 +83,6 @@ export const imageRoutes = new Elysia()
       stills: tmdb.imageSizes(ep.still_path, STILL_SIZES),
     })
   }, {
+    detail: { tags: ["Images"] },
     params: t.Object({ id: t.Numeric(), season: t.Numeric(), episode: t.Numeric() }),
   })

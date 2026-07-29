@@ -20,6 +20,7 @@ export const webhookRoutes = new Elysia({ prefix: "/api/v1/webhooks" })
 
     return success({ received: true })
   }, {
+    detail: { tags: ["Webhooks"] },
     body: t.Object({
       event: t.Optional(t.String()),
       user: t.Optional(t.Object({

@@ -10,6 +10,8 @@ export const syncRoutes = new Elysia()
   .get("/api/v1/sync/progress", async ({ userId }) => {
     if (!userId) throw new UnauthorizedError()
     return success(await userData.getSyncProgress(userId))
+  }, {
+    detail: { tags: ["Sync"] },
   })
 
   .put("/api/v1/sync/progress", async ({ userId, body }) => {
@@ -21,6 +23,7 @@ export const syncRoutes = new Elysia()
       season: data.season, episode: data.episode, progress: data.progress,
     }))
   }, {
+    detail: { tags: ["Sync"] },
     body: t.Optional(t.Object({
       mediaId: t.Number(),
       mediaType: t.Optional(t.String()),
@@ -39,6 +42,8 @@ export const syncRoutes = new Elysia()
       season: data.season, episode: data.episode,
     })
     return success({ deleted: true })
+  }, {
+    detail: { tags: ["Sync"] },
   })
 
   .post("/api/v1/sync/progress/batch", async ({ userId, body }) => {
@@ -46,4 +51,6 @@ export const syncRoutes = new Elysia()
     const { items } = body as { items?: any[] }
     if (!Array.isArray(items) || items.length === 0) throw new BadRequestError("Missing items array")
     return success(await userData.batchUpsertProgress(userId, items))
+  }, {
+    detail: { tags: ["Sync"] },
   })
