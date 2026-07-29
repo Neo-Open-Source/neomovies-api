@@ -50,7 +50,7 @@ model ExternalId {
 
 model MediaRating {
   imdbId     String   @id
-  imdbRating Decimal?
+  imdbRating Decimal? @db.Decimal(3, 1)
   imdbVotes  Int?
   updatedAt  DateTime @updatedAt
 }

@@ -11,25 +11,25 @@ export const watchLaterRoutes = new Elysia()
     if (!userId) throw new UnauthorizedError()
     return success(await userData.listWatchLater(userId))
   }, {
-    detail: { tags: ["Watch Later"] },
+    detail: { tags: ["Watch Later"], summary: "List Watch Later" },
   })
 
   .post("/api/v1/watch-later/:mediaId", async ({ userId, params: { mediaId } }) => {
     if (!userId) throw new UnauthorizedError()
     return success(await userData.addWatchLater(userId, Number(mediaId)))
-  }, { detail: { tags: ["Watch Later"] }, params: t.Object({ mediaId: t.Numeric() }) })
+  }, { detail: { tags: ["Watch Later"], summary: "Add to Watch Later" }, params: t.Object({ mediaId: t.Numeric() }) })
 
   .delete("/api/v1/watch-later/:mediaId", async ({ userId, params: { mediaId } }) => {
     if (!userId) throw new UnauthorizedError()
     await userData.removeWatchLater(userId, Number(mediaId))
     return success({ deleted: true })
   }, {
-    detail: { tags: ["Watch Later"] },
+    detail: { tags: ["Watch Later"], summary: "Remove from Watch Later" },
   })
 
   .get("/api/v1/watch-later/:mediaId/check", async ({ userId, params: { mediaId } }) => {
     if (!userId) throw new UnauthorizedError()
     return success({ isSaved: await userData.checkWatchLater(userId, Number(mediaId)) })
   }, {
-    detail: { tags: ["Watch Later"] },
+    detail: { tags: ["Watch Later"], summary: "Check Watch Later" },
   })

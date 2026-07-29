@@ -10,5 +10,5 @@ export const healthRoutes = new Elysia()
       timestamp: new Date().toISOString(),
     })
   }, {
-    detail: { tags: ["Health"] },
+    detail: { tags: ["Health"], summary: "Health Check" },
   })

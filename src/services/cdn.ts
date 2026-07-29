@@ -58,9 +58,10 @@ async function getEpisodes(cdnId: number): Promise<Episode[]> {
   return res.json() as Promise<Episode[]>
 }
 
-export async function resolveCdnId(imdbId: string): Promise<number> {
+export async function resolveCdnId(id: string, type: "imdb" | "kp" = "imdb"): Promise<number> {
   const plParam = CDN_PL ? `&pl=${CDN_PL}` : ""
-  const url = `${CDN_IFRAME}?imdb=${imdbId}&token=${CDN_TOKEN}&disabled_share=1${plParam}`
+  const param = type === "kp" ? "kp" : "imdb"
+  const url = `${CDN_IFRAME}?${param}=${id}&token=${CDN_TOKEN}&disabled_share=1${plParam}`
   const res = await fetch(url, { redirect: "manual" })
   const html = await res.text()
 
@@ -76,7 +77,7 @@ export async function resolveCdnId(imdbId: string): Promise<number> {
     if (!isNaN(id)) return id
   }
 
-  throw new Error(`CDN id not found in iframe HTML (imdb=${imdbId})`)
+  throw new Error(`CDN id not found in iframe HTML (${param}=${id})`)
 }
 
 function proxyUrl(filepath: string): string {

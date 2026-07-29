@@ -19,7 +19,7 @@ export const playerRoutes = new Elysia()
       url: `/api/v1/player/alloha/proxy?${proxyParams.toString()}`,
       type: "iframe",
     })
-  }, { detail: { tags: ["Players"] }, params: t.Object({ tmdbId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+  }, { detail: { tags: ["Players"], summary: "Alloha Player by TMDB ID" }, params: t.Object({ tmdbId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/alloha/kp/:kpId", async ({ params: { kpId }, query }) => {
     const season = query.season ? parseInt(String(query.season)) : undefined
@@ -34,7 +34,7 @@ export const playerRoutes = new Elysia()
       url: `/api/v1/player/alloha/proxy?${proxyParams.toString()}`,
       type: "iframe",
     })
-  }, { detail: { tags: ["Players"] }, params: t.Object({ kpId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+  }, { detail: { tags: ["Players"], summary: "Alloha Player by KP ID" }, params: t.Object({ kpId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/alloha/proxy", async ({ query }) => {
     const tmdb = query.tmdb
@@ -65,7 +65,7 @@ export const playerRoutes = new Elysia()
         "Access-Control-Allow-Origin": "*",
       },
     })
-  }, { detail: { tags: ["Players"] }, query: t.Object({ tmdb: t.Optional(t.String()), kp: t.Optional(t.String()), season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+  }, { detail: { tags: ["Players"], summary: "Alloha Proxy" }, query: t.Object({ tmdb: t.Optional(t.String()), kp: t.Optional(t.String()), season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/collaps/kp/:kpId", async ({ params: { kpId }, query }) => {
     if (!config.collaps.host || !config.collaps.token) throw new BadRequestError("Collaps not configured")
@@ -104,7 +104,7 @@ export const playerRoutes = new Elysia()
     if (!iframeUrl) throw new BadRequestError("No iframe URL found")
 
     return success({ provider: "Collaps", url: iframeUrl, type: "iframe" })
-  }, { detail: { tags: ["Players"] }, params: t.Object({ kpId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+  }, { detail: { tags: ["Players"], summary: "Collaps Player" }, params: t.Object({ kpId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/cdn/:cdnId", async ({ params: { cdnId }, query }) => {
     const season = query.season ? parseInt(String(query.season)) : undefined
@@ -120,7 +120,7 @@ export const playerRoutes = new Elysia()
       }
       throw e
     }
-  }, { detail: { tags: ["Players"] }, params: t.Object({ cdnId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+  }, { detail: { tags: ["Players"], summary: "CDN Player" }, params: t.Object({ cdnId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/cdn/imdb/:imdbId", async ({ params: { imdbId }, query }) => {
     const season = query.season ? parseInt(String(query.season)) : undefined
@@ -128,7 +128,7 @@ export const playerRoutes = new Elysia()
 
     let cdnId: number
     try {
-      cdnId = await resolveCdnId(imdbId)
+      cdnId = await resolveCdnId(imdbId, "imdb")
     } catch {
       throw new NotFoundError("video not found")
     }
@@ -143,7 +143,30 @@ export const playerRoutes = new Elysia()
       }
       throw e
     }
-  }, { detail: { tags: ["Players"] }, params: t.Object({ imdbId: t.String() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+  }, { detail: { tags: ["Players"], summary: "CDN Player by IMDB ID" }, params: t.Object({ imdbId: t.String() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+
+  .get("/api/v1/player/cdn/kp/:kpId", async ({ params: { kpId }, query }) => {
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
+
+    let cdnId: number
+    try {
+      cdnId = await resolveCdnId(String(kpId), "kp")
+    } catch {
+      throw new NotFoundError("video not found")
+    }
+
+    try {
+      const data = await getPlayerData(cdnId, season, episode)
+      return success({ provider: "CDN", ...data, type: "hls" })
+    } catch (e) {
+      const msg = (e as Error).message
+      if (msg.includes("not found") || msg.includes("no episodes") || msg.includes("no video")) {
+        throw new NotFoundError("video not found")
+      }
+      throw e
+    }
+  }, { detail: { tags: ["Players"], summary: "CDN Player by KP ID" }, params: t.Object({ kpId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
 
   .get("/api/v1/player/hls/proxy", async ({ query, request }) => {
     const url = query.url
@@ -175,4 +198,4 @@ export const playerRoutes = new Elysia()
     return new Response(rewritten, {
       headers: { "Content-Type": "application/vnd.apple.mpegurl", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" },
     })
-  }, { detail: { tags: ["Players"] }, query: t.Object({ url: t.String() }) })
+  }, { detail: { tags: ["Players"], summary: "HLS Proxy" }, query: t.Object({ url: t.String() }) })

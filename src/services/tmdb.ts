@@ -10,12 +10,21 @@ function params(lang: string, extra?: Record<string, string>): Record<string, st
   return { language: lang, include_adult: "false", ...extra }
 }
 
+const adultKeywords = ["hentai", "секс", "porn", "эротик", "sex ", "xxx", "18+", "adult"]
+
+function hasAdultContent(title: string, overview: string): boolean {
+  const text = `${title} ${overview}`.toLowerCase()
+  return adultKeywords.some(k => text.includes(k))
+}
+
 function validMovie(m: TMDBMovie): boolean {
   const today = new Date()
   if (m.adult) return false
   if (!m.poster_path) return false
   if (!m.vote_average || m.vote_average === 0) return false
   if (!m.release_date || m.release_date > today.toISOString().slice(0, 10)) return false
+  if (!m.overview || m.overview.trim() === "") return false
+  if (hasAdultContent(m.title, m.overview)) return false
   return true
 }
 
@@ -24,6 +33,8 @@ function validTV(t: TMDBTVShow): boolean {
   if (!t.poster_path) return false
   if (!t.vote_average || t.vote_average === 0) return false
   if (!t.first_air_date || t.first_air_date > today.toISOString().slice(0, 10)) return false
+  if (!t.overview || t.overview.trim() === "") return false
+  if (hasAdultContent(t.name, t.overview)) return false
   return true
 }
 
@@ -186,11 +197,11 @@ export class TMDBClient {
   }
 
   async popularTV(page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBTVShow>> {
-    return filterTV(await this.get<TMDBPageResult<TMDBTVShow>>("/tv/popular", params(lang, { page: String(page), "vote_count.gte": "10" })))
+    return filterTV(await this.get<TMDBPageResult<TMDBTVShow>>("/tv/popular", params(lang, { page: String(page), "vote_count.gte": "50" })))
   }
 
   async topRatedTV(page = 1, lang = DEFAULT_LANGUAGE): Promise<TMDBPageResult<TMDBTVShow>> {
-    return filterTV(await this.get<TMDBPageResult<TMDBTVShow>>("/tv/top_rated", params(lang, { page: String(page), "vote_count.gte": "10" })))
+    return filterTV(await this.get<TMDBPageResult<TMDBTVShow>>("/tv/top_rated", params(lang, { page: String(page), "vote_count.gte": "50" })))
   }
 
   async movieGenres(lang = DEFAULT_LANGUAGE): Promise<{ genres: TMDBGenre[] }> {
@@ -215,6 +226,24 @@ export class TMDBClient {
 
   async collection(id: number, lang = DEFAULT_LANGUAGE): Promise<{ id: number; name: string; overview: string; poster_path: string | null; backdrop_path: string | null; parts: TMDBMovie[] }> {
     return this.get(`/collection/${id}`, { language: lang })
+  }
+
+  async movieCertification(id: number): Promise<string | null> {
+    try {
+      const data = await this.get<{ results: Array<{ iso_3166_1: string; release_dates: Array<{ certification: string }> }> }>(`/movie/${id}/release_dates`)
+      const us = data.results.find(r => r.iso_3166_1 === "US")
+      if (!us) return null
+      const cert = us.release_dates.find(d => d.certification)
+      return cert?.certification ?? null
+    } catch { return null }
+  }
+
+  async tvCertification(id: number): Promise<string | null> {
+    try {
+      const data = await this.get<{ results: Array<{ rating: string }> }>(`/tv/${id}/content_ratings`)
+      const us = data.results.find(r => r.rating)
+      return us?.rating ?? null
+    } catch { return null }
   }
 }
 

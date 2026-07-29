@@ -9,12 +9,12 @@ export const genreRoutes = new Elysia()
     const { genres } = await tmdb.movieGenres(language(query))
     return success(genres.map((g) => ({ id: g.id, name: g.name })))
   }, {
-    detail: { tags: ["Genres"] },
+    detail: { tags: ["Genres"], summary: "Movie Genres" },
   })
 
   .get("/api/v1/genre/tv", async ({ query }) => {
     const { genres } = await tmdb.tvGenres(language(query))
     return success(genres.map((g) => ({ id: g.id, name: g.name })))
   }, {
-    detail: { tags: ["Genres"] },
+    detail: { tags: ["Genres"], summary: "TV Genres" },
   })

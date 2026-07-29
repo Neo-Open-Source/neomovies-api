@@ -79,7 +79,7 @@ export const newFeatureRoutes = new Elysia()
   .get("/api/v1/new-feature", async () => {
     return success({ data: "ok" })
   }, {
-    detail: { tags: ["New Feature"] },
+  { detail: { tags: ["New Feature"], summary: "New Feature name" },
   })
 ```
 

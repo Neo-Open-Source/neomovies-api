@@ -73,7 +73,7 @@ export const categoryRoutes = new Elysia()
       items: s.items.map(c => ({ id: c.id, name: c.name, slug: c.slug, type: c.mediaType })),
     })))
   }, {
-    detail: { tags: ["Categories"] },
+    detail: { tags: ["Categories"], summary: "List Categories" },
   })
 
   .get("/api/v1/collection/:slug", async ({ params: { slug }, query }) => {
@@ -103,6 +103,6 @@ export const categoryRoutes = new Elysia()
 
     return success({ ...data, category: { id: cat.id, name: cat.name, slug: cat.slug } })
   }, {
-    detail: { tags: ["Categories"] },
+    detail: { tags: ["Categories"], summary: "Get Collection" },
     params: t.Object({ slug: t.String() }),
   })

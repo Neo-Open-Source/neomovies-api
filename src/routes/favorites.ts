@@ -12,13 +12,13 @@ export const favoriteRoutes = new Elysia()
     if (!userId) throw new UnauthorizedError()
     return success(await userData.listFavorites(userId, page(query)))
   }, {
-    detail: { tags: ["Favorites"] },
+    detail: { tags: ["Favorites"], summary: "List Favorites" },
   })
 
   .post("/api/v1/favorites/:mediaId", async ({ userId, params: { mediaId } }) => {
     if (!userId) throw new UnauthorizedError()
     return success(await userData.addFavorite(userId, mediaId, "movie"))
-  }, { detail: { tags: ["Favorites"] }, params: t.Object({ mediaId: t.Numeric() }) })
+  }, { detail: { tags: ["Favorites"], summary: "Add Favorite" }, params: t.Object({ mediaId: t.Numeric() }) })
 
   .delete("/api/v1/favorites/:mediaId", async ({ userId, params: { mediaId }, query }) => {
     if (!userId) throw new UnauthorizedError()
@@ -26,7 +26,7 @@ export const favoriteRoutes = new Elysia()
     await userData.removeFavorite(userId, Number(mediaId), mediaType)
     return success({ deleted: true })
   }, {
-    detail: { tags: ["Favorites"] },
+    detail: { tags: ["Favorites"], summary: "Remove Favorite" },
   })
 
   .get("/api/v1/favorites/:mediaId/check", async ({ userId, params: { mediaId }, query }) => {
@@ -34,5 +34,5 @@ export const favoriteRoutes = new Elysia()
     const mediaType = (query as Record<string, string>)?.mediaType || "movie"
     return success({ isFavorite: await userData.checkFavorite(userId, Number(mediaId), mediaType) })
   }, {
-    detail: { tags: ["Favorites"] },
+    detail: { tags: ["Favorites"], summary: "Check Favorite" },
   })

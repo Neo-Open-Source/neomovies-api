@@ -70,6 +70,7 @@
         "tags": [
           "Health"
         ],
+        "summary": "Health Check",
         "responses": {
           "200": {}
         }
@@ -91,6 +92,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Neo ID Login",
         "responses": {
           "200": {}
         }
@@ -102,6 +104,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Auth Callback",
         "responses": {
           "200": {}
         }
@@ -113,6 +116,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Mobile Auth Callback",
         "responses": {
           "200": {}
         }
@@ -124,6 +128,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Refresh Tokens",
         "responses": {
           "200": {}
         }
@@ -135,6 +140,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Get User Profile",
         "responses": {
           "200": {}
         }
@@ -144,6 +150,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Update User Profile",
         "responses": {
           "200": {}
         }
@@ -165,6 +172,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "List Refresh Tokens",
         "responses": {
           "200": {}
         }
@@ -176,6 +184,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Revoke Refresh Token",
         "responses": {
           "200": {}
         }
@@ -187,6 +196,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Revoke All Refresh Tokens",
         "responses": {
           "200": {}
         }
@@ -198,6 +208,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Logout",
         "responses": {
           "200": {}
         }
@@ -209,6 +220,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "Delete Account",
         "responses": {
           "200": {}
         }
@@ -239,6 +251,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Movie Details",
         "responses": {
           "200": {}
         }
@@ -269,6 +282,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "TV Show Details",
         "responses": {
           "200": {}
         }
@@ -299,6 +313,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Movie Collection",
         "responses": {
           "200": {}
         }
@@ -329,6 +344,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Movie Credits",
         "responses": {
           "200": {}
         }
@@ -359,6 +375,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "TV Credits",
         "responses": {
           "200": {}
         }
@@ -406,6 +423,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Season Details",
         "responses": {
           "200": {}
         }
@@ -470,6 +488,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Episode Details",
         "responses": {
           "200": {}
         }
@@ -500,6 +519,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Movie Recommendations",
         "responses": {
           "200": {}
         }
@@ -530,6 +550,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "TV Recommendations",
         "responses": {
           "200": {}
         }
@@ -560,6 +581,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Similar Movies",
         "responses": {
           "200": {}
         }
@@ -590,6 +612,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Similar TV Shows",
         "responses": {
           "200": {}
         }
@@ -601,6 +624,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Popular Movies",
         "responses": {
           "200": {}
         }
@@ -612,6 +636,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Top Rated Movies",
         "responses": {
           "200": {}
         }
@@ -623,6 +648,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Upcoming Movies",
         "responses": {
           "200": {}
         }
@@ -634,6 +660,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Popular TV Shows",
         "responses": {
           "200": {}
         }
@@ -645,6 +672,7 @@
         "tags": [
           "Media"
         ],
+        "summary": "Top Rated TV Shows",
         "responses": {
           "200": {}
         }
@@ -656,6 +684,7 @@
         "tags": [
           "Search"
         ],
+        "summary": "Multi Search",
         "responses": {
           "200": {}
         }
@@ -667,6 +696,7 @@
         "tags": [
           "Support"
         ],
+        "summary": "Supporters List",
         "responses": {
           "200": {}
         }
@@ -678,6 +708,7 @@
         "tags": [
           "Genres"
         ],
+        "summary": "Movie Genres",
         "responses": {
           "200": {}
         }
@@ -689,6 +720,7 @@
         "tags": [
           "Genres"
         ],
+        "summary": "TV Genres",
         "responses": {
           "200": {}
         }
@@ -700,6 +732,7 @@
         "tags": [
           "Favorites"
         ],
+        "summary": "List Favorites",
         "responses": {
           "200": {}
         }
@@ -730,6 +763,7 @@
         "tags": [
           "Favorites"
         ],
+        "summary": "Add Favorite",
         "responses": {
           "200": {}
         }
@@ -739,6 +773,7 @@
         "tags": [
           "Favorites"
         ],
+        "summary": "Remove Favorite",
         "parameters": [
           {
             "schema": {
@@ -760,6 +795,7 @@
         "tags": [
           "Favorites"
         ],
+        "summary": "Check Favorite",
         "parameters": [
           {
             "schema": {
@@ -781,6 +817,7 @@
         "tags": [
           "Watch Later"
         ],
+        "summary": "List Watch Later",
         "responses": {
           "200": {}
         }
@@ -811,6 +848,7 @@
         "tags": [
           "Watch Later"
         ],
+        "summary": "Add to Watch Later",
         "responses": {
           "200": {}
         }
@@ -820,6 +858,7 @@
         "tags": [
           "Watch Later"
         ],
+        "summary": "Remove from Watch Later",
         "parameters": [
           {
             "schema": {
@@ -841,6 +880,7 @@
         "tags": [
           "Watch Later"
         ],
+        "summary": "Check Watch Later",
         "parameters": [
           {
             "schema": {
@@ -862,6 +902,7 @@
         "tags": [
           "Sync"
         ],
+        "summary": "Get Sync Progress",
         "responses": {
           "200": {}
         }
@@ -872,6 +913,7 @@
         "tags": [
           "Sync"
         ],
+        "summary": "Upsert Sync Progress",
         "requestBody": {
           "required": true,
           "content": {
@@ -964,6 +1006,7 @@
         "tags": [
           "Sync"
         ],
+        "summary": "Delete Sync Progress",
         "responses": {
           "200": {}
         }
@@ -975,6 +1018,7 @@
         "tags": [
           "Sync"
         ],
+        "summary": "Batch Sync Progress",
         "responses": {
           "200": {}
         }
@@ -1021,6 +1065,7 @@
         "tags": [
           "Players"
         ],
+        "summary": "Alloha Player by TMDB ID",
         "responses": {
           "200": {}
         }
@@ -1067,6 +1112,7 @@
         "tags": [
           "Players"
         ],
+        "summary": "Alloha Player by KP ID",
         "responses": {
           "200": {}
         }
@@ -1112,6 +1158,7 @@
         "tags": [
           "Players"
         ],
+        "summary": "Alloha Proxy",
         "responses": {
           "200": {}
         }
@@ -1158,6 +1205,7 @@
         "tags": [
           "Players"
         ],
+        "summary": "Collaps Player",
         "responses": {
           "200": {}
         }
@@ -1204,6 +1252,7 @@
         "tags": [
           "Players"
         ],
+        "summary": "CDN Player",
         "responses": {
           "200": {}
         }
@@ -1241,6 +1290,7 @@
         "tags": [
           "Players"
         ],
+        "summary": "CDN Player by IMDB ID",
         "responses": {
           "200": {}
         }
@@ -1262,6 +1312,7 @@
         "tags": [
           "Players"
         ],
+        "summary": "HLS Proxy",
         "responses": {
           "200": {}
         }
@@ -1292,6 +1343,7 @@
         "tags": [
           "Images"
         ],
+        "summary": "Movie Backdrops",
         "responses": {
           "200": {}
         }
@@ -1322,6 +1374,7 @@
         "tags": [
           "Images"
         ],
+        "summary": "TV Backdrops",
         "responses": {
           "200": {}
         }
@@ -1386,6 +1439,7 @@
         "tags": [
           "Images"
         ],
+        "summary": "Episode Stills",
         "responses": {
           "200": {}
         }
@@ -1415,6 +1469,7 @@
         "tags": [
           "Torrents"
         ],
+        "summary": "Search Torrents",
         "responses": {
           "200": {}
         }
@@ -1427,6 +1482,7 @@
         "tags": [
           "Webhooks"
         ],
+        "summary": "Neo ID Webhook",
         "requestBody": {
           "required": true,
           "content": {
@@ -1497,6 +1553,7 @@
         "tags": [
           "Categories"
         ],
+        "summary": "List Categories",
         "responses": {
           "200": {}
         }
@@ -1518,6 +1575,7 @@
         "tags": [
           "Categories"
         ],
+        "summary": "Get Collection",
         "responses": {
           "200": {}
         }
