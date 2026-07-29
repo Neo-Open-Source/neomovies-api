@@ -8,4 +8,6 @@ const supporters = [
 ]
 
 export const supportRoutes = new Elysia()
-  .get("/api/v1/support/list", () => success(supporters))
+  .get("/api/v1/support/list", () => success(supporters), {
+    detail: { tags: ["Support"] },
+  })

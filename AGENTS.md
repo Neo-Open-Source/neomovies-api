@@ -67,6 +67,24 @@ Pagination:
 - **No silent error swallowing**: `.catch(() => {})` is replaced with proper error handling
 - **Token safety**: API tokens are never exposed to clients; player URLs are server-side proxied
 
+### OpenAPI Tags
+
+Every route MUST include a `detail: { tags: ["TagName"] }` in its config object to group endpoints in the Swagger playground. Tag definitions are registered in `src/app.ts` in the `swagger({ documentation: { tags: [...] } })` config.
+
+When adding a new route file, add both the tag definition in `app.ts` and `detail.tags` on each route:
+
+```typescript
+// routes/new-feature.ts
+export const newFeatureRoutes = new Elysia()
+  .get("/api/v1/new-feature", async () => {
+    return success({ data: "ok" })
+  }, {
+    detail: { tags: ["New Feature"] },
+  })
+```
+
+Existing tags: Auth, Categories, Favorites, Genres, Health, Images, Media, Players, Search, Support, Sync, Torrents, Watch Later, Webhooks.
+
 ## File Structure
 
 ```

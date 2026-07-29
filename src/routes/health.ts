@@ -9,4 +9,6 @@ export const healthRoutes = new Elysia()
       version: "3.0.0",
       timestamp: new Date().toISOString(),
     })
+  }, {
+    detail: { tags: ["Health"] },
   })

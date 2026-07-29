@@ -2,294 +2,1482 @@
   "openapi": "3.0.3",
   "info": {
     "title": "NeoWatch API",
-    "description": "REST API for NeoWatch — movies and TV shows streaming platform. Built with TypeScript, Bun, Elysia, Prisma, and PostgreSQL.",
-    "version": "3.0.0",
-    "contact": {
-      "name": "Neo Team",
-      "url": "https://github.com/anomalyco/neowatch-api-ts"
-    }
+    "description": "REST API for NeoWatch - movies and TV shows streaming platform",
+    "version": "3.0.0"
   },
-  "servers": [
-    { "url": "https://api.neome.uk", "description": "Production" },
-    { "url": "http://localhost:3000", "description": "Local development" }
-  ],
   "tags": [
-    { "name": "Health", "description": "API health check" },
-    { "name": "Auth", "description": "Authentication via Neo ID SSO" },
-    { "name": "Movies", "description": "Movie details, credits, recommendations" },
-    { "name": "TV", "description": "TV show details, seasons, episodes, credits" },
-    { "name": "Search", "description": "Text search and advanced filtering" },
-    { "name": "Categories", "description": "Browse categories and collections" },
-    { "name": "Genres", "description": "Movie and TV genre lists" },
-    { "name": "Favorites", "description": "User favorites management" },
-    { "name": "Watch Later", "description": "Watch later list management" },
-    { "name": "Sync", "description": "Cross-device watch progress sync" },
-    { "name": "Players", "description": "Video streaming providers" },
-    { "name": "Images", "description": "TMDB image proxy" },
-    { "name": "Torrents", "description": "Torrent search" },
-    { "name": "Support", "description": "Supporters list" },
-    { "name": "Webhooks", "description": "Webhook handlers" },
-    { "name": "Cron", "description": "Scheduled tasks" }
-  ],
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "Neo ID access token"
-      }
+    {
+      "name": "Auth",
+      "description": "Authentication and authorization"
     },
-    "schemas": {
-      "SuccessResponse": {
-        "type": "object",
-        "properties": {
-          "success": { "type": "boolean", "enum": [true] },
-          "data": {}
-        },
-        "required": ["success", "data"]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "success": { "type": "boolean", "enum": [false] },
-          "error": { "type": "string" }
-        },
-        "required": ["success", "error"]
-      },
-      "PaginatedResponse": {
-        "type": "object",
-        "properties": {
-          "success": { "type": "boolean", "enum": [true] },
-          "data": {
-            "type": "object",
-            "properties": {
-              "items": { "type": "array" },
-              "page": { "type": "integer" },
-              "totalPages": { "type": "integer" },
-              "totalResults": { "type": "integer" }
-            },
-            "required": ["items", "page", "totalPages", "totalResults"]
-          }
-        },
-        "required": ["success", "data"]
-      },
-      "Media": {
-        "type": "object",
-        "properties": {
-          "tmdbId": { "type": "integer" },
-          "imdbId": { "type": "string", "nullable": true },
-          "title": { "type": "string" },
-          "originalTitle": { "type": "string" },
-          "overview": { "type": "string" },
-          "poster": { "type": "string", "nullable": true },
-          "backdrop": { "type": "string", "nullable": true },
-          "releaseDate": { "type": "string", "nullable": true },
-          "genres": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": { "type": "integer" },
-                "name": { "type": "string" }
-              }
-            },
-            "nullable": true
-          },
-          "genreIds": {
-            "type": "array",
-            "items": { "type": "integer" },
-            "nullable": true
-          },
-          "voteAverage": { "type": "number" },
-          "voteCount": { "type": "integer" },
-          "popularity": { "type": "number" }
-        }
-      },
-      "MediaDetail": {
-        "allOf": [
-          { "$ref": "#/components/schemas/Media" },
-          {
-            "type": "object",
-            "properties": {
-              "runtime": { "type": "integer", "nullable": true },
-              "status": { "type": "string" },
-              "tagline": { "type": "string" },
-              "imdbRating": { "type": "number", "nullable": true },
-              "imdbVotes": { "type": "integer", "nullable": true },
-              "credits": {
-                "type": "object",
-                "properties": {
-                  "cast": { "type": "array", "items": { "$ref": "#/components/schemas/CastMember" } },
-                  "crew": { "type": "array", "items": { "$ref": "#/components/schemas/CrewMember" } }
-                }
-              },
-              "productionCompanies": {
-                "type": "array",
-                "items": { "$ref": "#/components/schemas/Company" }
-              }
-            }
-          }
-        ]
-      },
-      "TVDetail": {
-        "allOf": [
-          { "$ref": "#/components/schemas/Media" },
-          {
-            "type": "object",
-            "properties": {
-              "seasons": { "type": "array", "items": { "$ref": "#/components/schemas/Season" } },
-              "numberOfSeasons": { "type": "integer" },
-              "numberOfEpisodes": { "type": "integer" },
-              "status": { "type": "string" },
-              "tagline": { "type": "string" },
-              "networks": { "type": "array", "items": { "$ref": "#/components/schemas/Network" } },
-              "productionCompanies": { "type": "array", "items": { "$ref": "#/components/schemas/Company" } },
-              "credits": {
-                "type": "object",
-                "properties": {
-                  "cast": { "type": "array", "items": { "$ref": "#/components/schemas/CastMember" } },
-                  "crew": { "type": "array", "items": { "$ref": "#/components/schemas/CrewMember" } }
-                }
-              },
-              "imdbRating": { "type": "number", "nullable": true },
-              "imdbVotes": { "type": "integer", "nullable": true }
-            }
-          }
-        ]
-      },
-      "CastMember": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "character": { "type": "string" },
-          "profile": { "type": "string", "nullable": true },
-          "order": { "type": "integer" }
-        }
-      },
-      "CrewMember": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "job": { "type": "string" },
-          "department": { "type": "string" },
-          "profile": { "type": "string", "nullable": true }
-        }
-      },
-      "Season": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "seasonNumber": { "type": "integer" },
-          "episodeCount": { "type": "integer" },
-          "overview": { "type": "string" },
-          "poster": { "type": "string", "nullable": true },
-          "airDate": { "type": "string", "nullable": true }
-        }
-      },
-      "Episode": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "overview": { "type": "string" },
-          "still": { "type": "string", "nullable": true },
-          "airDate": { "type": "string", "nullable": true },
-          "episodeNumber": { "type": "integer" },
-          "seasonNumber": { "type": "integer" },
-          "voteAverage": { "type": "number" },
-          "runtime": { "type": "integer", "nullable": true }
-        }
-      },
-      "Company": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "logo": { "type": "string", "nullable": true }
-        }
-      },
-      "Network": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "logo": { "type": "string", "nullable": true }
-        }
-      },
-      "AuthTokens": {
-        "type": "object",
-        "properties": {
-          "accessToken": { "type": "string" },
-          "refreshToken": { "type": "string" },
-          "idToken": { "type": "string" },
-          "expiresIn": { "type": "integer" }
-        }
-      },
-      "PlayerResponse": {
-        "type": "object",
-        "properties": {
-          "provider": { "type": "string" },
-          "url": { "type": "string" },
-          "type": { "type": "string", "enum": ["iframe", "hls"] }
-        }
-      }
+    {
+      "name": "Categories",
+      "description": "Browse categories and collections"
+    },
+    {
+      "name": "Favorites",
+      "description": "User favorites management"
+    },
+    {
+      "name": "Genres",
+      "description": "Movie and TV show genres"
+    },
+    {
+      "name": "Health",
+      "description": "Health check endpoint"
+    },
+    {
+      "name": "Images",
+      "description": "Image proxy and backdrops"
+    },
+    {
+      "name": "Media",
+      "description": "Movie and TV show details"
+    },
+    {
+      "name": "Players",
+      "description": "Video streaming players"
+    },
+    {
+      "name": "Search",
+      "description": "Multi-type search"
+    },
+    {
+      "name": "Support",
+      "description": "Supporters list"
+    },
+    {
+      "name": "Sync",
+      "description": "Cross-device sync progress"
+    },
+    {
+      "name": "Torrents",
+      "description": "Torrent search"
+    },
+    {
+      "name": "Watch Later",
+      "description": "Watch later management"
+    },
+    {
+      "name": "Webhooks",
+      "description": "External webhook handlers"
     }
-  },
+  ],
   "paths": {
     "/api/v1/health": {
       "get": {
-        "tags": ["Health"],
-        "summary": "Health check",
-        "operationId": "health",
+        "operationId": "getApiV1Health",
+        "tags": [
+          "Health"
+        ],
         "responses": {
-          "200": {
-            "description": "API is healthy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "enum": [true] },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "status": { "type": "string", "example": "ok" },
-                        "timestamp": { "type": "string" }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
+          "200": {}
         }
       }
     },
     "/api/v1/auth/login": {
       "get": {
-        "tags": ["Auth"],
-        "summary": "Get Neo ID authorization URL",
-        "operationId": "authLogin",
         "parameters": [
-          { "name": "redirect_uri", "in": "query", "schema": { "type": "string" }, "description": "Custom redirect URI" }
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "redirect_uri",
+            "required": false
+          }
+        ],
+        "operationId": "getApiV1AuthLogin",
+        "tags": [
+          "Auth"
         ],
         "responses": {
-          "200": {
-            "description": "Authorization URL",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "enum": [true] },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "url": { "type": "string", "example": "https://id.neome.uk/api/v1/oauth2/authorize?..." }
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/callback": {
+      "get": {
+        "operationId": "getApiV1AuthCallback",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/mobile-callback": {
+      "get": {
+        "operationId": "getApiV1AuthMobile-callback",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "postApiV1AuthRefresh",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/profile": {
+      "get": {
+        "operationId": "getApiV1AuthProfile",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      },
+      "put": {
+        "operationId": "putApiV1AuthProfile",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/refresh-tokens": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "authorization",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1AuthRefresh-tokens",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/refresh-tokens/revoke": {
+      "post": {
+        "operationId": "postApiV1AuthRefresh-tokensRevoke",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/refresh-tokens/revoke-all": {
+      "post": {
+        "operationId": "postApiV1AuthRefresh-tokensRevoke-all",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "postApiV1AuthLogout",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/auth/account": {
+      "delete": {
+        "operationId": "deleteApiV1AuthAccount",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1MovieById",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1TvById",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/{id}/collection": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1MovieByIdCollection",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/{id}/credits": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1MovieByIdCredits",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/{id}/credits": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1TvByIdCredits",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/{id}/season/{season}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "season",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1TvByIdSeasonBySeason",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/{id}/season/{season}/episode/{episode}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "season",
+            "required": true
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "episode",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1TvByIdSeasonBySeasonEpisodeByEpisode",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/{id}/recommendations": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1MovieByIdRecommendations",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/{id}/recommendations": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1TvByIdRecommendations",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/{id}/similar": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1MovieByIdSimilar",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/{id}/similar": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1TvByIdSimilar",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/popular": {
+      "get": {
+        "operationId": "getApiV1MoviePopular",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/top-rated": {
+      "get": {
+        "operationId": "getApiV1MovieTop-rated",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/upcoming": {
+      "get": {
+        "operationId": "getApiV1MovieUpcoming",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/popular": {
+      "get": {
+        "operationId": "getApiV1TvPopular",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/top-rated": {
+      "get": {
+        "operationId": "getApiV1TvTop-rated",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "operationId": "getApiV1Search",
+        "tags": [
+          "Search"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/support/list": {
+      "get": {
+        "operationId": "getApiV1SupportList",
+        "tags": [
+          "Support"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/genre/movie": {
+      "get": {
+        "operationId": "getApiV1GenreMovie",
+        "tags": [
+          "Genres"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/genre/tv": {
+      "get": {
+        "operationId": "getApiV1GenreTv",
+        "tags": [
+          "Genres"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/favorites": {
+      "get": {
+        "operationId": "getApiV1Favorites",
+        "tags": [
+          "Favorites"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/favorites/{mediaId}": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "mediaId",
+            "required": true
+          }
+        ],
+        "operationId": "postApiV1FavoritesByMediaId",
+        "tags": [
+          "Favorites"
+        ],
+        "responses": {
+          "200": {}
+        }
+      },
+      "delete": {
+        "operationId": "deleteApiV1FavoritesByMediaId",
+        "tags": [
+          "Favorites"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "mediaId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/favorites/{mediaId}/check": {
+      "get": {
+        "operationId": "getApiV1FavoritesByMediaIdCheck",
+        "tags": [
+          "Favorites"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "mediaId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/watch-later": {
+      "get": {
+        "operationId": "getApiV1Watch-later",
+        "tags": [
+          "Watch Later"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/watch-later/{mediaId}": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "mediaId",
+            "required": true
+          }
+        ],
+        "operationId": "postApiV1Watch-laterByMediaId",
+        "tags": [
+          "Watch Later"
+        ],
+        "responses": {
+          "200": {}
+        }
+      },
+      "delete": {
+        "operationId": "deleteApiV1Watch-laterByMediaId",
+        "tags": [
+          "Watch Later"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "mediaId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/watch-later/{mediaId}/check": {
+      "get": {
+        "operationId": "getApiV1Watch-laterByMediaIdCheck",
+        "tags": [
+          "Watch Later"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "mediaId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/sync/progress": {
+      "get": {
+        "operationId": "getApiV1SyncProgress",
+        "tags": [
+          "Sync"
+        ],
+        "responses": {
+          "200": {}
+        }
+      },
+      "put": {
+        "parameters": [],
+        "operationId": "putApiV1SyncProgress",
+        "tags": [
+          "Sync"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mediaId",
+                  "progress"
+                ],
+                "properties": {
+                  "mediaId": {
+                    "type": "number"
+                  },
+                  "mediaType": {
+                    "type": "string"
+                  },
+                  "season": {
+                    "type": "number"
+                  },
+                  "episode": {
+                    "type": "number"
+                  },
+                  "progress": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mediaId",
+                  "progress"
+                ],
+                "properties": {
+                  "mediaId": {
+                    "type": "number"
+                  },
+                  "mediaType": {
+                    "type": "string"
+                  },
+                  "season": {
+                    "type": "number"
+                  },
+                  "episode": {
+                    "type": "number"
+                  },
+                  "progress": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mediaId",
+                  "progress"
+                ],
+                "properties": {
+                  "mediaId": {
+                    "type": "number"
+                  },
+                  "mediaType": {
+                    "type": "string"
+                  },
+                  "season": {
+                    "type": "number"
+                  },
+                  "episode": {
+                    "type": "number"
+                  },
+                  "progress": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {}
+        }
+      },
+      "delete": {
+        "operationId": "deleteApiV1SyncProgress",
+        "tags": [
+          "Sync"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/sync/progress/batch": {
+      "post": {
+        "operationId": "postApiV1SyncProgressBatch",
+        "tags": [
+          "Sync"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/player/alloha/tmdb/{tmdbId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "tmdbId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "season",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "episode",
+            "required": false
+          }
+        ],
+        "operationId": "getApiV1PlayerAllohaTmdbByTmdbId",
+        "tags": [
+          "Players"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/player/alloha/kp/{kpId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "kpId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "season",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "episode",
+            "required": false
+          }
+        ],
+        "operationId": "getApiV1PlayerAllohaKpByKpId",
+        "tags": [
+          "Players"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/player/alloha/proxy": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "tmdb",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "kp",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "season",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "episode",
+            "required": false
+          }
+        ],
+        "operationId": "getApiV1PlayerAllohaProxy",
+        "tags": [
+          "Players"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/player/collaps/kp/{kpId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "kpId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "season",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "episode",
+            "required": false
+          }
+        ],
+        "operationId": "getApiV1PlayerCollapsKpByKpId",
+        "tags": [
+          "Players"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/player/cdn/{cdnId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "cdnId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "season",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "episode",
+            "required": false
+          }
+        ],
+        "operationId": "getApiV1PlayerCdnByCdnId",
+        "tags": [
+          "Players"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/player/cdn/imdb/{imdbId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "imdbId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "season",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "episode",
+            "required": false
+          }
+        ],
+        "operationId": "getApiV1PlayerCdnImdbByImdbId",
+        "tags": [
+          "Players"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/player/hls/proxy": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "url",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1PlayerHlsProxy",
+        "tags": [
+          "Players"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/movie/{id}/backdrops": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1MovieByIdBackdrops",
+        "tags": [
+          "Images"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/{id}/backdrops": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1TvByIdBackdrops",
+        "tags": [
+          "Images"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/tv/{id}/season/{season}/episode/{episode}/stills": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "season",
+            "required": true
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "numeric",
+                  "default": 0,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "in": "path",
+            "name": "episode",
+            "required": true
+          }
+        ],
+        "operationId": "getApiV1TvByIdSeasonBySeasonEpisodeByEpisodeStills",
+        "tags": [
+          "Images"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/torrents/search": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "q",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "imdb_id",
+            "required": false
+          }
+        ],
+        "operationId": "getApiV1TorrentsSearch",
+        "tags": [
+          "Torrents"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/v1/webhooks/neo-id": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1WebhooksNeo-id",
+        "tags": [
+          "Webhooks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event": {
+                    "type": "string"
+                  },
+                  "user": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event": {
+                    "type": "string"
+                  },
+                  "user": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event": {
+                    "type": "string"
+                  },
+                  "user": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
                       }
                     }
                   }
@@ -297,929 +1485,54 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/v1/auth/callback": {
-      "get": {
-        "tags": ["Auth"],
-        "summary": "OAuth callback (sets cookies, redirects to frontend)",
-        "operationId": "authCallback",
-        "parameters": [
-          { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "redirect_uri", "in": "query", "schema": { "type": "string" } }
-        ],
-        "responses": {
-          "302": { "description": "Redirect to frontend with auth cookies" }
-        }
-      }
-    },
-    "/api/v1/auth/mobile-callback": {
-      "get": {
-        "tags": ["Auth"],
-        "summary": "OAuth callback for mobile apps (returns tokens in JSON)",
-        "operationId": "authMobileCallback",
-        "parameters": [
-          { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "redirect_uri", "in": "query", "schema": { "type": "string" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Auth tokens",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/refresh": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Refresh access token",
-        "operationId": "authRefresh",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "refreshToken": { "type": "string" }
-                },
-                "required": ["refreshToken"]
-              }
-            }
-          }
         },
         "responses": {
-          "200": {
-            "description": "New tokens",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
-              }
-            }
-          },
-          "401": { "description": "Invalid refresh token" }
-        }
-      }
-    },
-    "/api/v1/auth/profile": {
-      "get": {
-        "tags": ["Auth"],
-        "summary": "Get current user profile",
-        "operationId": "authGetProfile",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "User profile",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
-              }
-            }
-          },
-          "401": { "description": "Unauthorized" }
-        }
-      },
-      "put": {
-        "tags": ["Auth"],
-        "summary": "Update user profile",
-        "operationId": "authUpdateProfile",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": { "type": "string" },
-                  "avatar": { "type": "string", "format": "uri" }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Profile updated" }
-        }
-      }
-    },
-    "/api/v1/auth/logout": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Logout",
-        "operationId": "authLogout",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": { "description": "Logged out" }
-        }
-      }
-    },
-    "/api/v1/auth/account": {
-      "delete": {
-        "tags": ["Auth"],
-        "summary": "Delete account",
-        "operationId": "authDeleteAccount",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": { "description": "Account deleted" }
-        }
-      }
-    },
-    "/api/v1/auth/refresh-tokens": {
-      "get": {
-        "tags": ["Auth"],
-        "summary": "List active refresh tokens",
-        "operationId": "authListTokens",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": { "description": "List of refresh tokens" }
-        }
-      }
-    },
-    "/api/v1/auth/refresh-tokens/revoke": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Revoke a refresh token",
-        "operationId": "authRevokeToken",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "refreshToken": { "type": "string" }
-                },
-                "required": ["refreshToken"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Token revoked" }
-        }
-      }
-    },
-    "/api/v1/auth/refresh-tokens/revoke-all": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Revoke all refresh tokens",
-        "operationId": "authRevokeAllTokens",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": { "description": "All tokens revoked" }
-        }
-      }
-    },
-    "/api/v1/movie/{id}": {
-      "get": {
-        "tags": ["Movies"],
-        "summary": "Get movie details",
-        "operationId": "getMovie",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "language", "in": "query", "schema": { "type": "string", "default": "ru-RU" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Movie details",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/movie/{id}/credits": {
-      "get": {
-        "tags": ["Movies"],
-        "summary": "Get movie credits (cast & crew)",
-        "operationId": "getMovieCredits",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "Movie credits" }
-        }
-      }
-    },
-    "/api/v1/movie/{id}/collection": {
-      "get": {
-        "tags": ["Movies"],
-        "summary": "Get movie collection (franchise)",
-        "operationId": "getMovieCollection",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "Collection with parts" }
-        }
-      }
-    },
-    "/api/v1/movie/{id}/recommendations": {
-      "get": {
-        "tags": ["Movies"],
-        "summary": "Get movie recommendations",
-        "operationId": "getMovieRecommendations",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated recommendations",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/movie/{id}/similar": {
-      "get": {
-        "tags": ["Movies"],
-        "summary": "Get similar movies",
-        "operationId": "getMovieSimilar",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated similar movies",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/movie/popular": {
-      "get": {
-        "tags": ["Movies"],
-        "summary": "Get popular movies",
-        "operationId": "getPopularMovies",
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated popular movies",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/movie/top-rated": {
-      "get": {
-        "tags": ["Movies"],
-        "summary": "Get top rated movies",
-        "operationId": "getTopRatedMovies",
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated top rated movies",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/movie/upcoming": {
-      "get": {
-        "tags": ["Movies"],
-        "summary": "Get upcoming movies",
-        "operationId": "getUpcomingMovies",
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated upcoming movies",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tv/{id}": {
-      "get": {
-        "tags": ["TV"],
-        "summary": "Get TV show details",
-        "operationId": "getTVShow",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "language", "in": "query", "schema": { "type": "string", "default": "ru-RU" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "TV show details",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tv/{id}/credits": {
-      "get": {
-        "tags": ["TV"],
-        "summary": "Get TV show credits",
-        "operationId": "getTVCredits",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "TV show credits" }
-        }
-      }
-    },
-    "/api/v1/tv/{id}/season/{seasonNumber}": {
-      "get": {
-        "tags": ["TV"],
-        "summary": "Get season details with episodes",
-        "operationId": "getTVSeason",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "seasonNumber", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "Season details" }
-        }
-      }
-    },
-    "/api/v1/tv/{id}/season/{seasonNumber}/episode/{episodeNumber}": {
-      "get": {
-        "tags": ["TV"],
-        "summary": "Get episode details",
-        "operationId": "getTVEpisode",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "seasonNumber", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "episodeNumber", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Episode details",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Episode" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tv/{id}/recommendations": {
-      "get": {
-        "tags": ["TV"],
-        "summary": "Get TV show recommendations",
-        "operationId": "getTVRecommendations",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated recommendations",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tv/{id}/similar": {
-      "get": {
-        "tags": ["TV"],
-        "summary": "Get similar TV shows",
-        "operationId": "getTVSimilar",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated similar TV shows",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tv/popular": {
-      "get": {
-        "tags": ["TV"],
-        "summary": "Get popular TV shows",
-        "operationId": "getPopularTV",
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated popular TV shows",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tv/top-rated": {
-      "get": {
-        "tags": ["TV"],
-        "summary": "Get top rated TV shows",
-        "operationId": "getTopRatedTV",
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated top rated TV shows",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/search": {
-      "get": {
-        "tags": ["Search"],
-        "summary": "Search movies, TV shows, and multi",
-        "operationId": "search",
-        "parameters": [
-          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Text search query" },
-          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["movie", "tv", "multi"] } },
-          { "name": "genre", "in": "query", "schema": { "type": "string" }, "description": "Genre IDs (comma-separated)" },
-          { "name": "year", "in": "query", "schema": { "type": "integer" } },
-          { "name": "yearFrom", "in": "query", "schema": { "type": "integer" } },
-          { "name": "yearTo", "in": "query", "schema": { "type": "integer" } },
-          { "name": "rating", "in": "query", "schema": { "type": "number" } },
-          { "name": "sort_by", "in": "query", "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Search results",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
-              }
-            }
-          }
+          "200": {}
         }
       }
     },
     "/api/v1/categories": {
       "get": {
-        "tags": ["Categories"],
-        "summary": "Get browse categories",
-        "operationId": "getCategories",
+        "operationId": "getApiV1Categories",
+        "tags": [
+          "Categories"
+        ],
         "responses": {
-          "200": { "description": "Categories grouped by section" }
+          "200": {}
         }
       }
     },
     "/api/v1/collection/{slug}": {
       "get": {
-        "tags": ["Categories"],
-        "summary": "Get category collection",
-        "operationId": "getCollection",
         "parameters": [
-          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }
-        ],
-        "responses": {
-          "200": { "description": "Collection with items" }
-        }
-      }
-    },
-    "/api/v1/genre/movie": {
-      "get": {
-        "tags": ["Genres"],
-        "summary": "Get movie genres",
-        "operationId": "getMovieGenres",
-        "responses": {
-          "200": { "description": "List of movie genres" }
-        }
-      }
-    },
-    "/api/v1/genre/tv": {
-      "get": {
-        "tags": ["Genres"],
-        "summary": "Get TV genres",
-        "operationId": "getTVGenres",
-        "responses": {
-          "200": { "description": "List of TV genres" }
-        }
-      }
-    },
-    "/api/v1/favorites": {
-      "get": {
-        "tags": ["Favorites"],
-        "summary": "List user favorites",
-        "operationId": "listFavorites",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": { "description": "Paginated favorites" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/v1/favorites/{mediaId}": {
-      "post": {
-        "tags": ["Favorites"],
-        "summary": "Add to favorites",
-        "operationId": "addFavorite",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "mediaId", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "Added to favorites" },
-          "401": { "description": "Unauthorized" }
-        }
-      },
-      "delete": {
-        "tags": ["Favorites"],
-        "summary": "Remove from favorites",
-        "operationId": "removeFavorite",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "mediaId", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "mediaType", "in": "query", "schema": { "type": "string", "default": "movie" } }
-        ],
-        "responses": {
-          "200": { "description": "Removed from favorites" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/v1/favorites/{mediaId}/check": {
-      "get": {
-        "tags": ["Favorites"],
-        "summary": "Check if media is favorited",
-        "operationId": "checkFavorite",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "mediaId", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "mediaType", "in": "query", "schema": { "type": "string", "default": "movie" } }
-        ],
-        "responses": {
-          "200": { "description": "Favorite status" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/v1/watch-later": {
-      "get": {
-        "tags": ["Watch Later"],
-        "summary": "List watch later items",
-        "operationId": "listWatchLater",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": { "description": "Watch later list" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/v1/watch-later/{mediaId}": {
-      "post": {
-        "tags": ["Watch Later"],
-        "summary": "Add to watch later",
-        "operationId": "addWatchLater",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "mediaId", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "Added to watch later" },
-          "401": { "description": "Unauthorized" }
-        }
-      },
-      "delete": {
-        "tags": ["Watch Later"],
-        "summary": "Remove from watch later",
-        "operationId": "removeWatchLater",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "mediaId", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "Removed from watch later" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/v1/watch-later/{mediaId}/check": {
-      "get": {
-        "tags": ["Watch Later"],
-        "summary": "Check if in watch later",
-        "operationId": "checkWatchLater",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "mediaId", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "Watch later status" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/v1/sync/progress": {
-      "get": {
-        "tags": ["Sync"],
-        "summary": "Get all sync progress",
-        "operationId": "getSyncProgress",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": { "description": "Sync progress list" },
-          "401": { "description": "Unauthorized" }
-        }
-      },
-      "put": {
-        "tags": ["Sync"],
-        "summary": "Upsert sync progress",
-        "operationId": "upsertSyncProgress",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "mediaId": { "type": "integer" },
-                  "mediaType": { "type": "string" },
-                  "season": { "type": "integer" },
-                  "episode": { "type": "integer" },
-                  "progress": { "type": "number" }
-                },
-                "required": ["mediaId", "progress"]
-              }
-            }
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "slug",
+            "required": true
           }
-        },
-        "responses": {
-          "200": { "description": "Progress updated" },
-          "401": { "description": "Unauthorized" }
-        }
-      },
-      "delete": {
-        "tags": ["Sync"],
-        "summary": "Delete sync progress",
-        "operationId": "deleteSyncProgress",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "mediaId": { "type": "integer" },
-                  "mediaType": { "type": "string" },
-                  "season": { "type": "integer" },
-                  "episode": { "type": "integer" }
-                },
-                "required": ["mediaId"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Progress deleted" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/v1/sync/progress/batch": {
-      "post": {
-        "tags": ["Sync"],
-        "summary": "Batch upsert sync progress",
-        "operationId": "batchUpsertSyncProgress",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "items": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "mediaId": { "type": "integer" },
-                        "mediaType": { "type": "string" },
-                        "season": { "type": "integer" },
-                        "episode": { "type": "integer" },
-                        "progress": { "type": "number" }
-                      },
-                      "required": ["mediaId", "progress"]
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Batch progress updated" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/v1/player/alloha/proxy": {
-      "get": {
-        "tags": ["Players"],
-        "summary": "Alloha player proxy (iframe source)",
-        "operationId": "allohaProxy",
-        "parameters": [
-          { "name": "tmdb", "in": "query", "schema": { "type": "integer" } },
-          { "name": "kp", "in": "query", "schema": { "type": "integer" } },
-          { "name": "season", "in": "query", "schema": { "type": "integer" } },
-          { "name": "episode", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "operationId": "getApiV1CollectionBySlug",
+        "tags": [
+          "Categories"
         ],
         "responses": {
-          "200": { "description": "HTML/iframe content" }
-        }
-      }
-    },
-    "/api/v1/player/alloha/tmdb/{tmdbId}": {
-      "get": {
-        "tags": ["Players"],
-        "summary": "Alloha player by TMDB ID (returns proxy URL)",
-        "operationId": "allohaByTmdb",
-        "parameters": [
-          { "name": "tmdbId", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "season", "in": "query", "schema": { "type": "integer" } },
-          { "name": "episode", "in": "query", "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Player info",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PlayerResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/player/collaps/kp/{kpId}": {
-      "get": {
-        "tags": ["Players"],
-        "summary": "Collaps player by Kinopoisk ID",
-        "operationId": "collapsByKp",
-        "parameters": [
-          { "name": "kpId", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "season", "in": "query", "schema": { "type": "integer" } },
-          { "name": "episode", "in": "query", "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Player info",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PlayerResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/player/cdn/{cdnId}": {
-      "get": {
-        "tags": ["Players"],
-        "summary": "CDN player by CDN ID",
-        "operationId": "cdnById",
-        "parameters": [
-          { "name": "cdnId", "in": "path", "required": true, "schema": { "type": "integer" } },
-          { "name": "season", "in": "query", "schema": { "type": "integer" } },
-          { "name": "episode", "in": "query", "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": { "description": "HLS stream info" }
-        }
-      }
-    },
-    "/api/v1/player/hls/proxy": {
-      "get": {
-        "tags": ["Players"],
-        "summary": "HLS proxy with URL rewriting",
-        "operationId": "hlsProxy",
-        "parameters": [
-          { "name": "url", "in": "query", "required": true, "schema": { "type": "string", "format": "uri" } }
-        ],
-        "responses": {
-          "200": { "description": "HLS playlist or segment" }
-        }
-      }
-    },
-    "/api/v1/torrents/search": {
-      "get": {
-        "tags": ["Torrents"],
-        "summary": "Search torrents",
-        "operationId": "searchTorrents",
-        "parameters": [
-          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Search query" },
-          { "name": "imdb_id", "in": "query", "schema": { "type": "string" }, "description": "IMDb ID" }
-        ],
-        "responses": {
-          "200": { "description": "Torrent results" }
-        }
-      }
-    },
-    "/api/v1/support": {
-      "get": {
-        "tags": ["Support"],
-        "summary": "Get supporters list",
-        "operationId": "getSupporters",
-        "responses": {
-          "200": { "description": "List of supporters" }
-        }
-      }
-    },
-    "/api/v1/webhooks/neo-id": {
-      "post": {
-        "tags": ["Webhooks"],
-        "summary": "Neo ID webhook handler",
-        "operationId": "webhookNeoId",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "event": { "type": "string" },
-                  "user": {
-                    "type": "object",
-                    "properties": {
-                      "id": { "type": "string" }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Webhook received" }
+          "200": {}
         }
       }
     },
     "/api/v1/cron/imdb-ratings": {
       "get": {
-        "tags": ["Cron"],
-        "summary": "Sync IMDb ratings (cron job)",
-        "operationId": "cronImdbRatings",
-        "parameters": [
-          { "name": "secret", "in": "query", "required": true, "schema": { "type": "string" } }
-        ],
+        "operationId": "getApiV1CronImdb-ratings",
         "responses": {
-          "200": { "description": "Ratings synced" }
+          "200": {}
         }
       }
     }
+  },
+  "components": {
+    "schemas": {}
   }
 }
