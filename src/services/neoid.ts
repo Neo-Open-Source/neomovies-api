@@ -104,7 +104,8 @@ class NeoIdClient {
       headers: { Authorization: authHeader },
     })
     if (!res.ok) return []
-    return (await res.json()) as any
+    const data = await res.json() as { id: string; deviceName?: string; createdAt: string }[]
+    return data
   }
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {

@@ -10,7 +10,7 @@ const config: Config = {
   baseUrl: "/",
   onBrokenLinks: isDev ? "throw" : "warn",
   onBrokenMarkdownLinks: "warn",
-  favicon: "img/favicon.ico",
+  favicon: "img/favicon.png",
 
   i18n: {
     defaultLocale: "en",
@@ -43,7 +43,8 @@ const config: Config = {
         docs: {
           routeBasePath: "/docs",
           sidebarPath: "./sidebars.ts",
-          showLastUpdateTime: true,
+          showLastUpdateTime: false,
+          showLastUpdateAuthor: false,
         },
         blog: false,
         theme: {
@@ -76,7 +77,7 @@ const config: Config = {
           position: "right",
         },
         {
-          href: "https://github.com/anomalyco/neowatch-api-ts",
+          href: "https://github.com/Neo-Open-Source/neomovies-api",
           label: "GitHub",
           position: "right",
         },
@@ -97,7 +98,7 @@ const config: Config = {
           title: "Community",
           items: [
             { label: "Telegram", href: "https://t.me/neowatch_news" },
-            { label: "GitHub", href: "https://github.com/anomalyco/neowatch-api-ts" },
+            { label: "GitHub", href: "https://github.com/Neo-Open-Source/neomovies-api" },
           ],
         },
       ],

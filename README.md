@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>NeoWatch API v3</strong> — REST API for streaming movies and TV shows.
+  <strong>NeoWatch API</strong> — REST API for streaming movies and TV shows.
 </p>
 
 <div align="center">

@@ -1,5 +1,7 @@
 {
+  "framework": null,
   "bunVersion": "1.x",
+  "buildCommand": "cd docs && bun install && bun run build",
   "outputDirectory": "docs/build",
   "crons": [
     {
@@ -9,7 +11,6 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/playground", "destination": "/api/index" },
     { "source": "/openapi.json", "destination": "/api/index" }
   ],
   "headers": [

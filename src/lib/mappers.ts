@@ -1,6 +1,9 @@
 import { tmdb } from "../services/tmdb"
 import * as images from "./images"
-import type { TMDBMovie, TMDBTVShow, TMDBGenre } from "../types/tmdb"
+import type {
+  TMDBMovie, TMDBTVShow, TMDBGenre, TMDBSeason, TMDBEpisode,
+  TMDBCompany, TMDBNetwork,
+} from "../types/tmdb"
 
 interface TMDBMovieOrDetails extends TMDBMovie {
   genres?: TMDBGenre[]
@@ -27,13 +30,19 @@ interface TMDBCrewMember {
   profile_path: string | null
 }
 
-interface TMDBCompany {
+interface TMDBCompanySimple {
   id: number
   name: string
   logo_path: string | null
 }
 
-interface TMDBSeason {
+interface TMDBNetworkSimple {
+  id: number
+  name: string
+  logo_path: string | null
+}
+
+interface TMDBSeasonSimple {
   id: number
   name: string
   season_number: number
@@ -43,7 +52,7 @@ interface TMDBSeason {
   air_date: string | null
 }
 
-interface TMDBEpisode {
+interface TMDBEpisodeWithRuntime {
   id: number
   name: string
   overview: string
@@ -53,12 +62,6 @@ interface TMDBEpisode {
   season_number: number
   vote_average: number
   runtime: number | null
-}
-
-interface TMDBNetwork {
-  id: number
-  name: string
-  logo_path: string | null
 }
 
 function parseGenres(m: TMDBMovieOrDetails | TMDBTVOrDetails): { id: number; name: string }[] | null {
@@ -131,7 +134,7 @@ export function mapCrewMember(c: TMDBCrewMember) {
   }
 }
 
-export function mapCompany(c: TMDBCompany) {
+export function mapCompany(c: TMDBCompany | TMDBCompanySimple) {
   return {
     id: c.id,
     name: c.name,
@@ -140,7 +143,7 @@ export function mapCompany(c: TMDBCompany) {
   }
 }
 
-export function mapSeason(s: TMDBSeason) {
+export function mapSeason(s: TMDBSeason | TMDBSeasonSimple) {
   return {
     id: s.id,
     name: s.name,
@@ -153,7 +156,7 @@ export function mapSeason(s: TMDBSeason) {
   }
 }
 
-export function mapEpisode(e: TMDBEpisode) {
+export function mapEpisode(e: TMDBEpisode | TMDBEpisodeWithRuntime) {
   return {
     id: e.id,
     name: e.name,
@@ -164,11 +167,11 @@ export function mapEpisode(e: TMDBEpisode) {
     episodeNumber: e.episode_number,
     seasonNumber: e.season_number,
     voteAverage: e.vote_average,
-    runtime: e.runtime,
+    runtime: "runtime" in e ? e.runtime : null,
   }
 }
 
-export function mapNetwork(n: TMDBNetwork) {
+export function mapNetwork(n: TMDBNetwork | TMDBNetworkSimple) {
   return {
     id: n.id,
     name: n.name,

@@ -159,6 +159,19 @@ export interface TMDBVideo {
   official: boolean
 }
 
+export interface TMDBImageItem {
+  file_path: string
+  iso_639_1: string | null
+  vote_average: number
+  vote_count: number
+}
+
+export interface TMDBImagesResponse {
+  backdrops: TMDBImageItem[]
+  logos: TMDBImageItem[]
+  posters: TMDBImageItem[]
+}
+
 export interface TMDBDiscoverParams {
   with_genres?: string
   with_original_language?: string
@@ -172,4 +185,7 @@ export interface TMDBDiscoverParams {
   page?: number
   with_keywords?: string
   with_companies?: string
+  with_networks?: string | number
+  with_watch_providers?: string
+  watch_region?: string
 }

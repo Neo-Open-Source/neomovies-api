@@ -7,7 +7,6 @@ import { authRoutes } from "./routes/auth"
 import { mediaRoutes } from "./routes/media"
 import { searchRoutes } from "./routes/search"
 
-import { genreRoutes } from "./routes/genres"
 import { favoriteRoutes } from "./routes/favorites"
 import { watchLaterRoutes } from "./routes/watch-later"
 import { syncRoutes } from "./routes/sync"
@@ -56,14 +55,13 @@ export const app = new Elysia()
     documentation: {
       info: {
         title: "NeoWatch API",
-        version: "3.0.0",
+        version: "1.0.0",
         description: "REST API for NeoWatch - movies and TV shows streaming platform",
       },
       tags: [
         { name: "Auth", description: "Authentication and authorization" },
         { name: "Categories", description: "Browse categories and collections" },
         { name: "Favorites", description: "User favorites management" },
-        { name: "Genres", description: "Movie and TV show genres" },
         { name: "Health", description: "Health check endpoint" },
         { name: "Images", description: "Image proxy and backdrops" },
         { name: "Media", description: "Movie and TV show details" },
@@ -82,7 +80,6 @@ export const app = new Elysia()
   .use(mediaRoutes)
   .use(searchRoutes)
   .use(supportRoutes)
-  .use(genreRoutes)
   .use(favoriteRoutes)
   .use(watchLaterRoutes)
   .use(syncRoutes)

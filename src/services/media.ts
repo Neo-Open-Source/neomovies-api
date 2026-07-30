@@ -1,99 +1,31 @@
 import { tmdb } from "./tmdb"
-import { db } from "../db"
-import { resolveIds } from "./alloha"
 import { DEFAULT_LANGUAGE, type Language } from "../lib/language"
 import {
-  mapMovie, mapTV, mapCastMember, mapCrewMember, mapCompany,
-  mapSeason, mapNetwork, mapEpisode, paginate,
+  mapMovie, mapTV, mapEpisode, paginate,
 } from "../lib/mappers"
 import type {
   TMDBMultiResult, TMDBDiscoverParams, TMDBMovie,
 } from "../types/tmdb"
+import {
+  resolveExternalIds, extractTrailers, formatCredits,
+  genreNames, enrichGenreNames, enrichCertifications,
+  movieDetailFromTMDB, tvDetailFromTMDB,
+  type TmdbCreditsResponse,
+} from "./media/utils"
 
-interface TmdbCreditsResponse {
-  cast: Array<{
-    id: number; name: string; character: string;
-    profile_path: string | null; order: number
-  }>
-  crew: Array<{
-    id: number; name: string; job: string;
-    department: string; profile_path: string | null
-  }>
-}
-
-interface TmdbExternalIdsResponse {
-  imdb_id: string | null
-}
-
-async function imdbRating(imdbId: string | null) {
-  if (!imdbId) return { imdbRating: null, imdbVotes: null }
-  const rows = await db.$queryRawUnsafe<Array<{ imdbRating: number | null; imdbVotes: number | null }>>(
-    "SELECT \"imdbRating\", \"imdbVotes\" FROM \"MediaRating\" WHERE \"imdbId\" = $1", imdbId,
-  )
-  const rating = rows?.[0] ?? null
-  return {
-    imdbRating: rating ? Number(rating.imdbRating) : null,
-    imdbVotes: rating?.imdbVotes ?? null,
-  }
-}
-
-async function resolveExternalIds(
-  tmdbId: number, mediaType: "movie" | "tv", tmdbImdbId: string | null,
-): Promise<{ imdbId: string | null; kpId: number | null; imdbRating: number | null; imdbVotes: number | null }> {
-  const ids = await resolveIds(tmdbId, mediaType)
-  const imdbId = tmdbImdbId || ids.imdbId
-  if (!imdbId) return { imdbId: null, kpId: ids.kpId, imdbRating: null, imdbVotes: null }
-  const rating = await imdbRating(imdbId)
-  return { imdbId, kpId: ids.kpId, ...rating }
-}
-
-function extractTrailers(videos: { results: Array<{ key: string; site: string; type: string; name: string; official: boolean }> }): string[] {
-  return (videos.results || [])
-    .filter(v => v.site === "YouTube" && v.type === "Trailer")
-    .map(v => v.key)
-}
-
-function credits(c: TmdbCreditsResponse) {
-  return {
-    cast: (c.cast || []).slice(0, 20).map(mapCastMember),
-    crew: (c.crew || []).slice(0, 20).map(mapCrewMember),
-  }
-}
-
-const genreCache = new Map<string, Map<number, string>>()
-
-async function genreNames(type: "movie" | "tv", lang: Language): Promise<Map<number, string>> {
-  const key = `${type}:${lang}`
-  let cached = genreCache.get(key)
-  if (!cached) {
-    const data = type === "movie" ? await tmdb.movieGenres(lang) : await tmdb.tvGenres(lang)
-    cached = new Map(data.genres.map(g => [g.id, g.name]))
-    genreCache.set(key, cached)
-  }
-  return cached
-}
-
-function enrichGenreNames(
-  items: Array<{ tmdbId: number; genres: { id: number; name: string }[] | null }>,
-  names: Map<number, string>,
-  rawResults: Array<{ id: number; genre_ids?: number[] }>,
+async function enrichedPage(
+  type: "movie" | "tv",
+  data: { results: any[]; page: number; total_pages: number; total_results: number },
+  lang: Language,
 ) {
-  const rawMap = new Map(rawResults.filter(r => r.genre_ids?.length).map(r => [r.id, r.genre_ids!]))
-  for (const item of items) {
-    if (!item.genres) {
-      const ids = rawMap.get(item.tmdbId)
-      if (ids?.length) {
-        item.genres = ids.map(id => ({ id, name: names.get(id) ?? String(id) }))
-      }
-    }
-  }
-}
-
-async function enrichCertifications(items: Array<{ tmdbId: number; certification: string | null }>, type: "movie" | "tv") {
-  const certs = await Promise.all(
-    items.map(i => type === "movie" ? tmdb.movieCertification(i.tmdbId) : tmdb.tvCertification(i.tmdbId)),
-  )
-  items.forEach((i, idx) => { i.certification = certs[idx] })
+  const mapper = type === "movie" ? mapMovie : mapTV
+  const items = data.results.map(mapper)
+  const [names] = await Promise.all([
+    genreNames(type, lang),
+  ])
+  enrichGenreNames(items, names, data.results)
+  await enrichCertifications(items, type)
+  return paginate(items, data.page, data.total_pages, data.total_results)
 }
 
 export const media = {
@@ -107,26 +39,14 @@ export const media = {
     const resolved = await resolveExternalIds(id, "movie", movie.imdb_id)
     return {
       ...mapMovie(movie),
+      ...movieDetailFromTMDB(movie),
       imdbId: resolved.imdbId,
       kpId: resolved.kpId,
       imdbRating: resolved.imdbRating,
       imdbVotes: resolved.imdbVotes,
       certification,
       trailers: extractTrailers(videos),
-      runtime: movie.runtime,
-      budget: movie.budget,
-      revenue: movie.revenue,
-      status: movie.status,
-      tagline: movie.tagline,
-      productionCompanies: (movie.production_companies || []).map(mapCompany),
-      collection: movie.belongs_to_collection
-        ? {
-            id: movie.belongs_to_collection.id,
-            name: movie.belongs_to_collection.name,
-            poster: tmdb.imageUrl(movie.belongs_to_collection.poster_path, "w300"),
-          }
-        : null,
-      credits: credits(c as unknown as TmdbCreditsResponse),
+      credits: formatCredits(c as unknown as TmdbCreditsResponse),
     }
   },
 
@@ -138,33 +58,27 @@ export const media = {
       tmdb.tvVideos(id, lang).catch(() => ({ results: [] })),
     ])
     const externalIds = await tmdb.tvExternalIds(id).catch(() => null)
-    const tmdbImdbId = (externalIds as TmdbExternalIdsResponse | null)?.imdb_id ?? null
+    const tmdbImdbId = externalIds?.imdb_id ?? null
     const resolved = await resolveExternalIds(id, "tv", tmdbImdbId)
     return {
       ...mapTV(show),
+      ...tvDetailFromTMDB(show),
       imdbId: resolved.imdbId,
       kpId: resolved.kpId,
       imdbRating: resolved.imdbRating,
       imdbVotes: resolved.imdbVotes,
       certification,
       trailers: extractTrailers(videos),
-      seasons: (show.seasons || []).map(mapSeason),
-      numberOfSeasons: show.number_of_seasons,
-      numberOfEpisodes: show.number_of_episodes,
-      status: show.status,
-      tagline: show.tagline,
-      networks: (show.networks || []).map(mapNetwork),
-      productionCompanies: (show.production_companies || []).map(mapCompany),
-      credits: credits(c as unknown as TmdbCreditsResponse),
+      credits: formatCredits(c as unknown as TmdbCreditsResponse),
     }
   },
 
   async movieCredits(id: number, lang = DEFAULT_LANGUAGE) {
-    return credits(await tmdb.movieCredits(id, lang) as unknown as TmdbCreditsResponse)
+    return formatCredits(await tmdb.movieCredits(id, lang) as unknown as TmdbCreditsResponse)
   },
 
   async tvCredits(id: number, lang = DEFAULT_LANGUAGE) {
-    return credits(await tmdb.tvCredits(id, lang) as unknown as TmdbCreditsResponse)
+    return formatCredits(await tmdb.tvCredits(id, lang) as unknown as TmdbCreditsResponse)
   },
 
   async episode(id: number, seasonNumber: number, episodeNumber: number, lang = DEFAULT_LANGUAGE) {
@@ -220,15 +134,11 @@ export const media = {
       "tv:popular": tmdb.popularTV.bind(tmdb) as Fetcher,
       "tv:top-rated": tmdb.topRatedTV.bind(tmdb) as Fetcher,
     }
-    const mapper: (item: any) => any = type === "movie" ? mapMovie : mapTV
     const fetcher = fetchers[`${type}:${method}`]
     if (!fetcher) throw new Error(`Unknown list: ${type}/${method}`)
 
     const data = await fetcher(pageNum, lang)
-    const items = data.results.map(mapper)
-    enrichGenreNames(items, await genreNames(type, lang), data.results)
-    await enrichCertifications(items, type)
-    return paginate(items, data.page, data.total_pages, data.total_results)
+    return enrichedPage(type, data, lang)
   },
 
   async trending(method: string, pageNum: number, lang = DEFAULT_LANGUAGE, typeFilter?: "movie" | "tv") {
@@ -238,8 +148,7 @@ export const media = {
     ])
 
     if (typeFilter === "movie" || typeFilter === "tv") {
-      const d = typeFilter === "movie" ? movieData : tvData
-      return d!
+      return typeFilter === "movie" ? movieData! : tvData!
     }
 
     const movieItems = (movieData?.items ?? []).map((i: any) => ({ ...i, mediaType: "movie" as const }))
@@ -267,20 +176,12 @@ export const media = {
 
   async similar(type: "movie" | "tv", id: number, pageNum: number, lang = DEFAULT_LANGUAGE) {
     const data = await tmdb.similar(type, id, pageNum, lang)
-    const mapper: (item: any) => any = type === "movie" ? mapMovie : mapTV
-    const items = data.results.map(mapper)
-    enrichGenreNames(items, await genreNames(type, lang), data.results)
-    await enrichCertifications(items, type)
-    return paginate(items, data.page, data.total_pages, data.total_results)
+    return enrichedPage(type, data, lang)
   },
 
   async recommendations(type: "movie" | "tv", id: number, pageNum: number, lang = DEFAULT_LANGUAGE) {
     const data = await tmdb.recommendations(type, id, pageNum, lang)
-    const mapper: (item: any) => any = type === "movie" ? mapMovie : mapTV
-    const items = data.results.map(mapper)
-    enrichGenreNames(items, await genreNames(type, lang), data.results)
-    await enrichCertifications(items, type)
-    return paginate(items, data.page, data.total_pages, data.total_results)
+    return enrichedPage(type, data, lang)
   },
 
   async search(p: Record<string, string | undefined>, lang = DEFAULT_LANGUAGE) {
@@ -291,17 +192,11 @@ export const media = {
       const mediaType = type || "multi"
       if (mediaType === "movie") {
         const data = await tmdb.searchMovie(q, pageNum, lang)
-        const items = data.results.map(mapMovie)
-        enrichGenreNames(items, await genreNames("movie", lang), data.results)
-        await enrichCertifications(items, "movie")
-        return paginate(items, data.page, data.total_pages, data.total_results)
+        return enrichedPage("movie", data, lang)
       }
       if (mediaType === "tv") {
         const data = await tmdb.searchTV(q, pageNum, lang)
-        const items = data.results.map(mapTV)
-        enrichGenreNames(items, await genreNames("tv", lang), data.results)
-        await enrichCertifications(items, "tv")
-        return paginate(items, data.page, data.total_pages, data.total_results)
+        return enrichedPage("tv", data, lang)
       }
       const data = await tmdb.searchMulti(q, pageNum, lang)
       const multiResult = data.results.map((item: TMDBMultiResult) => {
@@ -315,8 +210,8 @@ export const media = {
       })
       const movieItems = multiResult.filter(r => r.mediaType === "movie") as any[]
       const tvItems = multiResult.filter(r => r.mediaType === "tv") as any[]
-      const movieRaw = data.results.filter((r: TMDBMultiResult) => r.media_type === "movie")
-      const tvRaw = data.results.filter((r: TMDBMultiResult) => r.media_type === "tv")
+      const movieRaw = data.results.filter((r: TMDBMultiResult) => r.media_type === "movie") as any[]
+      const tvRaw = data.results.filter((r: TMDBMultiResult) => r.media_type === "tv") as any[]
       await Promise.all([
         movieItems.length ? enrichGenreNames(movieItems, await genreNames("movie", lang), movieRaw) : Promise.resolve(),
         tvItems.length ? enrichGenreNames(tvItems, await genreNames("tv", lang), tvRaw) : Promise.resolve(),
@@ -342,15 +237,9 @@ export const media = {
     const searchMediaType = type || "movie"
     if (searchMediaType === "tv") {
       const data = await tmdb.discoverTV(discover as TMDBDiscoverParams, lang)
-      const items = data.results.map(mapTV)
-      enrichGenreNames(items, await genreNames("tv", lang), data.results)
-      await enrichCertifications(items, "tv")
-      return paginate(items, data.page, data.total_pages, data.total_results)
+      return enrichedPage("tv", data, lang)
     }
     const data = await tmdb.discoverMovie(discover as TMDBDiscoverParams, lang)
-    const items = data.results.map(mapMovie)
-    enrichGenreNames(items, await genreNames("movie", lang), data.results)
-    await enrichCertifications(items, "movie")
-    return paginate(items, data.page, data.total_pages, data.total_results)
+    return enrichedPage("movie", data, lang)
   },
 }
