@@ -3,7 +3,7 @@
   "info": {
     "title": "NeoWatch API",
     "description": "REST API for NeoWatch - movies and TV shows streaming platform",
-    "version": "3.0.0"
+    "version": "1.0.0"
   },
   "tags": [
     {

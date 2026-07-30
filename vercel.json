@@ -10,8 +10,12 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/openapi.json", "destination": "/api/index" }
+    { "source": "/api", "destination": "/api/index.html" },
+    { "source": "/api/", "destination": "/api/index.html" },
+    { "source": "/ru/api", "destination": "/ru/api/index.html" },
+    { "source": "/ru/api/", "destination": "/ru/api/index.html" },
+    { "source": "/api/v1/(.*)", "destination": "/api/handler" },
+    { "source": "/openapi.json", "destination": "/api/handler" }
   ],
   "headers": [
     {
@@ -21,7 +25,7 @@
       ]
     },
     {
-      "source": "/api/(.*)",
+      "source": "/api/v1/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS" },

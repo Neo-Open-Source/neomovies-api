@@ -52,6 +52,7 @@ export const app = new Elysia()
   }))
   .use(swagger({
     path: "/playground",
+    exclude: ["/api/v1/cron/imdb-ratings"],
     documentation: {
       info: {
         title: "NeoWatch API",

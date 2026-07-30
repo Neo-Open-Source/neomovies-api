@@ -9,7 +9,6 @@ const config: Config = {
   url: "https://docs.neome.uk",
   baseUrl: "/",
   onBrokenLinks: isDev ? "throw" : "warn",
-  onBrokenMarkdownLinks: "warn",
   favicon: "img/favicon.png",
 
   i18n: {
@@ -63,7 +62,7 @@ const config: Config = {
       title: "NeoWatch API",
       logo: {
         alt: "NeoWatch Logo",
-        src: "img/logo.svg",
+        src: "img/favicon.png",
       },
       items: [
         {

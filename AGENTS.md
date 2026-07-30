@@ -61,7 +61,7 @@ Pagination:
 
 ### Key Design Decisions
 
-- **Dual deployment**: Local dev via `Bun.serve()`, production via Vercel serverless (`api/index.ts`)
+- **Dual deployment**: Local dev via `Bun.serve()`, production via Vercel serverless (`api/handler.ts`)
 - **Validation**: Elysia's `t.Object()` for request validation; avoid raw `as` casts
 - **No `any` types**: All mapper functions use proper TypeScript interfaces
 - **No silent error swallowing**: `.catch(() => {})` is replaced with proper error handling
@@ -124,7 +124,7 @@ docs/                   # Docusaurus site
 
 ## Vercel Deployment
 
-`api/index.ts` exports `app.fetch` as the serverless handler. `vercel.json` rewrites all routes to this handler.
+`api/handler.ts` exports `app.fetch` as the serverless handler. `vercel.json` rewrites all routes to this handler.
 
 ## Design Decisions
 

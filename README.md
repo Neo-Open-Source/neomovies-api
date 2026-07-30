@@ -8,6 +8,15 @@
   <strong>NeoWatch API</strong> — REST API for streaming movies and TV shows.
 </p>
 
+<p align="center">
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNeo-Open-Source%2Fneowatch-api&project-name=neowatch-api">
+    <img src="https://vercel.com/button" alt="Deploy with Vercel" />
+  </a>
+  <a href="https://app.netlify.com/start/deploy?repository=https://github.com/Neo-Open-Source/neowatch-api">
+    <img src="https://www.netlify.com/img/deploy/button.svg" alt="Deploy to Netlify" />
+  </a>
+</p>
+
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -212,7 +221,7 @@ bun run build
 
 ### Vercel
 
-The project is configured for Vercel deployment via `vercel.json`. All routes are rewritten to the serverless entrypoint at `api/index.ts`.
+The project is configured for Vercel deployment via `vercel.json`. All routes are rewritten to the serverless entrypoint at `api/handler.ts`.
 
 ```bash
 vercel deploy
