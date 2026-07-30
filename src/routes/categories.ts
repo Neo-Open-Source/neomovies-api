@@ -131,7 +131,7 @@ async function fetchGenreCategories(lang: Language): Promise<CategoryDef[]> {
 
 export const categoryRoutes = new Elysia()
 
-  .get("/api/v1/categories", async ({ query }) => {
+  .get("/api/v1/categories", async ({ query, set }) => {
     const lang = language(query)
     const genres = await fetchGenreCategories(lang)
 
@@ -140,6 +140,8 @@ export const categoryRoutes = new Elysia()
       { section: "Genres", items: genres },
       { section: "Studios", items: [...studioCategories, ...networkCategories] },
     ]
+
+    set.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=3600"
 
     return success(all.map(s => ({
       section: s.section,
@@ -153,15 +155,18 @@ export const categoryRoutes = new Elysia()
     })))
   }, {
     detail: { tags: ["Categories"], summary: "List Categories" },
+    query: t.Object({ language: t.Optional(t.String()) }),
   })
 
-  .get("/api/v1/collection/:id", async ({ params: { id }, query }) => {
+  .get("/api/v1/collection/:id", async ({ params: { id }, query, set }) => {
     const lang = language(query)
     const pageNum = page(query)
     const genres = await fetchGenreCategories(lang)
     const all = [...listCategories, ...genres, ...studioCategories, ...networkCategories]
     const cat = all.find(c => c.id === id)
     if (!cat) throw new NotFoundError("Category")
+
+    set.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=3600"
 
     let data: any
 
@@ -208,4 +213,5 @@ export const categoryRoutes = new Elysia()
   }, {
     detail: { tags: ["Categories"], summary: "Get Collection" },
     params: t.Object({ id: t.String() }),
+    query: t.Object({ language: t.Optional(t.String()), page: t.Optional(t.String()) }),
   })
