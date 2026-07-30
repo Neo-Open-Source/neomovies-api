@@ -26,10 +26,12 @@
     "@elysiajs/swagger": "^1.2.0",
     "@prisma/client": "^6.0.0",
     "elysia": "^1.2.0",
-    "jose": "^6.0.0"
+    "jose": "^6.0.0",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
+    "@types/sharp": "^0.32.0",
     "bun-types": "^1.2.0",
     "prisma": "^6.0.0",
     "typescript": "^5.7.0"
