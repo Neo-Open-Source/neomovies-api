@@ -27,7 +27,7 @@ const config: Config = {
         label: "API Reference",
         route: "/api",
         configuration: {
-          spec: { url: "/openapi.json" },
+          spec: { url: "/playground/json" },
           hideModels: false,
           hideDownloadButton: false,
         },

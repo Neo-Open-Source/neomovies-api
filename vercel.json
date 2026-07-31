@@ -15,6 +15,7 @@
     { "source": "/ru/api", "destination": "/ru/api/index.html" },
     { "source": "/ru/api/", "destination": "/ru/api/index.html" },
     { "source": "/api/v1/(.*)", "destination": "/api/handler" },
+    { "source": "/playground/json", "destination": "/api/handler" },
     { "source": "/openapi.json", "destination": "/api/handler" }
   ],
   "headers": [
