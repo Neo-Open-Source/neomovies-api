@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img alt="NeoWatch" src=".github/icon.png" width="240">
+    <img alt="NeoWatch" src=".github/icon.png" width="48">
   </picture>
 </p>
 
@@ -173,7 +173,6 @@ Error responses:
 | GET | `/player/collaps/kp/:kpId` | Collaps player by KP ID |
 | GET | `/player/cdn/:cdnId` | CDN player |
 | GET | `/player/cdn/imdb/:imdbId` | CDN player by IMDb ID |
-| GET | `/player/hls/proxy` | HLS proxy |
 | **User Data** | | |
 | GET | `/favorites` | List favorites |
 | POST | `/favorites/:mediaId` | Add favorite |
