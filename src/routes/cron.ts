@@ -8,10 +8,13 @@ export const cronRoutes = new Elysia()
 
   .get("/api/v1/cron/imdb-ratings", async ({ request }) => {
     const auth = request.headers.get("authorization")
-    if (auth !== `Bearer ${config.cronSecret}`) {
+    const isVercelCron = ["true", "1"].includes(request.headers.get("x-vercel-cron") || "")
+    if (!isVercelCron && auth !== `Bearer ${config.cronSecret}`) {
       throw new UnauthorizedError()
     }
 
-    const result = await syncIMDBRatings()
+    const result = await syncIMDBRatings(true)
     return success(result)
+  }, {
+    detail: { hide: true },
   })
