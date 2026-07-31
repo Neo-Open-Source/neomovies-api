@@ -57,6 +57,18 @@ export const mediaRoutes = new Elysia()
     params: t.Object({ type: MediaType, id: t.Numeric(), season: t.Numeric(), episode: t.Numeric() }),
   })
 
+  .get("/api/v1/movies/:list", async ({ params: { list }, query }) =>
+    success(await media.list("movie", list, page(query), language(query))), {
+    detail: { tags: ["Media"], summary: "Movie List" },
+    params: t.Object({ list: t.Enum({ popular: "popular", "top-rated": "top-rated", upcoming: "upcoming" }) }),
+  })
+
+  .get("/api/v1/tv/:list", async ({ params: { list }, query }) =>
+    success(await media.list("tv", list, page(query), language(query))), {
+    detail: { tags: ["Media"], summary: "TV List" },
+    params: t.Object({ list: t.Enum({ popular: "popular", "top-rated": "top-rated" }) }),
+  })
+
   .get("/api/v1/trending/:sort", async ({ params: { sort }, query }) => {
     const typeFilter = query.type === "movie" || query.type === "tv" ? query.type : undefined
     return success(await media.trending(sort, page(query), language(query), typeFilter))
