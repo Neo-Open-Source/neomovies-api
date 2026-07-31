@@ -35,10 +35,10 @@ function formatBytes(bytes: number): string {
   return bytes + "B"
 }
 
-export async function syncIMDBRatings(): Promise<{ upserted: number; skipped: number }> {
+export async function syncIMDBRatings(force = false): Promise<{ upserted: number; skipped: number }> {
   const rows = await db.$queryRawUnsafe<Array<{ updatedAt: Date }>>("SELECT \"updatedAt\" FROM \"MediaRating\" ORDER BY \"updatedAt\" DESC LIMIT 1")
   const recent = rows?.[0]
-  if (recent && Date.now() - recent.updatedAt.getTime() < 24 * 60 * 60 * 1000) {
+  if (!force && recent && Date.now() - recent.updatedAt.getTime() < 24 * 60 * 60 * 1000) {
     console.log(`IMDB ratings last synced at ${recent.updatedAt.toISOString()}, skipping (ok in 24h)`)
     return { upserted: 0, skipped: 0 }
   }

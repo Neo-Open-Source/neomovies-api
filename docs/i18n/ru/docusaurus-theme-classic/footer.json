@@ -21,11 +21,11 @@
   },
   "link.item.label.Telegram": {
     "message": "Telegram",
-    "description": "The label of footer link with label=Telegram linking to https://t.me/neowatch_news"
+    "description": "The label of footer link with label=Telegram linking to https://t.me/neomovies_news"
   },
   "link.item.label.GitHub": {
     "message": "GitHub",
-    "description": "The label of footer link with label=GitHub linking to https://github.com/anomalyco/neowatch-api-ts"
+    "description": "The label of footer link with label=GitHub linking to https://github.com/Neo-Open-Source/neomovies-api"
   },
   "copyright": {
     "message": "© 2024-2026 Neo-Open-Source",

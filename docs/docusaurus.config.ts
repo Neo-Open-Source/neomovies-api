@@ -96,7 +96,7 @@ const config: Config = {
         {
           title: "Community",
           items: [
-            { label: "Telegram", href: "https://t.me/neowatch_news" },
+            { label: "Telegram", href: "https://t.me/neomovies_news" },
             { label: "GitHub", href: "https://github.com/Neo-Open-Source/neomovies-api" },
           ],
         },
