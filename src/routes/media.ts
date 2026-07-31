@@ -3,75 +3,59 @@ import { media } from "../services/media"
 import { success } from "../lib/response"
 import { page } from "../lib/query"
 import { language } from "../lib/language"
+import { BadRequestError } from "../lib/errors"
+
+const MediaType = t.Enum({ movie: "movie", tv: "tv" })
 
 export const mediaRoutes = new Elysia()
 
-  .get("/api/v1/movie/:id", async ({ params: { id }, query }) =>
-    success(await media.movieDetail(id, language(query))), {
-    detail: { tags: ["Media"], summary: "Movie Details" },
-    params: t.Object({ id: t.Numeric() }),
+  .get("/api/v1/media/:type/:id", async ({ params: { type, id }, query }) =>
+    success(await (type === "movie" ? media.movieDetail(id, language(query)) : media.tvDetail(id, language(query)))), {
+    detail: { tags: ["Media"], summary: "Media Details" },
+    params: t.Object({ type: MediaType, id: t.Numeric() }),
   })
 
-  .get("/api/v1/tv/:id", async ({ params: { id }, query }) =>
-    success(await media.tvDetail(id, language(query))), {
-    detail: { tags: ["Media"], summary: "TV Show Details" },
-    params: t.Object({ id: t.Numeric() }),
+  .get("/api/v1/media/:type/:id/credits", async ({ params: { type, id }, query }) =>
+    success(await (type === "movie" ? media.movieCredits(id, language(query)) : media.tvCredits(id, language(query)))), {
+    detail: { tags: ["Media"], summary: "Media Credits" },
+    params: t.Object({ type: MediaType, id: t.Numeric() }),
   })
 
-  .get("/api/v1/movie/:id/collection", async ({ params: { id }, query }) =>
-    success(await media.collection(id, language(query))), {
+  .get("/api/v1/media/:type/:id/recommendations", async ({ params: { type, id }, query }) =>
+    success(await media.recommendations(type, id, page(query), language(query))), {
+    detail: { tags: ["Media"], summary: "Media Recommendations" },
+    params: t.Object({ type: MediaType, id: t.Numeric() }),
+  })
+
+  .get("/api/v1/media/:type/:id/similar", async ({ params: { type, id }, query }) =>
+    success(await media.similar(type, id, page(query), language(query))), {
+    detail: { tags: ["Media"], summary: "Similar Media" },
+    params: t.Object({ type: MediaType, id: t.Numeric() }),
+  })
+
+  .get("/api/v1/media/:type/:id/collection", async ({ params: { type, id }, query }) => {
+    if (type !== "movie") throw new BadRequestError("Collections are only available for movies")
+    return success(await media.collection(id, language(query)))
+  }, {
     detail: { tags: ["Media"], summary: "Movie Collection" },
-    params: t.Object({ id: t.Numeric() }),
+    params: t.Object({ type: MediaType, id: t.Numeric() }),
   })
 
-  .get("/api/v1/movie/:id/credits", async ({ params: { id }, query }) =>
-    success(await media.movieCredits(id, language(query))), {
-    detail: { tags: ["Media"], summary: "Movie Credits" },
-    params: t.Object({ id: t.Numeric() }),
-  })
-
-  .get("/api/v1/tv/:id/credits", async ({ params: { id }, query }) =>
-    success(await media.tvCredits(id, language(query))), {
-    detail: { tags: ["Media"], summary: "TV Credits" },
-    params: t.Object({ id: t.Numeric() }),
-  })
-
-  .get("/api/v1/tv/:id/season/:season", async ({ params: { id, season }, query }) =>
-    success(await media.season(id, season, language(query))), {
+  .get("/api/v1/media/:type/:id/season/:season", async ({ params: { type, id, season }, query }) => {
+    if (type !== "tv") throw new BadRequestError("Seasons are only available for TV shows")
+    return success(await media.season(id, season, language(query)))
+  }, {
     detail: { tags: ["Media"], summary: "Season Details" },
-    params: t.Object({ id: t.Numeric(), season: t.Numeric() }),
+    params: t.Object({ type: MediaType, id: t.Numeric(), season: t.Numeric() }),
   })
 
-  .get("/api/v1/tv/:id/season/:season/episode/:episode", async ({ params: { id, season, episode }, query }) =>
-    success(await media.episode(id, season, episode, language(query))), {
+  .get("/api/v1/media/:type/:id/season/:season/episode/:episode", async ({ params: { type, id, season, episode }, query }) => {
+    if (type !== "tv") throw new BadRequestError("Episodes are only available for TV shows")
+    return success(await media.episode(id, season, episode, language(query)))
+  }, {
     detail: { tags: ["Media"], summary: "Episode Details" },
-    params: t.Object({ id: t.Numeric(), season: t.Numeric(), episode: t.Numeric() }),
+    params: t.Object({ type: MediaType, id: t.Numeric(), season: t.Numeric(), episode: t.Numeric() }),
   })
-
-  .get("/api/v1/movie/:id/recommendations", async ({ params: { id }, query }) =>
-    success(await media.recommendations("movie", id, page(query), language(query))), {
-    detail: { tags: ["Media"], summary: "Movie Recommendations" },
-    params: t.Object({ id: t.Numeric() }),
-  })
-
-  .get("/api/v1/tv/:id/recommendations", async ({ params: { id }, query }) =>
-    success(await media.recommendations("tv", id, page(query), language(query))), {
-    detail: { tags: ["Media"], summary: "TV Recommendations" },
-    params: t.Object({ id: t.Numeric() }),
-  })
-
-  .get("/api/v1/movie/:id/similar", async ({ params: { id }, query }) =>
-    success(await media.similar("movie", id, page(query), language(query))), {
-    detail: { tags: ["Media"], summary: "Similar Movies" },
-    params: t.Object({ id: t.Numeric() }),
-  })
-
-  .get("/api/v1/tv/:id/similar", async ({ params: { id }, query }) =>
-    success(await media.similar("tv", id, page(query), language(query))), {
-    detail: { tags: ["Media"], summary: "Similar TV Shows" },
-    params: t.Object({ id: t.Numeric() }),
-  })
-
 
   .get("/api/v1/trending/:sort", async ({ params: { sort }, query }) => {
     const typeFilter = query.type === "movie" || query.type === "tv" ? query.type : undefined
