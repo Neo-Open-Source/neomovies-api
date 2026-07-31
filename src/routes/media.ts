@@ -74,7 +74,7 @@ export const mediaRoutes = new Elysia()
     return success(await media.trending(sort, page(query), language(query), typeFilter))
   }, {
     detail: { tags: ["Media"], summary: "Trending — mixed or filtered by type" },
-    params: t.Object({ sort: t.String() }),
+    params: t.Object({ sort: t.Enum({ popular: "popular", "top-rated": "top-rated" }) }),
     query: t.Object({
       type: t.Optional(t.String()),
       page: t.Optional(t.String()),
