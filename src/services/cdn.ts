@@ -80,13 +80,6 @@ export async function resolveCdnId(id: string, type: "imdb" | "kp" = "imdb"): Pr
   throw new Error(`CDN id not found in iframe HTML (${param}=${id})`)
 }
 
-function proxyUrl(filepath: string): string {
-  if (filepath.endsWith(".m3u8")) {
-    return `/api/v1/player/hls/proxy?url=${encodeURIComponent(filepath)}`
-  }
-  return filepath
-}
-
 export async function getPlayerData(cdnId: number, season?: number, episode?: number): Promise<CdnVideoDto> {
   const info = await getContentInfo(cdnId)
   const id = `cp_${cdnId}`
@@ -96,7 +89,7 @@ export async function getPlayerData(cdnId: number, season?: number, episode?: nu
   if (episodesRaw.length === 0) {
     const filepath = info.trailerUrls?.[0]
     if (!filepath) throw new Error("no video")
-    return { id, title: info.title, isSeries: false, m3u8Url: proxyUrl(filepath), season: null, episode: null, episodes: [] }
+    return { id, title: info.title, isSeries: false, m3u8Url: filepath, season: null, episode: null, episodes: [] }
   }
 
   const isSeries = info.hasMultipleEpisodes
@@ -112,7 +105,7 @@ export async function getPlayerData(cdnId: number, season?: number, episode?: nu
   const initialVariant = initialEp.episodeVariants[0]
   if (!initialVariant) throw new Error("no variants")
 
-  const initialUrl = proxyUrl(initialVariant.filepath)
+  const initialUrl = initialVariant.filepath
   const actualSeason = initialEp.season.order
   const actualEpisode = initialEp.order
 
@@ -124,7 +117,7 @@ export async function getPlayerData(cdnId: number, season?: number, episode?: nu
       season: e.season.order,
       episode: e.order,
       title: variant.title || "",
-      m3u8Url: proxyUrl(variant.filepath),
+      m3u8Url: variant.filepath,
     })
   }
 

@@ -56,10 +56,3 @@ GET /api/v1/player/cdn/12345
 GET /api/v1/player/cdn/imdb/tt0137523
 ```
 
-## HLS Proxy
-
-Прокси для HLS-потоков с перезаписью URL:
-
-```http
-GET /api/v1/player/hls/proxy?url=https://example.com/stream.m3u8
-```
