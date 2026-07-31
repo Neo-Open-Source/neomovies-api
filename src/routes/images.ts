@@ -196,28 +196,19 @@ export const imageRoutes = new Elysia()
     query: t.Object({ language: t.Optional(t.String()), size: t.Optional(t.String()) }),
   })
 
-  .get("/api/v1/movie/:id/backdrops", async ({ params: { id }, query }) => {
+  .get("/api/v1/images/:type/:id/backdrops", async ({ params: { type, id }, query }) => {
     const lang = language(query)
     const size = query.size as BackdropSize | undefined
-    const movie = await tmdb.movie(id, lang)
-    if (!movie.backdrop_path) throw new NotFoundError("No backdrops")
 
-    if (size && BACKDROP_SIZES.includes(size)) {
-      return success({ backdrop: tmdb.imageUrl(movie.backdrop_path, size) })
+    if (type === "movie") {
+      const movie = await tmdb.movie(id, lang)
+      if (!movie.backdrop_path) throw new NotFoundError("No backdrops")
+      if (size && BACKDROP_SIZES.includes(size)) {
+        return success({ backdrop: tmdb.imageUrl(movie.backdrop_path, size) })
+      }
+      return success({ backdrops: tmdb.imageSizes(movie.backdrop_path, BACKDROP_SIZES) })
     }
 
-    return success({
-      backdrops: tmdb.imageSizes(movie.backdrop_path, BACKDROP_SIZES),
-    })
-  }, {
-    detail: { tags: ["Images"], summary: "Movie Backdrops" },
-    params: t.Object({ id: t.Numeric() }),
-    query: t.Object({ size: t.Optional(t.String()), language: t.Optional(t.String()) }),
-  })
-
-  .get("/api/v1/tv/:id/backdrops", async ({ params: { id }, query }) => {
-    const lang = language(query)
-    const size = query.size as BackdropSize | undefined
     const [show, externalIds] = await Promise.all([
       tmdb.tvShow(id, lang),
       tmdb.tvExternalIds(id).catch(() => null),
@@ -233,8 +224,8 @@ export const imageRoutes = new Elysia()
       imdbId: externalIds?.imdb_id ?? null,
     })
   }, {
-    detail: { tags: ["Images"], summary: "TV Backdrops" },
-    params: t.Object({ id: t.Numeric() }),
+    detail: { tags: ["Images"], summary: "Backdrops by Type" },
+    params: t.Object({ type: t.Enum({ movie: "movie", tv: "tv" }), id: t.Numeric() }),
     query: t.Object({ size: t.Optional(t.String()), language: t.Optional(t.String()) }),
   })
 
