@@ -10,7 +10,6 @@
     "docs:dev": "cd docs && bun start",
     "docs:build": "cd docs && bun run build",
     "docs:serve": "cd docs && bun run serve",
-    "docs:generate": "bun run scripts/generate-openapi.ts",
     "format": "bunx biome check --write src/",
     "lint": "bunx biome lint src/",
     "lint:fix": "bunx biome check --write --unsafe src/",
