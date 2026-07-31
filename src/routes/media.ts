@@ -59,22 +59,43 @@ export const mediaRoutes = new Elysia()
 
   .get("/api/v1/movies/:list", async ({ params: { list }, query }) =>
     success(await media.list("movie", list, page(query), language(query))), {
-    detail: { tags: ["Media"], summary: "Movie List" },
+    detail: {
+      tags: ["Media"],
+      summary: "Movie List",
+      parameters: [{
+        name: "list",
+        in: "path",
+        required: true,
+        schema: { type: "string", enum: ["popular", "top-rated", "upcoming"] },
+      }],
+    },
     params: t.Object({ list: t.Enum({ popular: "popular", "top-rated": "top-rated", upcoming: "upcoming" }) }),
   })
 
   .get("/api/v1/tv/:list", async ({ params: { list }, query }) =>
     success(await media.list("tv", list, page(query), language(query))), {
-    detail: { tags: ["Media"], summary: "TV List" },
+    detail: {
+      tags: ["Media"],
+      summary: "TV List",
+      parameters: [{
+        name: "list",
+        in: "path",
+        required: true,
+        schema: { type: "string", enum: ["popular", "top-rated"] },
+      }],
+    },
     params: t.Object({ list: t.Enum({ popular: "popular", "top-rated": "top-rated" }) }),
   })
 
-  .get("/api/v1/trending/:sort", async ({ params: { sort }, query }) => {
+  .get("/api/v1/trending", async ({ query }) => {
     const typeFilter = query.type === "movie" || query.type === "tv" ? query.type : undefined
-    return success(await media.trending(sort, page(query), language(query), typeFilter))
+    return success(await media.trending("popular", page(query), language(query), typeFilter))
   }, {
-    detail: { tags: ["Media"], summary: "Trending — mixed or filtered by type" },
-    params: t.Object({ sort: t.Enum({ popular: "popular", "top-rated": "top-rated" }) }),
+    detail: {
+      tags: ["Media"],
+      summary: "Trending",
+      description: "Popular movies and TV shows, mixed or filtered by the type query parameter",
+    },
     query: t.Object({
       type: t.Optional(t.String()),
       page: t.Optional(t.String()),
