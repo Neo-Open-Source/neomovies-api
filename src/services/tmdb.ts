@@ -14,7 +14,7 @@ import type {
   TMDBVideo,
 } from "../types/tmdb"
 import { TMDBCache } from "./tmdb/cache"
-import { buildDefaultParams, filterMovies, filterMulti, filterTV, MIN_VOTE_COUNT } from "./tmdb/filters"
+import { buildDefaultParams, filterMovies, filterMoviesSearch, filterMultiSearch, filterTV, filterTVSearch, MIN_VOTE_COUNT } from "./tmdb/filters"
 
 export class TMDBClient {
   private cache = new TMDBCache()
@@ -71,7 +71,7 @@ export class TMDBClient {
 
   public imageUrl(path: string | null, size: string = "w500"): string | null {
     if (!path) return null
-    return `/image/${size}${path}`
+    return `${config.publicUrl}/api/v1/image/${size}${path}`
   }
 
   public imageSizes(
@@ -86,7 +86,7 @@ export class TMDBClient {
     }
 
     for (const size of sizes) {
-      result[size] = `/image/${size}${path}`
+      result[size] = `${config.publicUrl}/api/v1/image/${size}${path}`
     }
 
     return result
@@ -146,10 +146,70 @@ export class TMDBClient {
   }
 
   public async tvCredits(id: number, lang = DEFAULT_LANGUAGE) {
-    return this.get<{ cast: unknown[]; crew: unknown[] }>(
-      `/tv/${id}/credits`,
+    // `/tv/{id}/credits` only returns the cast of the latest season.
+    // `/tv/{id}/aggregate_credits` aggregates cast/crew across the entire series.
+    const data = await this.get<{
+      cast: Array<{
+        id: number
+        name: string
+        profile_path: string | null
+        order?: number
+        roles?: Array<{ character: string | null }>
+      }>
+      crew: Array<{
+        id: number
+        name: string
+        department: string
+        profile_path: string | null
+        job?: string
+        jobs?: Array<{ job: string }>
+      }>
+    }>(`/tv/${id}/aggregate_credits`, { language: lang })
+
+    return {
+      cast: (data.cast || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        character: (p.roles || [])
+          .map((r) => r.character)
+          .filter(Boolean)
+          .join(", ") || null,
+        profile_path: p.profile_path,
+        order: p.order ?? 99999,
+      })),
+      crew: (data.crew || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        job: (p.jobs || (p.job ? [{ job: p.job }] : []))
+          .map((j) => j.job)
+          .join(", "),
+        department: p.department,
+        profile_path: p.profile_path,
+      })),
+    }
+  }
+
+  public async personMovieCredits(id: number, lang = DEFAULT_LANGUAGE) {
+    return this.get<{ cast: TMDBMovie[]; crew: TMDBMovie[] }>(
+      `/person/${id}/movie_credits`,
       { language: lang }
     )
+  }
+
+  public async personTvCredits(id: number, lang = DEFAULT_LANGUAGE) {
+    return this.get<{ cast: TMDBTVShow[]; crew: TMDBTVShow[] }>(
+      `/person/${id}/tv_credits`,
+      { language: lang }
+    )
+  }
+
+  public async person(id: number, lang = DEFAULT_LANGUAGE) {
+    return this.get<{
+      id: number
+      name: string
+      profile_path: string | null
+      known_for_department: string | null
+    }>(`/person/${id}`, { language: lang })
   }
 
   public async tvVideos(
@@ -173,37 +233,62 @@ export class TMDBClient {
   public async searchMulti(
     query: string,
     page = 1,
-    lang = DEFAULT_LANGUAGE
+    _lang = DEFAULT_LANGUAGE
   ): Promise<TMDBPageResult<TMDBMultiResult>> {
+    // Search without language so TMDB matches across all languages
     const data = await this.get<TMDBPageResult<TMDBMultiResult>>(
       "/search/multi",
-      buildDefaultParams(lang, { query, page: String(page) })
+      { query, page: String(page), include_adult: "false" }
     )
-    return filterMulti(data)
+    return filterMultiSearch(data)
   }
 
   public async searchMovie(
+    query: string,
+    page = 1,
+    _lang = DEFAULT_LANGUAGE
+  ): Promise<TMDBPageResult<TMDBMovie>> {
+    const data = await this.get<TMDBPageResult<TMDBMovie>>(
+      "/search/movie",
+      { query, page: String(page), include_adult: "false" }
+    )
+    return filterMoviesSearch(data)
+  }
+
+  public async searchMovieLocalised(
     query: string,
     page = 1,
     lang = DEFAULT_LANGUAGE
   ): Promise<TMDBPageResult<TMDBMovie>> {
     const data = await this.get<TMDBPageResult<TMDBMovie>>(
       "/search/movie",
-      buildDefaultParams(lang, { query, page: String(page) })
+      { query, page: String(page), include_adult: "false", language: lang }
     )
-    return filterMovies(data)
+    return data // no filtering — just for localised fields
   }
 
   public async searchTV(
+    query: string,
+    page = 1,
+    _lang = DEFAULT_LANGUAGE
+  ): Promise<TMDBPageResult<TMDBTVShow>> {
+    const data = await this.get<TMDBPageResult<TMDBTVShow>>(
+      "/search/tv",
+      { query, page: String(page), include_adult: "false" }
+    )
+    return filterTVSearch(data)
+  }
+
+  public async searchTVLocalised(
     query: string,
     page = 1,
     lang = DEFAULT_LANGUAGE
   ): Promise<TMDBPageResult<TMDBTVShow>> {
     const data = await this.get<TMDBPageResult<TMDBTVShow>>(
       "/search/tv",
-      buildDefaultParams(lang, { query, page: String(page) })
+      { query, page: String(page), include_adult: "false", language: lang }
     )
-    return filterTV(data)
+    return data // no filtering — just for localised fields
   }
 
   public async discoverMovie(

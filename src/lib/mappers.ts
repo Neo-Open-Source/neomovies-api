@@ -17,7 +17,7 @@ interface TMDBTVOrDetails extends TMDBTVShow {
 interface TMDBCastMember {
   id: number
   name: string
-  character: string
+  character: string | null
   profile_path: string | null
   order: number
 }

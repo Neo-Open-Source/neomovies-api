@@ -7,7 +7,10 @@ import { language } from "../lib/language"
 import { config } from "../config"
 import type { TMDBImagesResponse, TMDBImageItem } from "../types/tmdb"
 
-const IMAGE_CACHE = "public, max-age=604800, immutable"
+// Edge-cacheable on Vercel (s-maxage) and browser-cacheable (max-age): images
+// are immutable per TMDB path, so a 7-day CDN cache removes the serverless
+// cold-start + TMDB refetch from every image load.
+const IMAGE_CACHE = "public, max-age=604800, s-maxage=604800, immutable"
 
 async function fetchImage(url: string): Promise<{ buffer: Buffer; contentType: string }> {
   const res = await fetch(url)
@@ -69,10 +72,10 @@ function pickByLang(items: TMDBImageItem[], lang: string): string | null {
   return null
 }
 
-async function fetchImages(id: number, mediaType: "movie" | "tv"): Promise<TMDBImagesResponse> {
+async function fetchImages(id: number, mediaType: "movie" | "tv", extra: Record<string, string> = {}): Promise<TMDBImagesResponse> {
   return tmdb.get<TMDBImagesResponse>(
     `/${mediaType}/${id}/images`,
-    {}
+    extra
   )
 }
 
@@ -83,21 +86,32 @@ async function fetchNullImages(id: number, mediaType: "movie" | "tv"): Promise<T
   )
 }
 
+const IMAGE_PROXY_PREFIXES = ["/image/", "/api/v1/image/"] as const
+
+function proxyImagePath(pathname: string): string | null {
+  for (const prefix of IMAGE_PROXY_PREFIXES) {
+    if (pathname.startsWith(prefix)) return pathname.slice(prefix.length)
+  }
+  return null
+}
+
+async function serveProxyImage(pathname: string): Promise<Response> {
+  const rest = proxyImagePath(pathname)
+  if (!rest) throw new BadRequestError("Missing image path")
+
+  const firstSlash = rest.indexOf("/")
+  if (firstSlash === -1) throw new BadRequestError("Invalid image path")
+
+  const size = rest.substring(0, firstSlash)
+  const path = rest.substring(firstSlash)
+  const { buffer, contentType } = await fetchImage(`${config.tmdb.imageBaseUrl}/${size}${path}`)
+  return imageResponse(buffer, contentType)
+}
+
 export const imageRoutes = new Elysia()
 
-  .get("/image/*", async ({ request }) => {
-    const url = new URL(request.url)
-    const rest = url.pathname.replace("/image/", "")
-    if (!rest) throw new BadRequestError("Missing image path")
-
-    const firstSlash = rest.indexOf("/")
-    if (firstSlash === -1) throw new BadRequestError("Invalid image path")
-
-    const size = rest.substring(0, firstSlash)
-    const path = rest.substring(firstSlash)
-    const { buffer, contentType } = await fetchImage(`${config.tmdb.imageBaseUrl}/${size}${path}`)
-    return imageResponse(buffer, contentType)
-  })
+  .get("/image/*", async ({ request }) => serveProxyImage(new URL(request.url).pathname))
+  .get("/api/v1/image/*", async ({ request }) => serveProxyImage(new URL(request.url).pathname))
 
   .get("/api/v1/images/poster/:id", async ({ params: { id }, query }) => {
     const lang = language(query)
@@ -149,7 +163,14 @@ export const imageRoutes = new Elysia()
     const detected = explicitType ? { type: explicitType, found: true } : await detectType(id)
     if (!detected.found) throw new NotFoundError("Content not found")
 
-    const allImages = await fetchImages(id, detected.type)
+    // Ask TMDB for title-card backdrops in the requested language (plus EN and
+    // language-less ones). Passing include_image_language replaces the default
+    // (en+null), so the target language must be listed explicitly for a
+    // localized "backdrop with text" preview.
+    const langPrefix = lang.slice(0, 2)
+    const allImages = await fetchImages(id, detected.type, {
+      include_image_language: `${langPrefix},en,null`,
+    })
     const backdrop = pickByLang(allImages.backdrops, lang)
     const details = detected.type === "movie" ? await tmdb.movie(id, lang) : await tmdb.tvShow(id, lang)
     const imagePath = backdrop || details.backdrop_path || details.poster_path

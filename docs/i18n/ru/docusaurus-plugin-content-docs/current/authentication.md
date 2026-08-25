@@ -19,7 +19,7 @@ GET /api/v1/auth/login?redirect_uri=https://neome.uk/auth/callback
 {
   "success": true,
   "data": {
-    "url": "https://id.neome.uk/api/v1/oauth2/authorize?..."
+    "url": "https://id.neome.uk/api/v1/oauth/authorize?..."
   }
 }
 ```

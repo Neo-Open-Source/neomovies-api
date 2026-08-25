@@ -1,9 +1,12 @@
 import { db } from "../db"
+import { tmdb } from "./tmdb"
+import { mapMovie, mapTV } from "../lib/mappers"
+import { DEFAULT_LANGUAGE, type Language } from "../lib/language"
 
 export const userData = {
-  async listFavorites(userId: string, page: number = 1) {
+  async listFavorites(userId: string, page: number = 1, lang: Language = DEFAULT_LANGUAGE) {
     const limit = 20
-    const [items, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       db.favorite.findMany({
         where: { userId },
         skip: (page - 1) * limit, take: limit,
@@ -11,9 +14,38 @@ export const userData = {
       }),
       db.favorite.count({ where: { userId } }),
     ])
+
+    const enriched = await Promise.all(
+      rows.map(async (f) => {
+        try {
+          const mediaType = f.mediaType === "tv" ? ("tv" as const) : ("movie" as const)
+          if (mediaType === "tv") {
+            const show = await tmdb.tvShow(f.mediaId, lang)
+            return {
+              ...mapTV(show),
+              mediaType,
+              mediaId: f.mediaId,
+              createdAt: f.createdAt,
+            }
+          }
+          const movie = await tmdb.movie(f.mediaId, lang)
+          return {
+            ...mapMovie(movie),
+            mediaType,
+            mediaId: f.mediaId,
+            createdAt: f.createdAt,
+          }
+        } catch {
+          return null
+        }
+      }),
+    )
+
     return {
-      items: items.map(f => ({ mediaId: f.mediaId, mediaType: f.mediaType, createdAt: f.createdAt })),
-      page, totalPages: Math.ceil(total / limit), totalResults: total,
+      items: enriched.filter((item): item is NonNullable<typeof item> => item !== null),
+      page,
+      totalPages: Math.ceil(total / limit),
+      totalResults: total,
     }
   },
 

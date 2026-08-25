@@ -1,10 +1,11 @@
 import { tmdb } from "./tmdb"
 import { DEFAULT_LANGUAGE, type Language } from "../lib/language"
+import * as images from "../lib/images"
 import {
   mapMovie, mapTV, mapEpisode, paginate,
 } from "../lib/mappers"
 import type {
-  TMDBMultiResult, TMDBDiscoverParams, TMDBMovie,
+  TMDBMultiResult, TMDBDiscoverParams, TMDBMovie, TMDBTVShow,
 } from "../types/tmdb"
 import {
   resolveExternalIds, extractTrailers, formatCredits,
@@ -12,6 +13,7 @@ import {
   movieDetailFromTMDB, tvDetailFromTMDB,
   type TmdbCreditsResponse,
 } from "./media/utils"
+import { validMovieCredit, validTVCredit } from "./tmdb/filters"
 
 async function enrichedPage(
   type: "movie" | "tv",
@@ -29,6 +31,97 @@ async function enrichedPage(
 }
 
 export const media = {
+  async person(id: number, lang = DEFAULT_LANGUAGE) {
+    const p = await tmdb.person(id, lang)
+    return {
+      tmdbId: p.id,
+      name: p.name,
+      profile: tmdb.imageUrl(p.profile_path, "w342"),
+      profiles: tmdb.imageSizes(p.profile_path, images.PROFILE_SIZES),
+      department: p.known_for_department,
+    }
+  },
+
+  async personCredits(id: number, pageNum = 1, lang = DEFAULT_LANGUAGE) {
+    const [movieCredits, tvCredits] = await Promise.all([
+      tmdb.personMovieCredits(id, lang),
+      tmdb.personTvCredits(id, lang),
+    ])
+
+    interface CreditBase {
+      id: number
+      overview: string
+      poster_path: string | null
+      vote_average: number
+      vote_count: number
+      popularity: number
+      character?: string
+      job?: string
+    }
+
+    const toMovie = (m: CreditBase & { title: string; original_title: string; release_date: string }) => ({
+      tmdbId: m.id,
+      title: m.title,
+      originalTitle: m.original_title,
+      overview: m.overview ?? "",
+      poster: tmdb.imageUrl(m.poster_path, "w500"),
+      releaseDate: m.release_date || null,
+      voteAverage: m.vote_average ?? 0,
+      voteCount: m.vote_count ?? 0,
+      popularity: m.popularity ?? 0,
+      mediaType: "movie" as const,
+      role: m.character ?? m.job ?? null,
+      creditType: (m.character ? "cast" : "crew") as "cast" | "crew",
+    })
+
+    const toTV = (s: CreditBase & { name: string; original_name: string; first_air_date: string }) => ({
+      tmdbId: s.id,
+      title: s.name,
+      originalTitle: s.original_name,
+      overview: s.overview ?? "",
+      poster: tmdb.imageUrl(s.poster_path, "w500"),
+      releaseDate: s.first_air_date || null,
+      voteAverage: s.vote_average ?? 0,
+      voteCount: s.vote_count ?? 0,
+      popularity: s.popularity ?? 0,
+      mediaType: "tv" as const,
+      role: s.character ?? s.job ?? null,
+      creditType: (s.character ? "cast" : "crew") as "cast" | "crew",
+    })
+
+    type CreditItem = ReturnType<typeof toMovie> | ReturnType<typeof toTV>
+
+    const dedupe = (items: CreditItem[]) => {
+      const seen = new Map<number, CreditItem>()
+      for (const item of items) {
+        const existing = seen.get(item.tmdbId)
+        if (!existing || (existing.creditType === "crew" && item.creditType === "cast")) {
+          seen.set(item.tmdbId, item)
+        }
+      }
+      return [...seen.values()]
+    }
+
+    // TMDB credits include every credited role (minor/uncredited/obscure titles).
+    // Apply the credit validators (poster, released, overview, genres, valid
+    // title, soft engagement floor) to drop shorts, non-localized and junk
+    // entries while keeping fresh and little-known titles.
+    const all = dedupe([
+      ...(movieCredits.cast || []).filter(validMovieCredit).map(toMovie),
+      ...(movieCredits.crew || []).filter(validMovieCredit).map(toMovie),
+      ...(tvCredits.cast || []).filter(validTVCredit).map(toTV),
+      ...(tvCredits.crew || []).filter(validTVCredit).map(toTV),
+    ]).sort((a, b) => (b.releaseDate ?? "").localeCompare(a.releaseDate ?? ""))
+
+    const pageSize = 30
+    const totalResults = all.length
+    const totalPages = Math.max(1, Math.ceil(totalResults / pageSize))
+    const start = (pageNum - 1) * pageSize
+    const slice = all.slice(start, start + pageSize)
+
+    return paginate(slice, pageNum, totalPages, totalResults)
+  },
+
   async movieDetail(id: number, lang = DEFAULT_LANGUAGE) {
     const [movie, c, certification, videos] = await Promise.all([
       tmdb.movie(id, lang),
@@ -93,6 +186,7 @@ export const media = {
       seasonNumber: data.season_number,
       overview: data.overview,
       poster: tmdb.imageUrl(data.poster_path, "w342"),
+      posters: tmdb.imageSizes(data.poster_path, images.POSTER_SIZES),
       airDate: data.air_date,
       episodes: (data.episodes || []).map(mapEpisode),
     }
@@ -175,6 +269,11 @@ export const media = {
   },
 
   async similar(type: "movie" | "tv", id: number, pageNum: number, lang = DEFAULT_LANGUAGE) {
+    // TMDB `/similar` is often weakly related. `/recommendations` matches
+    const recommended = await tmdb.recommendations(type, id, pageNum, lang)
+    if (recommended.results?.length) {
+      return enrichedPage(type, recommended, lang)
+    }
     const data = await tmdb.similar(type, id, pageNum, lang)
     return enrichedPage(type, data, lang)
   },
@@ -184,6 +283,194 @@ export const media = {
     return enrichedPage(type, data, lang)
   },
 
+  async relatedByCast(type: "movie" | "tv", id: number, pageNum: number, lang = DEFAULT_LANGUAGE) {
+    // TMDB discover `with_people` is unreliable for TV (often ignored).
+    // Aggregate real person credits instead, then score by shared cast/crew + genres.
+    const [details, credits] = await Promise.all([
+      type === "movie" ? tmdb.movie(id, lang) : tmdb.tvShow(id, lang),
+      type === "movie" ? tmdb.movieCredits(id, lang) : tmdb.tvCredits(id, lang),
+    ])
+
+    const sourceGenres = new Set((details.genres || []).map((g) => g.id))
+    const isAnimation = sourceGenres.has(16)
+
+    const cast = ((credits.cast || []) as Array<{ id: number }>).slice(0, 5)
+    const CREATOR_JOBS = new Set([
+      "Creator",
+      "Executive Producer",
+      "Writer",
+      "Director",
+      "Characters",
+      "Original Series Creator",
+      "Supervising Producer",
+      "Developer",
+      "Novel",
+      "Screenplay",
+      "Story",
+    ])
+    const crew = ((credits.crew || []) as Array<{ id: number; job: string }>)
+      .filter((c) => (c.job || "").split(",").some((j) => CREATOR_JOBS.has(j.trim())))
+      .slice(0, 8)
+
+    const peopleIds = [...new Set([...cast, ...crew].map((p) => p.id).filter(Boolean))]
+    if (!peopleIds.length) {
+      return paginate([], pageNum, 0, 0)
+    }
+
+    const creditPages = await Promise.all(
+      peopleIds.map((pid) =>
+        type === "movie"
+          ? tmdb.personMovieCredits(pid, lang)
+          : tmdb.personTvCredits(pid, lang),
+      ),
+    )
+
+    type CreditItem = (TMDBMovie | TMDBTVShow) & { genre_ids?: number[] }
+    const scores = new Map<number, {
+      item: CreditItem
+      hits: number
+      popularity: number
+      genres: Set<number>
+    }>()
+
+    for (const page of creditPages) {
+      const entries = [...(page.cast || []), ...(page.crew || [])] as CreditItem[]
+      for (const item of entries) {
+        if (!item?.id || item.id === id) continue
+        // Drop unreleased, undated, non-localized and junk titles
+        if ("release_date" in item ? !validMovieCredit(item) : !validTVCredit(item)) continue
+        const existing = scores.get(item.id)
+        const genres = new Set(item.genre_ids || [])
+        if (existing) {
+          existing.hits += 1
+          existing.popularity = Math.max(existing.popularity, item.popularity || 0)
+          for (const g of genres) existing.genres.add(g)
+          if ((item.vote_count || 0) > (existing.item.vote_count || 0)) {
+            existing.item = item
+          }
+        } else {
+          scores.set(item.id, {
+            item,
+            hits: 1,
+            popularity: item.popularity || 0,
+            genres,
+          })
+        }
+      }
+    }
+
+    const ranked = [...scores.values()]
+      .map((entry) => {
+        const overlap = [...entry.genres].filter((g) => sourceGenres.has(g)).length
+        const hasAnimation = entry.genres.has(16)
+        // Drop titles with no genre overlap unless source isn't tagged yet
+        if (sourceGenres.size > 0 && overlap === 0) return null
+        // For animated sources, keep the row on-brand
+        if (isAnimation && !hasAnimation) return null
+
+        const score =
+          overlap * 12 +
+          entry.hits * 10 +
+          Math.log1p(entry.popularity) +
+          (hasAnimation && isAnimation ? 18 : 0) +
+          Math.log1p(entry.item.vote_count || 0) * 0.5
+
+        return { score, item: entry.item }
+      })
+      .filter((x): x is { score: number; item: CreditItem } => Boolean(x))
+      .sort((a, b) => b.score - a.score)
+
+    const pageSize = 20
+    const totalResults = ranked.length
+    const totalPages = Math.max(1, Math.ceil(totalResults / pageSize))
+    const start = (pageNum - 1) * pageSize
+    const slice = ranked.slice(start, start + pageSize).map((r) => r.item)
+
+    return enrichedPage(
+      type,
+      {
+        results: slice as any[],
+        page: pageNum,
+        total_pages: totalPages,
+        total_results: totalResults,
+      },
+      lang,
+    )
+  },
+
+  async relatedByStudio(type: "movie" | "tv", id: number, pageNum: number, lang = DEFAULT_LANGUAGE) {
+    // Prefer production companies ("studio") over broadcast networks — matches Plex better.
+    if (type === "movie") {
+      const movie = await tmdb.movie(id, lang)
+      const companies = (movie.production_companies || []).filter((c) => c.id)
+      if (!companies.length) {
+        return { ...paginate([], pageNum, 0, 0), label: null as string | null }
+      }
+
+      const companyIds = companies.slice(0, 2).map((c) => c.id).join("|")
+      const label = companies[0].name
+      const data = await tmdb.discoverMovie(
+        { page: pageNum, sort_by: "popularity.desc", with_companies: companyIds },
+        lang,
+      )
+      data.results = data.results.filter((item) => item.id !== id)
+      const page = await enrichedPage(type, data, lang)
+      return { ...page, label }
+    }
+
+    const show = await tmdb.tvShow(id, lang)
+    const companies = (show.production_companies || []).filter((c) => c.id)
+    const genres = (show.genres || []).map((g) => g.id)
+    const networkId = show.networks?.[0]?.id
+    const networkName = show.networks?.[0]?.name ?? null
+
+    if (companies.length) {
+      const companyIds = companies.slice(0, 2).map((c) => c.id).join("|")
+      const label = companies[0].name
+      const data = await tmdb.discoverTV(
+        {
+          page: pageNum,
+          sort_by: "popularity.desc",
+          with_companies: companyIds,
+          ...(genres.length ? { with_genres: genres.slice(0, 2).join(",") } : {}),
+        },
+        lang,
+      )
+      data.results = data.results.filter((item) => item.id !== id)
+
+      // If company+genre is too strict, retry companies only
+      if (!data.results.length) {
+        const fallback = await tmdb.discoverTV(
+          { page: pageNum, sort_by: "popularity.desc", with_companies: companyIds },
+          lang,
+        )
+        fallback.results = fallback.results.filter((item) => item.id !== id)
+        const page = await enrichedPage(type, fallback, lang)
+        return { ...page, label }
+      }
+
+      const page = await enrichedPage(type, data, lang)
+      return { ...page, label }
+    }
+
+    if (networkId) {
+      const data = await tmdb.discoverTV(
+        {
+          page: pageNum,
+          sort_by: "popularity.desc",
+          with_networks: networkId,
+          ...(genres.length ? { with_genres: genres.slice(0, 2).join(",") } : {}),
+        },
+        lang,
+      )
+      data.results = data.results.filter((item) => item.id !== id)
+      const page = await enrichedPage(type, data, lang)
+      return { ...page, label: networkName }
+    }
+
+    return { ...paginate([], pageNum, 0, 0), label: null as string | null }
+  },
+
   async search(p: Record<string, string | undefined>, lang = DEFAULT_LANGUAGE) {
     const { q, type, genre, year, yearFrom, yearTo, rating, ratingFrom, ratingTo, keyword, country, sort_by, page: pageStr } = p
     const pageNum = parseInt(pageStr || "1")
@@ -191,17 +478,38 @@ export const media = {
     if (q) {
       const mediaType = type || "multi"
       if (mediaType === "movie") {
-        const data = await tmdb.searchMovie(q, pageNum, lang)
-        return enrichedPage("movie", data, lang)
+        const [data, localised] = await Promise.all([
+          tmdb.searchMovie(q, pageNum, lang),
+          tmdb.searchMovieLocalised(q, pageNum, lang),
+        ])
+        const locMap = new Map(localised.results.map(r => [r.id, r]))
+        const merged = { ...data, results: data.results.map(r => ({ ...r, ...locMap.get(r.id) })) }
+        return enrichedPage("movie", merged, lang)
       }
       if (mediaType === "tv") {
-        const data = await tmdb.searchTV(q, pageNum, lang)
-        return enrichedPage("tv", data, lang)
+        const [data, localised] = await Promise.all([
+          tmdb.searchTV(q, pageNum, lang),
+          tmdb.searchTVLocalised(q, pageNum, lang),
+        ])
+        const locMap = new Map(localised.results.map(r => [r.id, r]))
+        const merged = { ...data, results: data.results.map(r => ({ ...r, ...locMap.get(r.id) })) }
+        return enrichedPage("tv", merged, lang)
       }
-      const data = await tmdb.searchMulti(q, pageNum, lang)
+      // multi: search without language for matching, enrich with localised data
+      const [data, locMovies, locTV] = await Promise.all([
+        tmdb.searchMulti(q, pageNum, lang),
+        tmdb.searchMovieLocalised(q, pageNum, lang).then(r => new Map(r.results.map(m => [m.id, m]))),
+        tmdb.searchTVLocalised(q, pageNum, lang).then(r => new Map(r.results.map(m => [m.id, m]))),
+      ])
       const multiResult = data.results.map((item: TMDBMultiResult) => {
-        if (item.media_type === "movie") return { ...mapMovie(item), mediaType: "movie" }
-        if (item.media_type === "tv") return { ...mapTV(item), mediaType: "tv" }
+        if (item.media_type === "movie") {
+          const loc = locMovies.get(item.id)
+          return { ...mapMovie(loc ? { ...item, ...loc } : item), mediaType: "movie" }
+        }
+        if (item.media_type === "tv") {
+          const loc = locTV.get(item.id)
+          return { ...mapTV(loc ? { ...item, ...loc } : item), mediaType: "tv" }
+        }
         return {
           mediaType: "person", tmdbId: item.id, name: item.name,
           profile: tmdb.imageUrl(item.profile_path, "w185"),

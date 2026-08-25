@@ -6,7 +6,7 @@ import { mapCastMember, mapCrewMember, mapSeason, mapCompany, mapNetwork } from 
 
 export interface TmdbCreditsResponse {
   cast: Array<{
-    id: number; name: string; character: string;
+    id: number; name: string; character: string | null;
     profile_path: string | null; order: number
   }>
   crew: Array<{
@@ -45,8 +45,8 @@ export function extractTrailers(videos: { results: Array<{ key: string; site: st
 
 export function formatCredits(c: TmdbCreditsResponse) {
   return {
-    cast: (c.cast || []).slice(0, 20).map(mapCastMember),
-    crew: (c.crew || []).slice(0, 20).map(mapCrewMember),
+    cast: (c.cast || []).map(mapCastMember),
+    crew: (c.crew || []).map(mapCrewMember),
   }
 }
 
@@ -106,8 +106,20 @@ export function movieDetailFromTMDB(movie: any) {
 }
 
 export function tvDetailFromTMDB(show: any) {
+  const isReleased = (date: string | null | undefined) => {
+    if (!date) return false
+    const parsed = new Date(date)
+    return !Number.isNaN(parsed.getTime()) && parsed.getTime() <= Date.now()
+  }
+
   return {
-    seasons: (show.seasons || []).map(mapSeason),
+    seasons: (show.seasons || [])
+      .filter((s: any) =>
+        s.season_number > 0 &&
+        s.episode_count > 0 &&
+        isReleased(s.air_date),
+      )
+      .map(mapSeason),
     numberOfSeasons: show.number_of_seasons,
     numberOfEpisodes: show.number_of_episodes,
     status: show.status,

@@ -19,7 +19,7 @@ Response:
 {
   "success": true,
   "data": {
-    "url": "https://id.neome.uk/api/v1/oauth2/authorize?..."
+    "url": "https://id.neome.uk/api/v1/oauth/authorize?..."
   }
 }
 ```
