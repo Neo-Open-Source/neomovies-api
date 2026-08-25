@@ -6,6 +6,8 @@ import { AppError } from "./lib/errors"
 import { authRoutes } from "./routes/auth"
 import { mediaRoutes } from "./routes/media"
 import { searchRoutes } from "./routes/search"
+import { genreRoutes } from "./routes/genres"
+import { personRoutes } from "./routes/person"
 
 import { favoriteRoutes } from "./routes/favorites"
 import { watchLaterRoutes } from "./routes/watch-later"
@@ -21,7 +23,40 @@ import { cronRoutes } from "./routes/cron"
 
 assertConfig()
 
+/**
+ * Public GET endpoints that Vercel's edge can cache.
+ * Vary by full URL (query string included), so language variants are cached
+ * separately. User-scoped / stateful routes are excluded (auth, favorites,
+ * watch-later, sync, players, torrents, cron, webhooks).
+ */
+const EDGE_CACHE = "public, s-maxage=300, stale-while-revalidate=600"
+
+const NO_EDGE_CACHE_PREFIXES = [
+  "/api/v1/favorites",
+  "/api/v1/watch-later",
+  "/api/v1/sync",
+  "/api/v1/auth",
+  "/api/v1/players",
+  "/api/v1/torrents",
+  "/api/v1/cron",
+  "/api/v1/webhooks",
+]
+
+function isEdgeCacheable(request: Request): boolean {
+  if (request.method !== "GET") return false
+  const url = new URL(request.url)
+  const path = url.pathname
+  return !NO_EDGE_CACHE_PREFIXES.some((p) => path.startsWith(p))
+}
+
 export const app = new Elysia()
+  .onAfterHandle(({ set, request }) => {
+    if (!isEdgeCacheable(request)) return
+    // Image routes already send their own long-lived immutable cache headers.
+    const path = new URL(request.url).pathname
+    if (path.startsWith("/image/") || path.startsWith("/api/v1/image/") || path.startsWith("/api/v1/images/")) return
+    set.headers["Cache-Control"] = EDGE_CACHE
+  })
   .onError(({ code, error, set }) => {
     if (error instanceof AppError) {
       set.status = error.statusCode
@@ -63,11 +98,13 @@ export const app = new Elysia()
         { name: "Auth", description: "Authentication and authorization" },
         { name: "Categories", description: "Browse categories and collections" },
         { name: "Favorites", description: "User favorites management" },
+        { name: "Genres", description: "Movie and TV genres list" },
         { name: "Health", description: "Health check endpoint" },
         { name: "Images", description: "Image proxy and backdrops" },
         { name: "Media", description: "Movie and TV show details" },
         { name: "Players", description: "Video streaming players" },
         { name: "Search", description: "Multi-type search" },
+        { name: "People", description: "Person details and filmography" },
         { name: "Support", description: "Supporters list" },
         { name: "Sync", description: "Cross-device sync progress" },
         { name: "Torrents", description: "Torrent search" },
@@ -80,6 +117,8 @@ export const app = new Elysia()
   .use(authRoutes)
   .use(mediaRoutes)
   .use(searchRoutes)
+  .use(genreRoutes)
+  .use(personRoutes)
   .use(supportRoutes)
   .use(favoriteRoutes)
   .use(watchLaterRoutes)

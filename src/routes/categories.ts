@@ -36,25 +36,20 @@ const studioCategories: CategoryDef[] = [
   { id: "marvel", name: "Marvel", slug: "marvel", kind: "company", mediaType: "movie", value: "420" },
   { id: "dc", name: "DC", slug: "dc", kind: "company", mediaType: "movie", value: "128064" },
   { id: "pixar", name: "Pixar", slug: "pixar", kind: "company", mediaType: "movie", value: "3" },
-  { id: "dreamworks", name: "DreamWorks", slug: "dreamworks", kind: "company", mediaType: "movie", value: "24" },
-  { id: "legendary", name: "Legendary", slug: "legendary", kind: "company", mediaType: "movie", value: "379" },
+  { id: "dreamworks", name: "DreamWorks", slug: "dreamworks", kind: "company", mediaType: "movie", value: "521" },
   { id: "a24", name: "A24", slug: "a24", kind: "company", mediaType: "movie", value: "199" },
-  { id: "amazon-studios", name: "Amazon Studios", slug: "amazon-studios", kind: "company", mediaType: "movie", value: "10234" },
-  { id: "apple-studios", name: "Apple Studios", slug: "apple-studios", kind: "company", mediaType: "movie", value: "2552" },
 ]
 
 const networkCategories: CategoryDef[] = [
   { id: "netflix", name: "Netflix", slug: "netflix", kind: "network", mediaType: "tv", value: "213" },
   { id: "hbo", name: "HBO", slug: "hbo", kind: "network", mediaType: "tv", value: "49" },
   { id: "apple-tv-plus", name: "Apple TV+", slug: "apple-tv-plus", kind: "network", mediaType: "tv", value: "2552" },
-  { id: "disney-plus", name: "Disney+", slug: "disney-plus", kind: "network", mediaType: "tv", value: "2739" },
   { id: "prime-video", name: "Prime Video", slug: "prime-video", kind: "network", mediaType: "tv", value: "1024" },
   { id: "hulu", name: "Hulu", slug: "hulu", kind: "network", mediaType: "tv", value: "453" },
-  { id: "paramount-plus", name: "Paramount+", slug: "paramount-plus", kind: "network", mediaType: "tv", value: "4335" },
-  { id: "peacock", name: "Peacock", slug: "peacock", kind: "network", mediaType: "tv", value: "5807" },
+  { id: "peacock", name: "Peacock", slug: "peacock", kind: "network", mediaType: "tv", value: "3353" },
   { id: "cartoon-network", name: "Cartoon Network", slug: "cartoon-network", kind: "network", mediaType: "tv", value: "56" },
-  { id: "nickelodeon", name: "Nickelodeon", slug: "nickelodeon", kind: "network", mediaType: "tv", value: "87" },
-  { id: "adult-swim", name: "Adult Swim", slug: "adult-swim", kind: "network", mediaType: "tv", value: "377" },
+  { id: "nickelodeon", name: "Nickelodeon", slug: "nickelodeon", kind: "network", mediaType: "tv", value: "13" },
+  { id: "adult-swim", name: "Adult Swim", slug: "adult-swim", kind: "network", mediaType: "tv", value: "80" },
 ]
 
 function capitalizeFirst(name: string): string {
@@ -190,12 +185,25 @@ export const categoryRoutes = new Elysia()
         data = paginate([], pageNum, 1, 0)
       }
     } else if (cat.kind === "company") {
-      const discover = await tmdb.discoverMovie({ with_companies: cat.value }, lang)
-      const items = discover.results.map(mapMovie)
-      enrichGenreNames(items, await genreNames("movie", lang), discover.results)
-      data = paginate(items, discover.page, discover.total_pages, discover.total_results)
+      const [movieDiscover, tvDiscover] = await Promise.all([
+        tmdb.discoverMovie({ with_companies: cat.value, page: pageNum }, lang).catch(() => null),
+        tmdb.discoverTV({ with_companies: cat.value, page: pageNum }, lang).catch(() => null),
+      ])
+
+      const movieItems = movieDiscover ? movieDiscover.results.map(mapMovie) : []
+      const tvItems = tvDiscover ? tvDiscover.results.map(mapTV) : []
+
+      if (movieDiscover) enrichGenreNames(movieItems, await genreNames("movie", lang), movieDiscover.results)
+      if (tvDiscover) enrichGenreNames(tvItems, await genreNames("tv", lang), tvDiscover.results)
+
+      const allItems = [...movieItems, ...tvItems]
+        .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
+
+      const totalResults = (movieDiscover?.total_results ?? 0) + (tvDiscover?.total_results ?? 0)
+      const totalPages = Math.max(movieDiscover?.total_pages ?? 0, tvDiscover?.total_pages ?? 0)
+      data = paginate(allItems, pageNum, totalPages, totalResults)
     } else if (cat.kind === "network") {
-      const discover = await tmdb.discoverTV({ with_networks: cat.value }, lang)
+      const discover = await tmdb.discoverTV({ with_networks: cat.value, page: pageNum }, lang)
       const items = discover.results.map(mapTV)
       enrichGenreNames(items, await genreNames("tv", lang), discover.results)
       data = paginate(items, discover.page, discover.total_pages, discover.total_results)

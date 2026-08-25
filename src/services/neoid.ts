@@ -16,11 +16,24 @@ interface NeoIdUserResponse {
   role: string
 }
 
+/** Neo ID wraps payloads as `{ ok: true, data: T }`. */
+function unwrapData<T>(json: unknown): T {
+  if (json && typeof json === "object" && "data" in json && (json as { ok?: boolean }).ok !== false) {
+    return (json as { data: T }).data
+  }
+  return json as T
+}
+
 class NeoIdClient {
   private clientId = config.neoId.clientId
   private clientSecret = config.neoId.clientSecret
 
-  getAuthorizeUrl(redirectUri?: string): string {
+  /**
+   * Builds the Neo ID authorize URL. Extra params (PKCE code_challenge,
+   * state, …) are appended verbatim so SPAs can start a public-client flow
+   * and exchange the code from the browser.
+   */
+  getAuthorizeUrl(redirectUri?: string, extra?: Record<string, string>): string {
     const redirect = redirectUri || config.neoId.redirectUri
     const params = new URLSearchParams({
       client_id: this.clientId,
@@ -28,6 +41,9 @@ class NeoIdClient {
       response_type: "code",
       scope: config.neoId.scope,
     })
+    for (const [key, value] of Object.entries(extra ?? {})) {
+      if (value) params.set(key, value)
+    }
     return `${config.neoId.authorizeUrl}?${params.toString()}`
   }
 
@@ -50,11 +66,11 @@ class NeoIdClient {
       throw new Error(`Neo ID token exchange failed: ${res.status} ${text}`)
     }
 
-    const json = await res.json() as Record<string, unknown>
+    const json = unwrapData<Record<string, unknown>>(await res.json())
     return {
       access_token: (json.access_token || json.accessToken) as string,
       token_type: (json.token_type || "Bearer") as string,
-      expires_in: json.expires_in as number,
+      expires_in: Number(json.expires_in ?? 3600),
       refresh_token: (json.refresh_token || json.refreshToken) as string,
       id_token: (json.id_token || json.idToken) as string,
     }
@@ -77,11 +93,11 @@ class NeoIdClient {
       throw new Error(`Neo ID refresh failed: ${res.status} ${text}`)
     }
 
-    const json = await res.json() as Record<string, unknown>
+    const json = unwrapData<Record<string, unknown>>(await res.json())
     return {
       access_token: (json.access_token || json.accessToken) as string,
       token_type: (json.token_type || "Bearer") as string,
-      expires_in: json.expires_in as number,
+      expires_in: Number(json.expires_in ?? 3600),
       refresh_token: (json.refresh_token || json.refreshToken) as string,
       id_token: (json.id_token || json.idToken) as string,
     }
@@ -96,29 +112,40 @@ class NeoIdClient {
       throw new Error(`Neo ID user fetch failed: ${res.status}`)
     }
 
-    return res.json() as Promise<NeoIdUserResponse>
+    const profile = unwrapData<Record<string, unknown>>(await res.json())
+    return {
+      id: String(profile.id ?? profile.sub ?? ""),
+      email: String(profile.email ?? ""),
+      displayName: (profile.displayName ?? profile.name) as string | undefined,
+      avatar: (profile.avatar ?? profile.picture) as string | undefined,
+      role: String(profile.role ?? "user"),
+    }
   }
 
   async listRefreshTokens(authHeader: string): Promise<{ id: string; deviceName?: string; createdAt: string }[]> {
-    const res = await fetch(`${config.neoId.issuer}/api/v1/oauth2/tokens`, {
+    // Neo ID exposes active sessions, not a separate oauth2 token list
+    const res = await fetch(`${config.neoId.issuer}/api/v1/sessions`, {
       headers: { Authorization: authHeader },
     })
     if (!res.ok) return []
-    const data = await res.json() as { id: string; deviceName?: string; createdAt: string }[]
-    return data
+    const sessions = unwrapData<{ id: string; deviceInfo?: string; createdAt: string }[]>(await res.json())
+    return (sessions ?? []).map((s) => ({
+      id: s.id,
+      deviceName: s.deviceInfo,
+      createdAt: s.createdAt,
+    }))
   }
 
-  async revokeRefreshToken(refreshToken: string): Promise<void> {
-    await fetch(`${config.neoId.issuer}/api/v1/oauth2/revoke`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+  async revokeRefreshToken(sessionId: string, authHeader: string): Promise<void> {
+    await fetch(`${config.neoId.issuer}/api/v1/sessions/${sessionId}`, {
+      method: "DELETE",
+      headers: { Authorization: authHeader, "Content-Type": "application/json" },
     })
   }
 
   async revokeAllRefreshTokens(authHeader: string): Promise<void> {
-    await fetch(`${config.neoId.issuer}/api/v1/oauth2/revoke-all`, {
-      method: "POST",
+    await fetch(`${config.neoId.issuer}/api/v1/sessions`, {
+      method: "DELETE",
       headers: { Authorization: authHeader, "Content-Type": "application/json" },
     })
   }

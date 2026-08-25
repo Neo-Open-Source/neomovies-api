@@ -9,11 +9,21 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
   .use(authMiddleware)
 
   .get("/login", ({ query }) => {
-    const { redirect_uri } = query
-    return success({ url: neoid.getAuthorizeUrl(redirect_uri) })
+    const { redirect_uri, code_challenge, code_challenge_method, state } = query
+    const extra = {
+      ...(code_challenge ? { code_challenge } : {}),
+      ...(code_challenge_method ? { code_challenge_method } : {}),
+      ...(state ? { state } : {}),
+    }
+    return success({ url: neoid.getAuthorizeUrl(redirect_uri, extra) })
   }, {
     detail: { tags: ["Auth"], summary: "Neo ID Login" },
-    query: t.Object({ redirect_uri: t.Optional(t.String()) }),
+    query: t.Object({
+      redirect_uri: t.Optional(t.String()),
+      code_challenge: t.Optional(t.String()),
+      code_challenge_method: t.Optional(t.String()),
+      state: t.Optional(t.String()),
+    }),
   })
 
   .get("/callback", async ({ query }) => {
@@ -75,9 +85,30 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     detail: { tags: ["Auth"], summary: "Refresh Tokens" },
   })
 
-  .get("/profile", async ({ userId, userEmail, userRole }) => {
+  .get("/profile", async ({ userId, userEmail, userRole, headers }) => {
     if (!userId) throw new UnauthorizedError()
-    return success({ id: userId, email: userEmail, role: userRole })
+    const authHeader = headers.authorization
+    if (!authHeader?.startsWith("Bearer ")) throw new UnauthorizedError()
+
+    try {
+      const user = await neoid.getUser(authHeader.slice(7))
+      return success({
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName ?? null,
+        avatar: user.avatar ?? null,
+        role: user.role,
+      })
+    } catch {
+      // Token verified by middleware — fall back to JWT claims if Neo ID is briefly down
+      return success({
+        id: userId,
+        email: userEmail,
+        displayName: null,
+        avatar: null,
+        role: userRole,
+      })
+    }
   }, {
     detail: { tags: ["Auth"], summary: "Get User Profile" },
   })
@@ -111,11 +142,11 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     headers: t.Object({ authorization: t.String() }),
   })
 
-  .post("/refresh-tokens/revoke", async ({ userId, body }) => {
+  .post("/refresh-tokens/revoke", async ({ userId, headers, body }) => {
     if (!userId) throw new UnauthorizedError()
     const { refreshToken } = body as { refreshToken?: string }
     if (!refreshToken) throw new BadRequestError("Missing refreshToken")
-    await neoid.revokeRefreshToken(refreshToken)
+    await neoid.revokeRefreshToken(refreshToken, headers.authorization || "")
     return success({ revoked: true })
   }, {
     detail: { tags: ["Auth"], summary: "Revoke Refresh Token" },

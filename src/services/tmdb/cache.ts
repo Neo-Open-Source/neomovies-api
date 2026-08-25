@@ -7,7 +7,7 @@ export class TMDBCache {
   private store = new Map<string, CacheEntry<unknown>>()
   private readonly ttl: number
 
-  constructor(ttlMs = 5 * 60 * 1000) {
+  constructor(ttlMs = 30 * 60 * 1000) {
     this.ttl = ttlMs
   }
 

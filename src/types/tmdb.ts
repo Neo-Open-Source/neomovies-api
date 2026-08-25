@@ -186,6 +186,8 @@ export interface TMDBDiscoverParams {
   with_keywords?: string
   with_companies?: string
   with_networks?: string | number
+  with_people?: string
+  with_cast?: string
   with_watch_providers?: string
   watch_region?: string
 }

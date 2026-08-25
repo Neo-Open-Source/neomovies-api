@@ -33,6 +33,18 @@ export const mediaRoutes = new Elysia()
     params: t.Object({ type: MediaType, id: t.Numeric() }),
   })
 
+  .get("/api/v1/media/:type/:id/related/cast", async ({ params: { type, id }, query }) =>
+    success(await media.relatedByCast(type, id, page(query), language(query))), {
+    detail: { tags: ["Media"], summary: "Related by Cast" },
+    params: t.Object({ type: MediaType, id: t.Numeric() }),
+  })
+
+  .get("/api/v1/media/:type/:id/related/studio", async ({ params: { type, id }, query }) =>
+    success(await media.relatedByStudio(type, id, page(query), language(query))), {
+    detail: { tags: ["Media"], summary: "Related by Studio / Network" },
+    params: t.Object({ type: MediaType, id: t.Numeric() }),
+  })
+
   .get("/api/v1/media/:type/:id/collection", async ({ params: { type, id }, query }) => {
     if (type !== "movie") throw new BadRequestError("Collections are only available for movies")
     return success(await media.collection(id, language(query)))

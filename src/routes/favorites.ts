@@ -3,21 +3,28 @@ import { userData } from "../services/user-data"
 import { success } from "../lib/response"
 import { UnauthorizedError } from "../lib/errors"
 import { page } from "../lib/query"
+import { language } from "../lib/language"
 import { authMiddleware } from "../middleware/auth"
+
+function mediaTypeFromQuery(query: Record<string, string | undefined> | undefined): string {
+  return query?.mediaType === "tv" ? "tv" : "movie"
+}
 
 export const favoriteRoutes = new Elysia()
   .use(authMiddleware)
 
   .get("/api/v1/favorites", async ({ userId, query }) => {
     if (!userId) throw new UnauthorizedError()
-    return success(await userData.listFavorites(userId, page(query)))
+    const q = query as Record<string, string | undefined>
+    return success(await userData.listFavorites(userId, page(q), language(q)))
   }, {
     detail: { tags: ["Favorites"], summary: "List Favorites" },
   })
 
-  .post("/api/v1/favorites/:mediaId", async ({ userId, params: { mediaId } }) => {
+  .post("/api/v1/favorites/:mediaId", async ({ userId, params: { mediaId }, query }) => {
     if (!userId) throw new UnauthorizedError()
-    return success(await userData.addFavorite(userId, mediaId, "movie"))
+    const mediaType = mediaTypeFromQuery(query as Record<string, string | undefined>)
+    return success(await userData.addFavorite(userId, mediaId, mediaType))
   }, { detail: { tags: ["Favorites"], summary: "Add Favorite" }, params: t.Object({ mediaId: t.Numeric() }) })
 
   .delete("/api/v1/favorites/:mediaId", async ({ userId, params: { mediaId }, query }) => {
