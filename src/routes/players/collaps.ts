@@ -1,45 +1,113 @@
 import { Elysia, t } from "elysia"
-import { config } from "../../config"
 import { success } from "../../lib/response"
 import { BadRequestError } from "../../lib/errors"
+import { getCollapsPlayer, getCollapsPlayerUrl } from "../../services/players"
 
 export const collapsRoutes = new Elysia()
 
   .get("/api/v1/player/collaps/kp/:kpId", async ({ params: { kpId }, query }) => {
-    if (!config.collaps.host || !config.collaps.token) throw new BadRequestError("Collaps not configured")
-
     const season = query.season ? parseInt(String(query.season)) : undefined
     const episode = query.episode ? parseInt(String(query.episode)) : undefined
+    const format = query.format ?? "html"
 
-    const listUrl = `${config.collaps.host.replace(/\/$/, "")}/list?token=${config.collaps.token}&kinopoisk_id=${kpId}`
-    const res = await fetch(listUrl)
-    if (!res.ok) throw new BadRequestError("Video not found on Collaps")
-
-    const data: any = await res.json()
-    const result = data?.results?.[0]
-    if (!result) throw new BadRequestError("No results from Collaps")
-
-    let iframeUrl: string | null = null
-
-    if (result.type === "series") {
-      const seasons = result.seasons ?? []
-      if (season != null && episode != null) {
-        const s = seasons.find((s: any) => s.season === season)
-        iframeUrl = s?.episodes?.find((e: any) => {
-          const en = typeof e.episode === "string" ? parseInt(e.episode) : e.episode
-          return en === episode
-        })?.iframe_url ?? null
-      } else if (season != null) {
-        const s = seasons.find((s: any) => s.season === season)
-        iframeUrl = s?.episodes?.[0]?.iframe_url ?? null
-      } else {
-        iframeUrl = result.iframe_url ?? seasons[0]?.episodes?.[0]?.iframe_url ?? null
+    if (format === "url") {
+      try {
+        const data = await getCollapsPlayerUrl(kpId, undefined, season, episode)
+        return success({ provider: "Collaps", ...data })
+      } catch (e) {
+        const msg = (e as Error).message
+        if (msg === "not_configured") throw new BadRequestError("Collaps not configured")
+        throw new BadRequestError("Video not found on Collaps")
       }
-    } else {
-      iframeUrl = result.iframe_url ?? null
     }
 
-    if (!iframeUrl) throw new BadRequestError("No iframe URL found")
+    try {
+      const html = await getCollapsPlayer(kpId, undefined, season, episode)
+      return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" } })
+    } catch (e) {
+      const msg = (e as Error).message
+      if (msg === "not_configured") throw new BadRequestError("Collaps not configured")
+      throw new BadRequestError("Video not found on Collaps")
+    }
+  }, {
+    detail: { tags: ["Players"], summary: "Collaps Player by KP ID" },
+    params: t.Object({ kpId: t.Numeric() }),
+    query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()), format: t.Optional(t.Union([t.Literal("html"), t.Literal("url")])) }),
+  })
 
-    return success({ provider: "Collaps", url: iframeUrl, type: "iframe" })
-  }, { detail: { tags: ["Players"], summary: "Collaps Player" }, params: t.Object({ kpId: t.Numeric() }), query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()) }) })
+  .get("/api/v1/player/collaps/imdb/:imdbId", async ({ params: { imdbId }, query }) => {
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
+    const format = query.format ?? "html"
+
+    if (format === "url") {
+      try {
+        const data = await getCollapsPlayerUrl(undefined, imdbId, season, episode)
+        return success({ provider: "Collaps", ...data })
+      } catch (e) {
+        const msg = (e as Error).message
+        if (msg === "not_configured") throw new BadRequestError("Collaps not configured")
+        throw new BadRequestError("Video not found on Collaps")
+      }
+    }
+
+    try {
+      const html = await getCollapsPlayer(undefined, imdbId, season, episode)
+      return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" } })
+    } catch (e) {
+      const msg = (e as Error).message
+      if (msg === "not_configured") throw new BadRequestError("Collaps not configured")
+      throw new BadRequestError("Video not found on Collaps")
+    }
+  }, {
+    detail: { tags: ["Players"], summary: "Collaps Player by IMDB ID" },
+    params: t.Object({ imdbId: t.String() }),
+    query: t.Object({ season: t.Optional(t.String()), episode: t.Optional(t.String()), format: t.Optional(t.Union([t.Literal("html"), t.Literal("url")])) }),
+  })
+
+  .get("/api/v1/player/collaps/proxy", async ({ query }) => {
+    const kp = query.kp
+    const imdb = query.imdb
+    const season = query.season ? parseInt(String(query.season)) : undefined
+    const episode = query.episode ? parseInt(String(query.episode)) : undefined
+    const format = query.format ?? "html"
+
+    if (format === "url") {
+      try {
+        const data = await getCollapsPlayerUrl(
+          kp ? Number(kp) : undefined,
+          imdb ?? undefined,
+          season,
+          episode,
+        )
+        return success({ provider: "Collaps", ...data })
+      } catch (e) {
+        const msg = (e as Error).message
+        if (msg === "not_configured") throw new BadRequestError("Collaps not configured")
+        throw new BadRequestError("Video not found on Collaps")
+      }
+    }
+
+    try {
+      const html = await getCollapsPlayer(
+        kp ? Number(kp) : undefined,
+        imdb ?? undefined,
+        season,
+        episode,
+      )
+      return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" } })
+    } catch (e) {
+      const msg = (e as Error).message
+      if (msg === "not_configured") throw new BadRequestError("Collaps not configured")
+      throw new BadRequestError("Video not found on Collaps")
+    }
+  }, {
+    detail: { tags: ["Players"], summary: "Collaps Proxy" },
+    query: t.Object({
+      kp: t.Optional(t.String()),
+      imdb: t.Optional(t.String()),
+      season: t.Optional(t.String()),
+      episode: t.Optional(t.String()),
+      format: t.Optional(t.Union([t.Literal("html"), t.Literal("url")])),
+    }),
+  })
