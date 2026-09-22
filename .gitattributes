@@ -12,3 +12,7 @@
 *.yaml text eol=lf
 *.html text eol=lf
 *.svg text eol=lf
+*.prisma text eol=lf
+*.toml text eol=lf
+*.lock text eol=lf
+*.nix text eol=lf
