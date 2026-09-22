@@ -26,7 +26,6 @@ async function enrichedPage(
     genreNames(type, lang),
   ])
   enrichGenreNames(items, names, data.results)
-  await enrichCertifications(items, type)
   return paginate(items, data.page, data.total_pages, data.total_results)
 }
 
@@ -247,13 +246,6 @@ export const media = {
 
     const movieItems = (movieData?.items ?? []).map((i: any) => ({ ...i, mediaType: "movie" as const }))
     const tvItems = (tvData?.items ?? []).map((i: any) => ({ ...i, mediaType: "tv" as const }))
-
-    const [movieCerts, tvCerts] = await Promise.all([
-      Promise.all(movieItems.map(i => tmdb.movieCertification(i.tmdbId).catch(() => null))),
-      Promise.all(tvItems.map(i => tmdb.tvCertification(i.tmdbId).catch(() => null))),
-    ])
-    movieItems.forEach((i, idx) => { i.certification = movieCerts[idx] })
-    tvItems.forEach((i, idx) => { i.certification = tvCerts[idx] })
 
     const items: typeof movieItems = []
     const maxLen = Math.max(movieItems.length, tvItems.length)
