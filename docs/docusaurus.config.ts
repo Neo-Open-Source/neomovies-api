@@ -6,10 +6,22 @@ const isDev = process.env.NODE_ENV === "development";
 const config: Config = {
   title: "NeoWatch API",
   tagline: "REST API for NeoWatch - movies and TV shows streaming platform",
-  url: "https://docs.neome.uk",
+  url: "https://neowatch-api-ts.vercel.app",
   baseUrl: "/",
   onBrokenLinks: isDev ? "throw" : "warn",
   favicon: "img/favicon.png",
+
+  // Scalar's CDN bundle reads process.env at runtime; webpack 5 / Docusaurus 3
+  // do not polyfill `process` in the browser, so the /api page crashed with
+  // "process is not defined". Minimal shim for client scripts only.
+  headTags: [
+    {
+      tagName: "script",
+      attributes: {},
+      innerHTML:
+        "window.process=window.process||{env:{NODE_ENV:\"production\"}};",
+    },
+  ],
 
   i18n: {
     defaultLocale: "en",
@@ -27,7 +39,9 @@ const config: Config = {
         label: "API Reference",
         route: "/api",
         configuration: {
-          spec: { url: "/playground/json" },
+          // Absolute URL — relative /playground/json is ambiguous when docs
+          // and API share a host behind path-based routing.
+          spec: { url: "https://neowatch-api-ts.vercel.app/playground/json" },
           hideModels: false,
           hideDownloadButton: false,
         },
@@ -70,6 +84,11 @@ const config: Config = {
           sidebarId: "tutorialSidebar",
           position: "left",
           label: "Docs",
+        },
+        {
+          label: "GraphQL Playground",
+          to: "/graphql",
+          position: "left",
         },
         {
           type: "localeDropdown",

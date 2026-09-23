@@ -66,7 +66,13 @@ export const typeDefs = /* GraphQL */ `
     watchLater: [WatchLaterItem!]!
     syncProgress: [SyncProgressItem!]!
 
-    loginUrl(redirectUri: String, codeChallenge: String): String!
+    me: AuthUser!
+    loginUrl(
+      redirectUri: String
+      codeChallenge: String
+      codeChallengeMethod: String
+      state: String
+    ): String!
 
     torrentSearch(q: String, imdbId: String): [Torrent!]!
     supporters: [Supporter!]!
@@ -120,7 +126,23 @@ export const typeDefs = /* GraphQL */ `
     tv: [Genre!]!
   }
 
-  type MediaItem {
+  interface MediaFields {
+    certification: String
+    tmdbId: Int!
+    title: String!
+    originalTitle: String!
+    overview: String!
+    poster: String
+    backdrop: String
+    releaseDate: String
+    genres: [Genre!]
+    voteAverage: Float!
+    voteCount: Int!
+    popularity: Float!
+    imdbRating: Float
+  }
+
+  type MediaItem implements MediaFields {
     certification: String
     tmdbId: Int!
     title: String!
@@ -176,6 +198,7 @@ export const typeDefs = /* GraphQL */ `
     overview: String!
     poster: String
     backdrop: String
+    logo: String
     releaseDate: String
     genres: [Genre!]
     voteAverage: Float!
@@ -204,6 +227,7 @@ export const typeDefs = /* GraphQL */ `
     overview: String!
     poster: String
     backdrop: String
+    logo: String
     releaseDate: String
     genres: [Genre!]
     voteAverage: Float!
@@ -418,7 +442,7 @@ export const typeDefs = /* GraphQL */ `
     totalResults: Int!
   }
 
-  type FavoriteMediaItem {
+  type FavoriteMediaItem implements MediaFields {
     certification: String
     tmdbId: Int!
     title: String!
@@ -449,6 +473,11 @@ export const typeDefs = /* GraphQL */ `
     episode: Int
     progress: Float!
     updatedAt: String!
+    title: String
+    poster: String
+    backdrop: String
+    episodeName: String
+    episodeStill: String
   }
 
   input SyncProgressInput {

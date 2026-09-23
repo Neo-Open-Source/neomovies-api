@@ -1,5 +1,6 @@
 import { config } from "../config"
 import { DEFAULT_LANGUAGE } from "../lib/language"
+import { pickBestLogo } from "../lib/logo"
 import type {
   TMDBDiscoverParams,
   TMDBEpisode,
@@ -485,6 +486,30 @@ export class TMDBClient {
 
       const usRating = data.results.find((item) => item.rating)
       return usRating?.rating ?? null
+    } catch {
+      return null
+    }
+  }
+
+  /** Returns the best logo path, preferring the requested language then English */
+  public async movieLogo(id: number, lang = DEFAULT_LANGUAGE): Promise<string | null> {
+    try {
+      const data = await this.get<{
+        logos: Array<{ file_path: string; iso_639_1: string | null; vote_average: number; file_type?: string }>
+      }>(`/movie/${id}/images`)
+      return pickBestLogo(data.logos ?? [], lang)
+    } catch {
+      return null
+    }
+  }
+
+  /** Returns the best logo path for a TV show, preferring the requested language then English */
+  public async tvLogo(id: number, lang = DEFAULT_LANGUAGE): Promise<string | null> {
+    try {
+      const data = await this.get<{
+        logos: Array<{ file_path: string; iso_639_1: string | null; vote_average: number; file_type?: string }>
+      }>(`/tv/${id}/images`)
+      return pickBestLogo(data.logos ?? [], lang)
     } catch {
       return null
     }

@@ -86,6 +86,38 @@ export async function enrichCertifications(items: Array<{ tmdbId: number; certif
   items.forEach((i, idx) => { i.certification = certs[idx] })
 }
 
+export async function enrichImdbRatings(
+  items: Array<{ tmdbId: number; imdbRating?: number | null; imdbVotes?: number | null }>,
+) {
+  const tmdbIds = items.map(i => i.tmdbId)
+  if (!tmdbIds.length) return
+
+  const externalIds = await db.externalId.findMany({
+    where: { tmdbId: { in: tmdbIds } },
+    select: { tmdbId: true, imdbId: true },
+  })
+
+  const imdbIdByTmdb = new Map(externalIds.map(e => [e.tmdbId, e.imdbId]))
+  const imdbIds = externalIds.map(e => e.imdbId).filter(Boolean) as string[]
+  if (!imdbIds.length) return
+
+  const ratings = await db.$queryRawUnsafe<Array<{ imdbId: string; imdbRating: number | null; imdbVotes: number | null }>>(
+    `SELECT "imdbId", "imdbRating", "imdbVotes" FROM "MediaRating" WHERE "imdbId" = ANY($1)`,
+    imdbIds,
+  )
+  const ratingByImdb = new Map(ratings.map(r => [r.imdbId, r]))
+
+  for (const item of items) {
+    const imdbId = imdbIdByTmdb.get(item.tmdbId)
+    if (!imdbId) continue
+    const r = ratingByImdb.get(imdbId)
+    if (r) {
+      item.imdbRating = r.imdbRating ? Number(r.imdbRating) : null
+      item.imdbVotes = r.imdbVotes
+    }
+  }
+}
+
 export function movieDetailFromTMDB(movie: any) {
   return {
     imdbId: movie.imdb_id,

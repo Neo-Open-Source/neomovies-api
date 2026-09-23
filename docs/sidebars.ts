@@ -1,21 +1,27 @@
-import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+import type { SidebarsConfig } from "@docusaurus/plugin-content-docs"
 
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
-    'intro',
-    'authentication',
-    'deployment',
+    "intro",
+    "authentication",
+    "deployment",
     {
-      type: 'category',
-      label: 'Guides',
+      type: "category",
+      label: "GraphQL",
+      collapsed: false,
+      items: ["graphql", "graphql-examples"],
+    },
+    {
+      type: "category",
+      label: "Guides",
       items: [
-        'guides/search',
-        'guides/players',
-        'guides/favorites',
-        'guides/sync-progress',
+        "guides/search",
+        "guides/players",
+        "guides/favorites",
+        "guides/sync-progress",
       ],
     },
   ],
-};
+}
 
-export default sidebars;
+export default sidebars
