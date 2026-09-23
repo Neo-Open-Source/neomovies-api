@@ -16,13 +16,14 @@ https://api.neome.uk
 
 ## Features
 
-- 🎬 **Movies & TV Shows** - Full metadata from TMDB
-- 🔍 **Search** - Text search and advanced filtering
-- 📺 **Players** - Multiple streaming providers (Alloha, Collaps, CDN)
-- ⭐ **Favorites** - User favorites management
-- 📌 **Watch Later** - Watch later list
-- 🔄 **Sync** - Cross-device watch progress sync
-- 🔐 **Authentication** - Neo ID SSO (OAuth 2.0 + OIDC)
+- 🎬 **Movies & TV Shows** — Full metadata from TMDB
+- 🔍 **Search** — Text search and advanced filtering
+- 📺 **Players** — Multiple streaming providers (Alloha, Collaps, CDN)
+- ⭐ **Favorites** — User favorites management
+- 📌 **Watch Later** — Watch later list
+- 🔄 **Sync** — Cross-device watch progress sync
+- 🔐 **Authentication** — Neo ID SSO (OAuth 2.0 + OIDC)
+- ⚡ **GraphQL** — Full GraphQL API at `/graphql`
 
 ## Response Format
 
@@ -72,3 +73,5 @@ List endpoints accept `?page=` and return:
 ## Quick Start
 
 Check out the [Authentication](/docs/authentication) guide to get started.
+
+For a flexible, single-request alternative to REST, see the [GraphQL API](/docs/graphql) docs.

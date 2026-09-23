@@ -1,7 +1,8 @@
 {
   "framework": null,
   "bunVersion": "1.x",
-  "buildCommand": "cd docs && bun install && bun run build",
+  "buildCommand": "bun run build:api && cd docs && bun install && bun run build",
+  "installCommand": "bun install --frozen-lockfile && bun run db:generate",
   "outputDirectory": "docs/build",
   "crons": [
     {
@@ -9,35 +10,61 @@
       "schedule": "0 4 * * *"
     }
   ],
-  "rewrites": [
-    { "source": "/api", "destination": "/api/index.html" },
-    { "source": "/api/", "destination": "/api/index.html" },
-    { "source": "/ru/api", "destination": "/ru/api/index.html" },
-    { "source": "/ru/api/", "destination": "/ru/api/index.html" },
-    { "source": "/api/v1/(.*)", "destination": "/api/handler" },
-    { "source": "/playground/json", "destination": "/api/handler" },
-    { "source": "/openapi.json", "destination": "/api/handler" }
-  ],
-  "headers": [
+  "routes": [
     {
-      "source": "/image/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800, immutable" }
-      ]
+      "src": "/api/v1/(.*)",
+      "dest": "/api/handler",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
     },
     {
-      "source": "/api/v1/image/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800, immutable" }
-      ]
+      "src": "/graphql",
+      "dest": "/api/handler",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
     },
     {
-      "source": "/api/v1/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
-      ]
-    }
+      "src": "/graphql/(.*)",
+      "dest": "/api/handler",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
+    },
+    {
+      "src": "/playground",
+      "dest": "/api/handler"
+    },
+    {
+      "src": "/playground/(.*)",
+      "dest": "/api/handler"
+    },
+    {
+      "src": "/image/(.*)",
+      "dest": "/api/handler",
+      "headers": {
+        "Cache-Control": "public, max-age=604800, immutable"
+      }
+    },
+    {
+      "src": "/api/v1/image/(.*)",
+      "dest": "/api/handler",
+      "headers": {
+        "Cache-Control": "public, max-age=604800, immutable"
+      }
+    },
+    { "src": "/api", "dest": "/api/index.html" },
+    { "src": "/api/", "dest": "/api/index.html" },
+    { "src": "/ru/api", "dest": "/ru/api/index.html" },
+    { "src": "/ru/api/", "dest": "/ru/api/index.html" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "status": 404, "dest": "/404.html" }
   ]
 }

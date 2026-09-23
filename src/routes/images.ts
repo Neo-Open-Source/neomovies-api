@@ -22,7 +22,7 @@ async function fetchImage(url: string): Promise<{ buffer: Buffer; contentType: s
 }
 
 function imageResponse(buffer: Buffer, contentType: string): Response {
-  return new Response(buffer, {
+  return new Response(buffer as unknown as BodyInit, {
     headers: {
       "Content-Type": contentType,
       "Cache-Control": IMAGE_CACHE,

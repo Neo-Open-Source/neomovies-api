@@ -10,11 +10,18 @@ const resolvers = {
   ...mutationResolvers,
 }
 
-export const graphqlPlugin = new Elysia().use(
-  yoga({
-    path: "/graphql",
-    typeDefs,
-    resolvers,
-    context: async ({ request }) => createContext(request),
-  }),
-)
+// Cast yoga() to any — @elysia/graphql-yoga infers deeply recursive resolver
+// types that cause TS2589 ("instantiation excessively deep") when combined
+// with Elysia's plugin chain. The runtime behaviour is unaffected.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const yogaPlugin: any = (yoga as any)({
+  path: "/graphql",
+  typeDefs,
+  resolvers: resolvers as any,
+  context: async ({ request }: { request: Request }) => createContext(request),
+  graphiql: {
+    title: "NeoWatch GraphQL Playground",
+  },
+})
+
+export const graphqlPlugin = new Elysia().use(yogaPlugin)

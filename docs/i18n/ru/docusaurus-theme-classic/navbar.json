@@ -11,6 +11,10 @@
     "message": "Документация",
     "description": "Navbar item with label Docs"
   },
+  "item.label.GraphQL Playground": {
+    "message": "GraphQL Playground",
+    "description": "Navbar item with label GraphQL Playground"
+  },
   "item.label.GitHub": {
     "message": "GitHub",
     "description": "Navbar item with label GitHub"

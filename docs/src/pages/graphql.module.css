@@ -1,0 +1,40 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--ifm-navbar-height));
+  min-height: 480px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem 1.25rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-background-surface-color);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.endpoint {
+  margin: 0;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+}
+
+.openLink {
+  margin-left: auto;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}

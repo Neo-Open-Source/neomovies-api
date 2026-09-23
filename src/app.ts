@@ -20,6 +20,7 @@ import { webhookRoutes } from "./routes/webhooks"
 import { healthRoutes } from "./routes/health"
 import { categoryRoutes } from "./routes/categories"
 import { cronRoutes } from "./routes/cron"
+import { graphqlPlugin } from "./graphql"
 
 assertConfig()
 
@@ -40,6 +41,8 @@ const NO_EDGE_CACHE_PREFIXES = [
   "/api/v1/torrents",
   "/api/v1/cron",
   "/api/v1/webhooks",
+  // GraphQL can be personalized (Authorization header) — never edge-cache it.
+  "/graphql",
 ]
 
 function isEdgeCacheable(request: Request): boolean {
@@ -87,7 +90,8 @@ export const app = new Elysia()
   }))
   .use(swagger({
     path: "/playground",
-    exclude: ["/api/v1/cron/imdb-ratings"],
+    // /graphql is Yoga's own route (GraphiQL + API) — not part of the REST spec.
+    exclude: ["/api/v1/cron/imdb-ratings", /^\/graphql/],
     documentation: {
       info: {
         title: "NeoWatch API",
@@ -129,3 +133,4 @@ export const app = new Elysia()
   .use(webhookRoutes)
   .use(categoryRoutes)
   .use(cronRoutes)
+  .use(graphqlPlugin)

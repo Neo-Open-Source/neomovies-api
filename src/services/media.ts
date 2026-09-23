@@ -9,7 +9,7 @@ import type {
 } from "../types/tmdb"
 import {
   resolveExternalIds, extractTrailers, formatCredits,
-  genreNames, enrichGenreNames, enrichCertifications,
+  genreNames, enrichGenreNames, enrichCertifications, enrichImdbRatings,
   movieDetailFromTMDB, tvDetailFromTMDB,
   type TmdbCreditsResponse,
 } from "./media/utils"
@@ -26,6 +26,10 @@ async function enrichedPage(
     genreNames(type, lang),
   ])
   enrichGenreNames(items, names, data.results)
+  await Promise.all([
+    enrichCertifications(items, type),
+    enrichImdbRatings(items),
+  ])
   return paginate(items, data.page, data.total_pages, data.total_results)
 }
 
@@ -122,11 +126,12 @@ export const media = {
   },
 
   async movieDetail(id: number, lang = DEFAULT_LANGUAGE) {
-    const [movie, c, certification, videos] = await Promise.all([
+    const [movie, c, certification, videos, logoPath] = await Promise.all([
       tmdb.movie(id, lang),
       tmdb.movieCredits(id, lang),
       tmdb.movieCertification(id),
       tmdb.movieVideos(id, lang).catch(() => ({ results: [] })),
+      tmdb.movieLogo(id, lang).catch(() => null),
     ])
     const resolved = await resolveExternalIds(id, "movie", movie.imdb_id)
     return {
@@ -137,17 +142,19 @@ export const media = {
       imdbRating: resolved.imdbRating,
       imdbVotes: resolved.imdbVotes,
       certification,
+      logo: tmdb.imageUrl(logoPath, "w500"),
       trailers: extractTrailers(videos),
       credits: formatCredits(c as unknown as TmdbCreditsResponse),
     }
   },
 
   async tvDetail(id: number, lang = DEFAULT_LANGUAGE) {
-    const [show, c, certification, videos] = await Promise.all([
+    const [show, c, certification, videos, logoPath] = await Promise.all([
       tmdb.tvShow(id, lang),
       tmdb.tvCredits(id, lang),
       tmdb.tvCertification(id),
       tmdb.tvVideos(id, lang).catch(() => ({ results: [] })),
+      tmdb.tvLogo(id, lang).catch(() => null),
     ])
     const externalIds = await tmdb.tvExternalIds(id).catch(() => null)
     const tmdbImdbId = externalIds?.imdb_id ?? null
@@ -160,6 +167,7 @@ export const media = {
       imdbRating: resolved.imdbRating,
       imdbVotes: resolved.imdbVotes,
       certification,
+      logo: tmdb.imageUrl(logoPath, "w500"),
       trailers: extractTrailers(videos),
       credits: formatCredits(c as unknown as TmdbCreditsResponse),
     }
@@ -392,6 +400,15 @@ export const media = {
 
   async relatedByStudio(type: "movie" | "tv", id: number, pageNum: number, lang = DEFAULT_LANGUAGE) {
     // Prefer production companies ("studio") over broadcast networks — matches Plex better.
+    const dedupe = <T extends { id: number }>(results: T[], excludeId: number) => {
+      const seen = new Set<number>()
+      return results.filter((item) => {
+        if (item.id === excludeId || seen.has(item.id)) return false
+        seen.add(item.id)
+        return true
+      })
+    }
+
     if (type === "movie") {
       const movie = await tmdb.movie(id, lang)
       const companies = (movie.production_companies || []).filter((c) => c.id)
@@ -405,7 +422,8 @@ export const media = {
         { page: pageNum, sort_by: "popularity.desc", with_companies: companyIds },
         lang,
       )
-      data.results = data.results.filter((item) => item.id !== id)
+      data.results = dedupe(data.results, id)
+      data.total_results = data.results.length
       const page = await enrichedPage(type, data, lang)
       return { ...page, label }
     }
@@ -428,7 +446,7 @@ export const media = {
         },
         lang,
       )
-      data.results = data.results.filter((item) => item.id !== id)
+      data.results = dedupe(data.results, id)
 
       // If company+genre is too strict, retry companies only
       if (!data.results.length) {
@@ -436,11 +454,13 @@ export const media = {
           { page: pageNum, sort_by: "popularity.desc", with_companies: companyIds },
           lang,
         )
-        fallback.results = fallback.results.filter((item) => item.id !== id)
+        fallback.results = dedupe(fallback.results, id)
+        fallback.total_results = fallback.results.length
         const page = await enrichedPage(type, fallback, lang)
         return { ...page, label }
       }
 
+      data.total_results = data.results.length
       const page = await enrichedPage(type, data, lang)
       return { ...page, label }
     }
@@ -455,7 +475,8 @@ export const media = {
         },
         lang,
       )
-      data.results = data.results.filter((item) => item.id !== id)
+      data.results = dedupe(data.results, id)
+      data.total_results = data.results.length
       const page = await enrichedPage(type, data, lang)
       return { ...page, label: networkName }
     }

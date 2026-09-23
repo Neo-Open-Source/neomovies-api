@@ -1,23 +1,27 @@
 import { neoid } from "../../services/neoid"
 import { userData } from "../../services/user-data"
 import { config } from "../../config"
-import { requireAuth, type GraphQLContext } from "../context"
+import { badRequest, internalError, requireAuth, unauthorized, type GraphQLContext } from "../context"
 
 export const mutationResolvers = {
   Mutation: {
     refreshTokens: async (_: any, args: Record<string, any>) => {
-      const tokens = await neoid.refreshTokens(args.refreshToken)
-      return {
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        idToken: tokens.id_token,
-        expiresIn: tokens.expires_in,
+      try {
+        const tokens = await neoid.refreshTokens(args.refreshToken)
+        return {
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          idToken: tokens.id_token,
+          expiresIn: tokens.expires_in,
+        }
+      } catch {
+        throw unauthorized("Invalid refresh token")
       }
     },
 
     updateProfile: async (_: any, args: Record<string, any>, ctx: GraphQLContext) => {
-      const userId = requireAuth(ctx)
-      if (!ctx.authorization) throw new Error("Unauthorized")
+      requireAuth(ctx)
+      if (!ctx.authorization) throw unauthorized()
 
       const res = await fetch(`${config.neoId.issuer}/api/v1/user/profile`, {
         method: "PUT",
@@ -27,7 +31,7 @@ export const mutationResolvers = {
         },
         body: JSON.stringify({ name: args.name, avatar: args.avatar }),
       })
-      if (!res.ok) throw new Error("Failed to update profile")
+      if (!res.ok) throw badRequest("Failed to update profile")
 
       const user = await res.json()
       return {
@@ -49,16 +53,16 @@ export const mutationResolvers = {
       return true
     },
 
-    deleteAccount: async (_: any, __: any, ctx: GraphQLContext) => {
+    deleteAccount: async (_: any, __: unknown, ctx: GraphQLContext) => {
       const userId = requireAuth(ctx)
-      if (!ctx.authorization) throw new Error("Unauthorized")
+      if (!ctx.authorization) throw unauthorized()
 
       const res = await fetch(`${config.neoId.issuer}/api/v1/user/delete`, {
         method: "DELETE",
         headers: { Authorization: ctx.authorization, "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
       })
-      if (!res.ok) throw new Error("Failed to delete account")
+      if (!res.ok) throw internalError("Failed to delete account")
       return true
     },
 
