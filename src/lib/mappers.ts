@@ -77,6 +77,7 @@ function baseItem() {
 export function mapMovie(m: TMDBMovieOrDetails) {
   return {
     ...baseItem(),
+    mediaType: "movie" as const,
     tmdbId: m.id,
     title: m.title,
     originalTitle: m.original_title,
@@ -96,6 +97,7 @@ export function mapMovie(m: TMDBMovieOrDetails) {
 export function mapTV(t: TMDBTVOrDetails) {
   return {
     ...baseItem(),
+    mediaType: "tv" as const,
     tmdbId: t.id,
     title: t.name,
     originalTitle: t.original_name,

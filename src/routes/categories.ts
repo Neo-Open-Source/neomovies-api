@@ -37,7 +37,7 @@ const studioCategories: CategoryDef[] = [
   { id: "dc", name: "DC", slug: "dc", kind: "company", mediaType: "movie", value: "128064" },
   { id: "pixar", name: "Pixar", slug: "pixar", kind: "company", mediaType: "movie", value: "3" },
   { id: "dreamworks", name: "DreamWorks", slug: "dreamworks", kind: "company", mediaType: "movie", value: "521" },
-  { id: "a24", name: "A24", slug: "a24", kind: "company", mediaType: "movie", value: "199" },
+  { id: "a24", name: "A24", slug: "a24", kind: "company", mediaType: "movie", value: "41077" },
 ]
 
 const networkCategories: CategoryDef[] = [
