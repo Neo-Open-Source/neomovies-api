@@ -20,8 +20,7 @@ async function enrichedPage(
   data: { results: any[]; page: number; total_pages: number; total_results: number },
   lang: Language,
 ) {
-  const mapper = type === "movie" ? mapMovie : mapTV
-  const items = data.results.map(mapper)
+  const items = data.results.map((r) => (type === "movie" ? mapMovie(r) : mapTV(r)))
   const [names] = await Promise.all([
     genreNames(type, lang),
   ])

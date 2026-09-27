@@ -129,6 +129,7 @@ export const typeDefs = /* GraphQL */ `
   interface MediaFields {
     certification: String
     tmdbId: Int!
+    mediaType: MediaType!
     title: String!
     originalTitle: String!
     overview: String!
@@ -145,6 +146,7 @@ export const typeDefs = /* GraphQL */ `
   type MediaItem implements MediaFields {
     certification: String
     tmdbId: Int!
+    mediaType: MediaType!
     title: String!
     originalTitle: String!
     overview: String!

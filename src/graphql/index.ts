@@ -8,6 +8,32 @@ import { createContext } from "./context"
 const resolvers = {
   ...queryResolvers,
   ...mutationResolvers,
+  // Unions/interfaces need runtime type resolution when objects lack __typename.
+  SearchItem: {
+    // Multi-search mixes MediaItem (title) with PersonSearchItem (name only).
+    __resolveType: (obj: { mediaType?: string; title?: string; name?: string }) => {
+      if (obj.mediaType === "person") return "PersonSearchItem"
+      if (obj.title !== undefined) return "MediaItem"
+      if (obj.name !== undefined) return "PersonSearchItem"
+      return "MediaItem"
+    },
+  },
+  MediaDetail: {
+    // Query.media sets __typename; this is a fallback if a resolver forgets it.
+    __resolveType: (obj: { __typename?: string; seasons?: unknown[]; networks?: unknown[] }) => {
+      if (obj.__typename) return obj.__typename
+      if (obj.seasons !== undefined || obj.networks !== undefined) return "TVDetail"
+      return "MovieDetail"
+    },
+  },
+  MediaFields: {
+    __resolveType: (obj: { __typename?: string; mediaId?: number; createdAt?: string }) => {
+      if (obj.__typename) return obj.__typename
+      // FavoriteMediaItem carries mediaId/createdAt; plain lists are MediaItem.
+      if (obj.mediaId !== undefined && obj.createdAt !== undefined) return "FavoriteMediaItem"
+      return "MediaItem"
+    },
+  },
 }
 
 // Cast yoga() to any — @elysia/graphql-yoga infers deeply recursive resolver
