@@ -37,7 +37,7 @@ interface CollapsEpisode {
   iframe_url?: string
 }
 
-function iframeHtml(url: string, title: string): string {
+export function iframeHtml(url: string, title: string): string {
   return `<!DOCTYPE html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'/><title>${title}</title><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;}iframe{display:block;position:fixed;inset:0;width:100vw;height:100vh;border:0;background:#000;}</style></head><body><iframe src="${url}" allowfullscreen loading="eager" scrolling="no" referrerpolicy="no-referrer-when-downgrade" allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe></body></html>`
 }
 
@@ -170,6 +170,14 @@ export async function getAllohaPlayer(
   return wrapExistingHtml(iframeCode, "Alloha Player")
 }
 
+function extractIframeSrc(code: string): string | null {
+  const trimmed = code.trim()
+  if (!trimmed) return null
+  if (!trimmed.includes("<")) return trimmed
+  const match = trimmed.match(/<iframe[^>]*\bsrc\s*=\s*["']([^"']+)["']/i)
+  return match?.[1] ?? null
+}
+
 export async function getAllohaPlayerUrl(
   kpId?: number,
   tmdbId?: number,
@@ -177,14 +185,17 @@ export async function getAllohaPlayerUrl(
   season?: number,
   episode?: number,
 ): Promise<{ url: string; type: string }> {
-  const params = new URLSearchParams()
-  if (kpId) params.set("kp", String(kpId))
-  if (tmdbId) params.set("tmdb", String(tmdbId))
-  if (imdbId) params.set("imdb", imdbId)
-  if (season) params.set("season", String(season))
-  if (episode) params.set("episode", String(episode))
+  const payload = await fetchAllohaJson(kpId, tmdbId, imdbId)
+  if (payload.status !== "success") throw new Error("not_found")
 
-  return { url: `/api/v1/player/alloha/proxy?${params.toString()}`, type: "iframe" }
+  const code = pickAllohaIframe(payload.data, season, episode)
+  const src = code ? extractIframeSrc(code) : null
+  if (!src) throw new Error("not_found")
+
+  return {
+    url: src.startsWith("//") ? `https:${src}` : src,
+    type: "iframe",
+  }
 }
 
 // ── Collaps ─────────────────────────────────────────────────────────────────
@@ -208,7 +219,13 @@ async function fetchCollapsList(kpId?: number, imdbId?: string): Promise<Collaps
     throw new Error("missing_id")
   }
 
-  const res = await fetch(url)
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      Referer: `${base}/`,
+    },
+  })
   if (!res.ok) throw new Error("not_found")
   return await res.json() as CollapsListResponse
 }
@@ -255,4 +272,29 @@ export async function getCollapsPlayerUrl(
   const iframeUrl = pickCollapsIframe(data, season, episode)
   if (!iframeUrl) throw new Error("not_found")
   return { url: iframeUrl, type: "iframe" }
+}
+
+export async function isAllohaAvailable(
+  kpId?: number,
+  tmdbId?: number,
+  imdbId?: string,
+): Promise<boolean> {
+  try {
+    const payload = await fetchAllohaJson(kpId, tmdbId, imdbId)
+    return payload.status === "success" && Boolean(pickAllohaIframe(payload.data))
+  } catch {
+    return false
+  }
+}
+
+export async function isCollapsAvailable(
+  kpId?: number,
+  imdbId?: string,
+): Promise<boolean> {
+  try {
+    const data = await fetchCollapsList(kpId, imdbId)
+    return Boolean(pickCollapsIframe(data))
+  } catch {
+    return false
+  }
 }
