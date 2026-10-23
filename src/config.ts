@@ -35,6 +35,11 @@ export const config = {
     token: process.env.COLLAPS_TOKEN || "",
   },
 
+  kodik: {
+    baseUrl: process.env.KODIK_API_URL || "",
+    token: process.env.KODIK_TOKEN || "",
+  },
+
   cdn: {
     baseUrl: "https://api.rstprgapipt.com/balancer-api/proxy/playlists/catalog-api",
     iframeUrl: "https://api.rstprgapipt.com/balancer-api/iframe",

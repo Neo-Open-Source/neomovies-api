@@ -8,6 +8,7 @@ export const typeDefs = /* GraphQL */ `
     alloha
     collaps
     cdn
+    kodik
   }
 
   enum MovieList {
@@ -59,8 +60,11 @@ export const typeDefs = /* GraphQL */ `
     categories(language: String): [CategorySection!]!
     categoryCollection(slug: String!, page: Int, language: String): CategoryCollection!
 
-    player(provider: PlayerProvider!, kpId: Int, tmdbId: Int, imdbId: String, season: Int, episode: Int): PlayerResult!
+    player(provider: PlayerProvider!, kpId: Int, tmdbId: Int, imdbId: String, season: Int, episode: Int, translation: Int): PlayerResult!
+    playerAvailability(kpId: Int, tmdbId: Int, imdbId: String): PlayerAvailability!
     cdnPlayer(cdnId: Int, kpId: Int, imdbId: String, season: Int, episode: Int): CdnPlayerResult!
+    kodik(kpId: Int, imdbId: String, shikimoriId: Int): KodikPlaylist!
+    kodikSearch(title: String!, limit: Int): KodikPlaylist!
 
     favorites(page: Int, language: String): PaginatedFavorite!
     watchLater: [WatchLaterItem!]!
@@ -410,6 +414,55 @@ export const typeDefs = /* GraphQL */ `
     provider: String!
     url: String!
     type: String!
+  }
+
+  type PlayerAvailability {
+    kodik: Boolean!
+    alloha: Boolean!
+    collaps: Boolean!
+  }
+
+  type KodikEpisode {
+    number: Int!
+    link: String!
+  }
+
+  type KodikSeason {
+    number: Int!
+    link: String
+    episodes: [KodikEpisode!]!
+  }
+
+  type KodikTranslation {
+    id: Int!
+    title: String!
+    type: String!
+    link: String
+    seasons: [KodikSeason!]!
+  }
+
+  type KodikSearchResult {
+    id: String!
+    type: String!
+    title: String!
+    titleOrig: String
+    year: Int
+    lastSeason: Int
+    lastEpisode: Int
+    episodesCount: Int
+    quality: String
+    camrip: Boolean!
+    blockedCountries: [String!]!
+    kinopoiskId: String
+    imdbId: String
+    shikimoriId: String
+    translations: [KodikTranslation!]!
+  }
+
+  type KodikPlaylist {
+    provider: String!
+    total: Int!
+    results: [KodikSearchResult!]!
   }
 
   type CdnPlayerResult {

@@ -4,6 +4,8 @@ import { userData } from "../../services/user-data"
 import { config } from "../../config"
 import { neoid } from "../../services/neoid"
 import { getAllohaPlayerUrl, getCollapsPlayerUrl } from "../../services/players"
+import { getKodikById, pickKodikLink, searchKodik, type KodikPlaylist } from "../../services/kodik"
+import { getPlayerAvailability } from "../../services/availability"
 import { getPlayerData, resolveCdnId } from "../../services/cdn"
 import { badRequest, requireAuth, type GraphQLContext } from "../context"
 import { language as langHelper, type Language } from "../../lib/language"
@@ -193,18 +195,42 @@ async function buildCategorySections(l: Language) {
 }
 
 // ---------------------------------------------------------------------------
+// Kodik helpers
+// ---------------------------------------------------------------------------
+
+async function resolveKodikPlaylist(args: Record<string, any>): Promise<KodikPlaylist> {
+  if (args.kpId) return getKodikById("kinopoisk_id", String(args.kpId))
+  if (args.imdbId) return getKodikById("imdb_id", args.imdbId)
+  if (args.shikimoriId) return getKodikById("shikimori_id", String(args.shikimoriId))
+  throw new Error("Missing kpId, imdbId or shikimoriId")
+}
+
+// ---------------------------------------------------------------------------
 // Player resolver helper
 // ---------------------------------------------------------------------------
 
 async function resolvePlayer(args: Record<string, any>) {
   const { provider, kpId, tmdbId, imdbId, season, episode } = args
 
+  if (provider === "kodik") {
+    const playlist = await resolveKodikPlaylist(args)
+    const url = pickKodikLink(
+      playlist,
+      args.translation ?? undefined,
+      season ?? undefined,
+      episode ?? undefined,
+    )
+    if (!url) throw new Error("Video not found on Kodik")
+    return { provider: "Kodik", url, type: "iframe" }
+  }
   if (provider === "alloha") {
-    return getAllohaPlayerUrl(kpId ?? undefined, tmdbId ?? undefined, imdbId ?? undefined, season ?? undefined, episode ?? undefined)
+    const data = await getAllohaPlayerUrl(kpId ?? undefined, tmdbId ?? undefined, imdbId ?? undefined, season ?? undefined, episode ?? undefined)
+    return { provider: "Alloha", ...data }
   }
 
   if (provider === "collaps") {
-    return getCollapsPlayerUrl(kpId ?? undefined, imdbId ?? undefined, season ?? undefined, episode ?? undefined)
+    const data = await getCollapsPlayerUrl(kpId ?? undefined, imdbId ?? undefined, season ?? undefined, episode ?? undefined)
+    return { provider: "Collaps", ...data }
   }
 
   if (provider === "cdn") {
@@ -321,6 +347,19 @@ export const queryResolvers = {
 
     player: async (_: any, args: Record<string, any>) =>
       resolvePlayer(args),
+
+    playerAvailability: async (_: any, args: Record<string, any>) =>
+      getPlayerAvailability({
+        kpId: args.kpId ?? undefined,
+        tmdbId: args.tmdbId ?? undefined,
+        imdbId: args.imdbId ?? undefined,
+      }),
+
+    kodik: async (_: any, args: Record<string, any>) =>
+      resolveKodikPlaylist(args),
+
+    kodikSearch: async (_: any, args: Record<string, any>) =>
+      searchKodik(args.title, args.limit ?? 20),
 
     cdnPlayer: async (_: any, args: Record<string, any>) => {
       let cdnId: number | undefined = args.cdnId ?? undefined
