@@ -387,7 +387,9 @@ export const queryResolvers = {
             avatar: user.avatar ?? null,
             role: user.role,
           }
-        } catch {}
+        } catch (err) {
+          console.error('[me resolver] neoid.getUser failed:', err)
+        }
       }
       return {
         id: ctx.userId,
