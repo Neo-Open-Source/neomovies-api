@@ -8,6 +8,9 @@ const config: Config = {
   tagline: "REST API for NeoWatch - movies and TV shows streaming platform",
   url: "https://neowatch-api-ts.vercel.app",
   baseUrl: "/",
+  customFields: {
+    graphqlEndpoint: process.env.DOCS_GRAPHQL_URL ?? "",
+  },
   onBrokenLinks: isDev ? "throw" : "warn",
   favicon: "img/favicon.png",
 
@@ -39,9 +42,7 @@ const config: Config = {
         label: "API Reference",
         route: "/api",
         configuration: {
-          // Absolute URL — relative /playground/json is ambiguous when docs
-          // and API share a host behind path-based routing.
-          spec: { url: "https://neowatch-api-ts.vercel.app/playground/json" },
+          spec: { url: "/openapi.json" },
           hideModels: false,
           hideDownloadButton: false,
         },
@@ -87,7 +88,7 @@ const config: Config = {
         },
         {
           label: "GraphQL Playground",
-          to: "/graphql",
+          to: "/graphql-playground",
           position: "left",
         },
         {

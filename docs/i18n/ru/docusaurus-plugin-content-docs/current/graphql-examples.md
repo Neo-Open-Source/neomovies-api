@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # Примеры GraphQL запросов
 
-Все примеры можно запустить прямо в [Playground](/graphql).
+Все примеры можно запустить прямо в [Playground](/graphql-playground).
 
 ## Детали фильма
 

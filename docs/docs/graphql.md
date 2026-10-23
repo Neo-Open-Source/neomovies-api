@@ -12,10 +12,11 @@ NeoWatch API provides a full GraphQL endpoint alongside REST. GraphQL lets you r
 POST https://api.neome.uk/graphql
 ```
 
-An interactive GraphQL Playground is available in these places:
+An interactive GraphQL Playground is available in two places:
 
-- **Docs site**: [GraphQL Playground](/graphql) (this site, embedded GraphiQL)
-- **API**: `GET https://neowatch-api-ts.vercel.app/graphql` with `Accept: text/html`
+- **Docs site**: [Playground](/graphql-playground) (embedded GraphiQL)
+- **API**: `GET https://neowatch-api-ts.vercel.app/graphql` with
+  `Accept: text/html`
 
 ## Authentication
 

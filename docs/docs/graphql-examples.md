@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # GraphQL Query Examples
 
-All examples can be run directly in the [Playground](/graphql).
+All examples can be run directly in the [Playground](/graphql-playground).
 
 ## Movie Detail
 
