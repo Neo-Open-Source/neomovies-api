@@ -67,8 +67,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/neo-team/neowatch-api-ts.git
-cd neowatch-api-ts
+git clone https://git.disroot.org/Neo/neomovies-api.git
+cd neomovies-api
 
 # Copy environment variables
 cp .env.example .env
@@ -105,7 +105,7 @@ bun run dev
 
 ## API Overview
 
-Base URL: `https://neowatch-api.vercel.app/api/v1`
+Base URL: `https://api.neome.uk`
 
 All responses use a consistent JSON envelope:
 
@@ -124,75 +124,6 @@ Error responses:
   "error": "Description of what went wrong"
 }
 ```
-
-### Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| **Auth** | | |
-| GET | `/auth/login` | Get Neo ID authorization URL |
-| GET | `/auth/callback` | OAuth callback handler |
-| GET | `/auth/mobile-callback` | Mobile OAuth callback |
-| POST | `/auth/refresh` | Refresh access token |
-| GET | `/auth/profile` | Get current user profile |
-| PUT | `/auth/profile` | Update user profile |
-| GET | `/auth/refresh-tokens` | List active refresh tokens |
-| POST | `/auth/refresh-tokens/revoke` | Revoke a refresh token |
-| POST | `/auth/refresh-tokens/revoke-all` | Revoke all refresh tokens |
-| POST | `/auth/logout` | Logout |
-| DELETE | `/auth/account` | Delete account |
-| **Movies** | | |
-| GET | `/movie/:id` | Movie details |
-| GET | `/movie/:id/credits` | Movie credits |
-| GET | `/movie/:id/collection` | Movie collection |
-| GET | `/movie/:id/recommendations` | Movie recommendations |
-| GET | `/movie/:id/similar` | Similar movies |
-| GET | `/movie/popular` | Popular movies |
-| GET | `/movie/top-rated` | Top rated movies |
-| GET | `/movie/upcoming` | Upcoming movies |
-| **TV** | | |
-| GET | `/tv/:id` | TV show details |
-| GET | `/tv/:id/credits` | TV show credits |
-| GET | `/tv/:id/season/:season` | Season details |
-| GET | `/tv/:id/season/:season/episode/:episode` | Episode details |
-| GET | `/tv/:id/recommendations` | TV recommendations |
-| GET | `/tv/:id/similar` | Similar TV shows |
-| GET | `/tv/popular` | Popular TV shows |
-| GET | `/tv/top-rated` | Top rated TV shows |
-| **Search** | | |
-| GET | `/search` | Multi-source search |
-| **Categories** | | |
-| GET | `/categories` | Browse categories |
-| GET | `/collection/:slug` | Category collection |
-| **Genres** | | |
-| GET | `/genre/movies` | Movie genres |
-| GET | `/genre/tv` | TV genres |
-| **Players** | | |
-| GET | `/player/alloha/tmdb/:tmdbId` | Alloha player by TMDB ID |
-| GET | `/player/alloha/kp/:kpId` | Alloha player by KP ID |
-| GET | `/player/collaps/kp/:kpId` | Collaps player by KP ID |
-| GET | `/player/cdn/:cdnId` | CDN player |
-| GET | `/player/cdn/imdb/:imdbId` | CDN player by IMDb ID |
-| **User Data** | | |
-| GET | `/favorites` | List favorites |
-| POST | `/favorites/:mediaId` | Add favorite |
-| DELETE | `/favorites/:mediaId` | Remove favorite |
-| GET | `/favorites/:mediaId/check` | Check if favorited |
-| GET | `/watch-later` | List watch later |
-| POST | `/watch-later/:mediaId` | Add to watch later |
-| DELETE | `/watch-later/:mediaId` | Remove from watch later |
-| GET | `/watch-later/:mediaId/check` | Check if in watch later |
-| GET | `/sync/progress` | Get sync progress |
-| PUT | `/sync/progress` | Upsert sync progress |
-| DELETE | `/sync/progress` | Delete sync progress |
-| POST | `/sync/progress/batch` | Batch upsert progress |
-| **Other** | | |
-| GET | `/images/tmdb` | TMDB image proxy |
-| GET | `/images/backdrop` | Backdrop images |
-| GET | `/images/still` | Still images |
-| GET | `/support` | Supporters list |
-| GET | `/torrents/search` | Torrent search |
-| GET | `/health` | Health check |
 
 ## Development
 
@@ -262,4 +193,4 @@ api/
 
 ## License
 
-[MIT](LICENSE) © Neo Team
+[MIT](LICENSE) © Neo-Open-Source
