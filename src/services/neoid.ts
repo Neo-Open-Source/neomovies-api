@@ -16,6 +16,11 @@ interface NeoIdUserResponse {
   role: string
 }
 
+const NEO_ID_REQUEST_HEADERS = {
+  Accept: "application/json",
+  "User-Agent": "NeoWatch/3.0 (+https://watch.neome.uk)",
+} as const
+
 /** Neo ID wraps payloads as `{ ok: true, data: T }`. */
 function unwrapData<T>(json: unknown): T {
   if (json && typeof json === "object" && "data" in json && (json as { ok?: boolean }).ok !== false) {
@@ -104,22 +109,38 @@ class NeoIdClient {
   }
 
   async getUser(accessToken: string): Promise<NeoIdUserResponse> {
-    const res = await fetch(config.neoId.userInfoUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    const urls = [
+      config.neoId.userInfoUrl,
+      `${config.neoId.issuer}/api/v1/oauth/userinfo`,
+    ]
+    let lastError: Error | null = null
 
-    if (!res.ok) {
-      throw new Error(`Neo ID user fetch failed: ${res.status}`)
+    for (const url of urls) {
+      const res = await fetch(url, {
+        headers: {
+          ...NEO_ID_REQUEST_HEADERS,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+      })
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "")
+        lastError = new Error(`Neo ID user fetch failed: ${res.status} ${body}`)
+        continue
+      }
+
+      const profile = unwrapData<Record<string, unknown>>(await res.json())
+      return {
+        id: String(profile.id ?? profile.sub ?? ""),
+        email: String(profile.email ?? ""),
+        displayName: (profile.displayName ?? profile.name ?? profile.username) as string | undefined,
+        avatar: (profile.avatar ?? profile.picture) as string | undefined,
+        role: String(profile.role ?? "user"),
+      }
     }
 
-    const profile = unwrapData<Record<string, unknown>>(await res.json())
-    return {
-      id: String(profile.id ?? profile.sub ?? ""),
-      email: String(profile.email ?? ""),
-      displayName: (profile.displayName ?? profile.name) as string | undefined,
-      avatar: (profile.avatar ?? profile.picture) as string | undefined,
-      role: String(profile.role ?? "user"),
-    }
+    throw lastError ?? new Error("Neo ID user fetch failed")
   }
 
   async listRefreshTokens(authHeader: string): Promise<{ id: string; deviceName?: string; createdAt: string }[]> {
