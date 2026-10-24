@@ -25,7 +25,7 @@ export const userData = {
               ...mapTV(show),
               mediaType,
               mediaId: f.mediaId,
-              createdAt: f.createdAt,
+              createdAt: f.createdAt.toISOString(),
             }
           }
           const movie = await tmdb.movie(f.mediaId, lang)
@@ -33,7 +33,7 @@ export const userData = {
             ...mapMovie(movie),
             mediaType,
             mediaId: f.mediaId,
-            createdAt: f.createdAt,
+            createdAt: f.createdAt.toISOString(),
           }
         } catch {
           return null
@@ -55,7 +55,12 @@ export const userData = {
       update: {},
       create: { userId, mediaId, mediaType },
     })
-    return { id: fav.id, mediaId: fav.mediaId, mediaType: fav.mediaType }
+    return {
+      id: fav.id,
+      mediaId: fav.mediaId,
+      mediaType: fav.mediaType,
+      createdAt: fav.createdAt.toISOString(),
+    }
   },
 
   async removeFavorite(userId: string, mediaId: number, mediaType: string) {
@@ -74,7 +79,7 @@ export const userData = {
       where: { userId },
       orderBy: { createdAt: "desc" },
     })
-    return items.map(w => ({ mediaId: w.mediaId, createdAt: w.createdAt }))
+    return items.map(w => ({ mediaId: w.mediaId, createdAt: w.createdAt.toISOString() }))
   },
 
   async addWatchLater(userId: string, mediaId: number) {
@@ -83,7 +88,11 @@ export const userData = {
       update: {},
       create: { userId, mediaId },
     })
-    return { id: wl.id, mediaId: wl.mediaId }
+    return {
+      id: wl.id,
+      mediaId: wl.mediaId,
+      createdAt: wl.createdAt.toISOString(),
+    }
   },
 
   async removeWatchLater(userId: string, mediaId: number) {
@@ -105,7 +114,7 @@ export const userData = {
     return items.map(s => ({
       mediaId: s.mediaId, mediaType: s.mediaType,
       season: s.season, episode: s.episode,
-      progress: s.progress, updatedAt: s.updatedAt,
+      progress: s.progress, updatedAt: s.updatedAt.toISOString(),
     }))
   },
 
@@ -133,7 +142,7 @@ export const userData = {
     return {
       mediaId: record.mediaId, mediaType: record.mediaType,
       season: record.season, episode: record.episode,
-      progress: record.progress, updatedAt: record.updatedAt,
+      progress: record.progress, updatedAt: record.updatedAt.toISOString(),
     }
   },
 
